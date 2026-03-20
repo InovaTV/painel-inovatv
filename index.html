@@ -3,28 +3,28 @@
 <head>
   <title>Painel InovaTV</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+  <style>
+    body { font-family: Arial; padding: 20px; }
+    button { margin: 2px; }
+    table { border-collapse: collapse; width: 100%; }
+  </style>
 </head>
 <body>
 
-<h2>Painel Admin - InovaTV</h2>
+<h2>Painel InovaTV</h2>
 
-<input id="busca" placeholder="Telefone (ex: 55179...)">
+<button onclick="mostrarClientes()">Clientes</button>
+<button onclick="mostrarContatos()">Contatos</button>
+
+<br><br>
+
+<input id="busca" placeholder="Telefone">
 <button onclick="buscar()">Buscar</button>
 
 <br><br>
 
-<button onclick="carregar()">🔄 Atualizar</button>
-
-<table border="1" cellpadding="10">
-  <thead>
-    <tr>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Status</th>
-      <th>Vencimento</th>
-      <th>Ações</th>
-    </tr>
-  </thead>
+<table border="1">
+  <thead id="thead"></thead>
   <tbody id="tabela"></tbody>
 </table>
 
@@ -34,117 +34,122 @@ const supabase = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
-// =====================
-// CARREGAR CLIENTES
-// =====================
-async function carregar() {
-  const { data, error } = await supabase
-    .from('clientes')
-    .select('*')
-    .order('criado_em', { ascending: false });
+let tela = 'clientes';
 
-  if (error) {
-    console.error('Erro ao carregar:', error);
-    alert('Erro ao carregar dados');
-    return;
-  }
+// CLIENTES
+async function mostrarClientes(){
+  tela = 'clientes';
 
-  render(data);
+  document.getElementById('thead').innerHTML = `
+    <tr>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Status</th>
+      <th>Vencimento</th>
+      <th>Ações</th>
+    </tr>
+  `;
+
+  const { data, error } = await supabase.from('clientes').select('*');
+
+  if(error){ alert('Erro'); return; }
+
+  renderClientes(data);
 }
 
-// =====================
-// RENDERIZAR TABELA
-// =====================
-function render(clientes) {
+function renderClientes(data){
   let html = '';
 
-  if (!clientes || clientes.length === 0) {
-    html = '<tr><td colspan="5">Nenhum cliente encontrado</td></tr>';
-  } else {
-    clientes.forEach(c => {
-      html += `
-        <tr>
-          <td>${c.nome || '-'}</td>
-          <td>${c.telefone}</td>
-          <td>${c.status || '-'}</td>
-          <td>${c.vencimento || '-'}</td>
-          <td>
-            <button onclick="pagar('${c.id}')">Pago</button>
-            <button onclick="humano('${c.id}', ${c.atendimento_humano})">
-              ${c.atendimento_humano ? 'IA ON' : 'Humano'}
-            </button>
-          </td>
-        </tr>
-      `;
-    });
-  }
+  data.forEach(c=>{
+    html += `
+      <tr>
+        <td>${c.nome||'-'}</td>
+        <td>${c.telefone}</td>
+        <td>${c.status}</td>
+        <td>${c.vencimento||'-'}</td>
+        <td>
+          <button onclick="pagar('${c.id}')">Pago</button>
+          <button onclick="humano('${c.id}', ${c.atendimento_humano})">
+            ${c.atendimento_humano ? 'IA ON' : 'Humano'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
 
   document.getElementById('tabela').innerHTML = html;
 }
 
-// =====================
-// CONFIRMAR PAGAMENTO
-// =====================
-async function pagar(id){
-  const { error } = await supabase
-    .from('clientes')
-    .update({ status: 'ativo' })
-    .eq('id', id);
+// CONTATOS
+async function mostrarContatos(){
+  tela = 'contatos';
 
-  if (error) {
-    console.error(error);
-    alert('Erro ao atualizar pagamento');
-    return;
-  }
+  document.getElementById('thead').innerHTML = `
+    <tr>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Ações</th>
+    </tr>
+  `;
 
-  alert('Pagamento confirmado');
-  carregar();
+  const { data } = await supabase.from('contatos').select('*');
+
+  let html = '';
+
+  data.forEach(c=>{
+    html += `
+      <tr>
+        <td>${c.nome||'Sem nome'}</td>
+        <td>${c.telefone}</td>
+        <td>
+          <button onclick="virarCliente('${c.telefone}')">Virar Cliente</button>
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('tabela').innerHTML = html;
 }
 
-// =====================
-// ATIVAR/DESATIVAR HUMANO
-// =====================
+// VIRAR CLIENTE
+async function virarCliente(telefone){
+  await supabase.rpc('virar_cliente', { p_telefone: telefone });
+  alert('Cliente criado');
+  mostrarClientes();
+}
+
+// PAGAMENTO
+async function pagar(id){
+  await supabase.from('clientes')
+    .update({ status:'ativo' })
+    .eq('id', id);
+
+  mostrarClientes();
+}
+
+// HUMANO
 async function humano(id, atual){
-  const { error } = await supabase
-    .from('clientes')
+  await supabase.from('clientes')
     .update({ atendimento_humano: !atual })
     .eq('id', id);
 
-  if (error) {
-    console.error(error);
-    alert('Erro ao atualizar modo humano');
-    return;
-  }
-
-  alert('Modo atualizado');
-  carregar();
+  mostrarClientes();
 }
 
-// =====================
-// BUSCAR
-// =====================
+// BUSCA
 async function buscar(){
   let termo = document.getElementById('busca').value;
 
-  const { data, error } = await supabase
-    .from('clientes')
+  const { data } = await supabase
+    .from(tela)
     .select('*')
     .ilike('telefone', `%${termo}%`);
 
-  if (error) {
-    console.error(error);
-    alert('Erro na busca');
-    return;
-  }
-
-  render(data);
+  if(tela === 'clientes') renderClientes(data);
+  else mostrarContatos();
 }
 
-// =====================
-// AUTO LOAD
-// =====================
-carregar();
-
+mostrarClientes();
 </script>
 
 </body>
