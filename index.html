@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Painel InovaTV</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+</head>
+<body>
+
+<h2>Painel Admin - InovaTV</h2>
+
+<input id="busca" placeholder="Telefone (ex: 55179...)">
+<button onclick="buscar()">Buscar</button>
+
+<table border="1" cellpadding="10">
+  <thead>
+    <tr>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Status</th>
+      <th>Vencimento</th>
+      <th>Ações</th>
+    </tr>
+  </thead>
+  <tbody id="tabela"></tbody>
+</table>
+
+<script>
+const supabase = supabase.createClient(
+  'https://tiupgtbzikwmseecxbvo.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+);
+
+async function carregar() {
+  let { data } = await supabase
+    .from('clientes')
+    .select('*')
+    .order('criado_em', { ascending: false });
+
+  render(data);
+}
+
+function render(clientes) {
+  let html = '';
+
+  clientes.forEach(c => {
+    html += `
+      <tr>
+        <td>${c.nome || '-'}</td>
+        <td>${c.telefone}</td>
+        <td>${c.status || '-'}</td>
+        <td>${c.vencimento || '-'}</td>
+        <td>
+          <button onclick="pagar('${c.id}')">Pago</button>
+          <button onclick="humano('${c.id}', ${c.atendimento_humano})">
+            ${c.atendimento_humano ? 'IA ON' : 'Humano'}
+          </button>
+        </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('tabela').innerHTML = html;
+}
+
+async function pagar(id){
+  await supabase
+    .from('clientes')
+    .update({ status: 'ativo' })
+    .eq('id', id);
+
+  alert('Pagamento confirmado');
+  carregar();
+}
+
+async function humano(id, atual){
+  await supabase
+    .from('clientes')
+    .update({ atendimento_humano: !atual })
+    .eq('id', id);
+
+  alert('Modo atualizado');
+  carregar();
+}
+
+async function buscar(){
+  let termo = document.getElementById('busca').value;
+
+  let { data } = await supabase
+    .from('clientes')
+    .select('*')
+    .ilike('telefone', `%${termo}%`);
+
+  render(data);
+}
+
+carregar();
+</script>
+
+</body>
+</html>
