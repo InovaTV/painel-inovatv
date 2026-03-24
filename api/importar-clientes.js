@@ -16,8 +16,16 @@ export default async function handler(req, res) {
 
     for (const c of clientes) {
 
-      const telefone = "55" + (c.telefone || "").replace(/\D/g, "");
+      // 🔥 NORMALIZA TELEFONE (CORRIGIDO)
+      let telefone = (c.telefone || "").replace(/\D/g, "");
 
+      telefone = telefone.replace(/^0+/, "");
+
+      if (!telefone.startsWith("55")) {
+        telefone = "55" + telefone;
+      }
+
+      // 🔥 UPSERT CLIENTES
       const response = await fetch(
         `${process.env.SUPABASE_URL}/rest/v1/clientes?on_conflict=telefone`,
         {
@@ -40,16 +48,24 @@ export default async function handler(req, res) {
               ? "ativo"
               : "inativo",
             servidor: c.servidor || "UNITV",
-            aplicativo: c.aplicativo || "UNITV"
+            aplicativo: c.aplicativo || "UNITV",
+            dispositivo: c.dispositivo || null,
+            telas: c.telas ? Number(c.telas) : 1,
+            forma_pagamento: c.forma_pagamento || "PIX",
+            observacao: c.observacao || "Importado automático"
           })
         }
       );
 
+      const data = await response.text();
+
       resultados.push({
         telefone,
-        status: response.status
+        status: response.status,
+        resposta: data
       });
 
+      // 🔥 UPSERT CONTATOS
       await fetch(
         `${process.env.SUPABASE_URL}/rest/v1/contatos?on_conflict=telefone`,
         {
@@ -73,6 +89,7 @@ export default async function handler(req, res) {
     return res.status(200).json({ resultados });
 
   } catch (e) {
+    console.log("ERRO:", e);
     return res.status(500).json({ error: e.message });
   }
 }
