@@ -3,7 +3,6 @@
 <head>
   <title>Painel InovaTV</title>
 
-  <!-- SUPABASE V2 CORRETO -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -25,6 +24,15 @@
 <input id="busca" placeholder="Telefone">
 <button onclick="buscar()">Buscar</button>
 
+<hr>
+
+<h3>Importação</h3>
+
+<input type="file" id="inputCSV" accept=".csv" />
+<button onclick="importarCSV()">IMPORTAR CSV</button>
+
+<button onclick="novoCliente()">NOVO CLIENTE</button>
+
 <br><br>
 
 <table border="1">
@@ -34,15 +42,15 @@
 
 <script>
 
-// ================= SUPABASE CONFIG
+// ================= SUPABASE
 const { createClient } = supabase;
 
 const client = createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'SUA_ANON_KEY_AQUI'
 );
 
-// ================= CONTROLE TELA
+// ================= CONTROLE
 let tela = 'clientes';
 
 // ================= CLIENTES
@@ -61,16 +69,8 @@ async function mostrarClientes(){
 
   const { data, error } = await client.from('clientes').select('*');
 
-  console.log('CLIENTES:', data, error);
-
   if (error){
     alert('Erro ao carregar clientes');
-    return;
-  }
-
-  if (!data || data.length === 0){
-    document.getElementById('tabela').innerHTML =
-      '<tr><td colspan="5">Nenhum cliente</td></tr>';
     return;
   }
 
@@ -110,16 +110,8 @@ async function mostrarContatos(){
 
   const { data, error } = await client.from('contatos').select('*');
 
-  console.log('CONTATOS:', data, error);
-
   if (error){
     alert('Erro ao carregar contatos');
-    return;
-  }
-
-  if (!data || data.length === 0){
-    document.getElementById('tabela').innerHTML =
-      '<tr><td colspan="3">Nenhum contato</td></tr>';
     return;
   }
 
@@ -149,7 +141,6 @@ async function virarCliente(telefone){
   });
 
   if (error){
-    console.error(error);
     alert('Erro ao converter cliente');
     return;
   }
@@ -160,30 +151,15 @@ async function virarCliente(telefone){
 
 // ================= PAGAMENTO
 async function pagar(id){
-  const { error } = await client
-    .from('clientes')
-    .update({ status:'ativo' })
-    .eq('id', id);
-
-  if (error){
-    alert('Erro ao atualizar');
-    return;
-  }
-
+  await client.from('clientes').update({ status:'ativo' }).eq('id', id);
   mostrarClientes();
 }
 
 // ================= HUMANO
 async function humano(id, atual){
-  const { error } = await client
-    .from('clientes')
+  await client.from('clientes')
     .update({ atendimento_humano: !atual })
     .eq('id', id);
-
-  if (error){
-    alert('Erro ao atualizar');
-    return;
-  }
 
   mostrarClientes();
 }
@@ -192,33 +168,102 @@ async function humano(id, atual){
 async function buscar(){
   let termo = document.getElementById('busca').value;
 
-  const { data, error } = await client
+  const { data } = await client
     .from(tela)
     .select('*')
     .ilike('telefone', `%${termo}%`);
 
-  if (error){
-    alert('Erro na busca');
+  let html = '';
+
+  data.forEach(c=>{
+    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||'-'}</td><td>${c.vencimento||'-'}</td><td>-</td></tr>`;
+  });
+
+  document.getElementById('tabela').innerHTML = html;
+}
+
+// ================= IMPORTAR CSV
+async function importarCSV(){
+
+  const file = document.getElementById("inputCSV").files[0];
+
+  if (!file){
+    alert("Selecione um CSV");
     return;
   }
 
-  if (tela === 'clientes'){
-    if (!data.length){
-      document.getElementById('tabela').innerHTML =
-        '<tr><td colspan="5">Nada encontrado</td></tr>';
-      return;
-    }
-    let html = '';
-    data.forEach(c=>{
-      html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td><td>${c.vencimento||'-'}</td><td>-</td></tr>`;
+  const text = await file.text();
+
+  const linhas = text.split("\n");
+  const cab = linhas[0].split(",");
+
+  const clientes = [];
+
+  for (let i=1;i<linhas.length;i++){
+
+    const dados = linhas[i].split(",");
+
+    if (!dados[0]) continue;
+
+    let obj = {};
+
+    cab.forEach((c,i)=>{
+      obj[c.trim().toLowerCase()] = dados[i]?.trim();
     });
-    document.getElementById('tabela').innerHTML = html;
-  } else {
-    mostrarContatos();
+
+    clientes.push({
+      nome: obj.nome,
+      telefone: obj.telefone,
+      usuario: obj.usuario,
+      senha: obj.senha,
+      plano: obj.plano,
+      valor: obj.valor,
+      vencimento: obj.vencimento,
+      servidor: obj.servidor,
+      aplicativo: obj.aplicativo,
+      dispositivo: obj.dispositivo,
+      telas: obj.telas,
+      forma_pagamento: obj.forma_pagamento
+    });
+
   }
+
+  await fetch("/api/importar-clientes", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ clientes })
+  });
+
+  alert("Importado com sucesso 🚀");
+  location.reload();
 }
 
-// ================= INIT
+// ================= NOVO CLIENTE
+async function novoCliente(){
+
+  const nome = prompt("Nome:");
+  const telefone = prompt("Telefone:");
+  const usuario = prompt("Usuário:");
+  const senha = prompt("Senha:");
+  const plano = prompt("Plano:");
+  const valor = prompt("Valor:");
+  const vencimento = prompt("Vencimento:");
+
+  const cliente = {
+    nome, telefone, usuario, senha, plano, valor, vencimento
+  };
+
+  await fetch("/api/importar-clientes", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ clientes:[cliente] })
+  });
+
+  alert("Cliente criado 🚀");
+  location.reload();
+}
+
+// INIT
 mostrarClientes();
 
 </script>
