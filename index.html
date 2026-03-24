@@ -30,7 +30,6 @@
 
 <input type="file" id="inputCSV" accept=".csv" />
 <button onclick="importarCSV()">IMPORTAR CSV</button>
-
 <button onclick="novoCliente()">NOVO CLIENTE</button>
 
 <br><br>
@@ -50,7 +49,6 @@ const client = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
-// ================= CONTROLE
 let tela = 'clientes';
 
 // ================= CLIENTES
@@ -67,12 +65,7 @@ async function mostrarClientes(){
     </tr>
   `;
 
-  const { data, error } = await client.from('clientes').select('*');
-
-  if (error){
-    alert('Erro ao carregar clientes');
-    return;
-  }
+  const { data } = await client.from('clientes').select('*');
 
   let html = '';
 
@@ -85,6 +78,15 @@ async function mostrarClientes(){
         <td>${c.vencimento || '-'}</td>
         <td>
           <button onclick="pagar('${c.id}')">Pago</button>
+
+          <button onclick="editarCliente('${c.id}','${c.nome}','${c.telefone}')">
+            Editar
+          </button>
+
+          <button onclick="deletarCliente('${c.id}')">
+            Excluir
+          </button>
+
           <button onclick="humano('${c.id}', ${c.atendimento_humano})">
             ${c.atendimento_humano ? 'IA ON' : 'Humano'}
           </button>
@@ -108,12 +110,7 @@ async function mostrarContatos(){
     </tr>
   `;
 
-  const { data, error } = await client.from('contatos').select('*');
-
-  if (error){
-    alert('Erro ao carregar contatos');
-    return;
-  }
+  const { data } = await client.from('contatos').select('*');
 
   let html = '';
 
@@ -126,6 +123,14 @@ async function mostrarContatos(){
           <button onclick="virarCliente('${c.telefone}')">
             Virar Cliente
           </button>
+
+          <button onclick="editarContato('${c.telefone}','${c.nome}')">
+            Editar
+          </button>
+
+          <button onclick="deletarContato('${c.telefone}')">
+            Excluir
+          </button>
         </td>
       </tr>
     `;
@@ -136,16 +141,8 @@ async function mostrarContatos(){
 
 // ================= VIRAR CLIENTE
 async function virarCliente(telefone){
-  const { error } = await client.rpc('virar_cliente', {
-    p_telefone: telefone
-  });
-
-  if (error){
-    alert('Erro ao converter cliente');
-    return;
-  }
-
-  alert('Cliente criado!');
+  await client.rpc('virar_cliente', { p_telefone: telefone });
+  alert("Cliente criado!");
   mostrarClientes();
 }
 
@@ -193,7 +190,6 @@ async function importarCSV(){
   }
 
   const text = await file.text();
-
   const linhas = text.split("\n");
   const cab = linhas[0].split(",");
 
@@ -211,21 +207,7 @@ async function importarCSV(){
       obj[c.trim().toLowerCase()] = dados[i]?.trim();
     });
 
-    clientes.push({
-      nome: obj.nome,
-      telefone: obj.telefone,
-      usuario: obj.usuario,
-      senha: obj.senha,
-      plano: obj.plano,
-      valor: obj.valor,
-      vencimento: obj.vencimento,
-      servidor: obj.servidor,
-      aplicativo: obj.aplicativo,
-      dispositivo: obj.dispositivo,
-      telas: obj.telas,
-      forma_pagamento: obj.forma_pagamento
-    });
-
+    clientes.push(obj);
   }
 
   await fetch("/api/importar-clientes", {
@@ -234,7 +216,7 @@ async function importarCSV(){
     body: JSON.stringify({ clientes })
   });
 
-  alert("Importado com sucesso 🚀");
+  alert("Importado 🚀");
   location.reload();
 }
 
@@ -243,24 +225,77 @@ async function novoCliente(){
 
   const nome = prompt("Nome:");
   const telefone = prompt("Telefone:");
-  const usuario = prompt("Usuário:");
-  const senha = prompt("Senha:");
-  const plano = prompt("Plano:");
-  const valor = prompt("Valor:");
-  const vencimento = prompt("Vencimento:");
 
-  const cliente = {
-    nome, telefone, usuario, senha, plano, valor, vencimento
-  };
+  if (!nome || !telefone) return;
 
   await fetch("/api/importar-clientes", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ clientes:[cliente] })
+    body: JSON.stringify({ clientes:[{ nome, telefone }] })
   });
 
   alert("Cliente criado 🚀");
   location.reload();
+}
+
+// ================= EDITAR CLIENTE
+async function editarCliente(id, nomeAtual, telefoneAtual){
+
+  const nome = prompt("Nome:", nomeAtual);
+  const telefone = prompt("Telefone:", telefoneAtual);
+
+  if (!nome || !telefone) return;
+
+  await client
+    .from('clientes')
+    .update({ nome, telefone })
+    .eq('id', id);
+
+  alert("Atualizado 🚀");
+  mostrarClientes();
+}
+
+// ================= DELETAR CLIENTE
+async function deletarCliente(id){
+
+  if (!confirm("Excluir cliente?")) return;
+
+  await client
+    .from('clientes')
+    .delete()
+    .eq('id', id);
+
+  alert("Deletado ❌");
+  mostrarClientes();
+}
+
+// ================= EDITAR CONTATO
+async function editarContato(telefone, nomeAtual){
+
+  const nome = prompt("Nome:", nomeAtual);
+  if (!nome) return;
+
+  await client
+    .from('contatos')
+    .update({ nome })
+    .eq('telefone', telefone);
+
+  alert("Atualizado 🚀");
+  mostrarContatos();
+}
+
+// ================= DELETAR CONTATO
+async function deletarContato(telefone){
+
+  if (!confirm("Excluir contato?")) return;
+
+  await client
+    .from('contatos')
+    .delete()
+    .eq('telefone', telefone);
+
+  alert("Deletado ❌");
+  mostrarContatos();
 }
 
 // INIT
