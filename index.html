@@ -2,6 +2,7 @@
 <html>
 <head>
   <title>Painel InovaTV</title>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -20,7 +21,7 @@
 
 <br><br>
 
-<input id="busca" placeholder="Telefone">
+<input id="busca" placeholder="Telefone ou Nome">
 <button onclick="buscar()">Buscar</button>
 
 <hr>
@@ -30,6 +31,7 @@
 <input type="file" id="inputCSV" accept=".csv" />
 <button onclick="importarCSV()">IMPORTAR CSV</button>
 <button onclick="novoCliente()">NOVO CLIENTE</button>
+<button onclick="deletarSelecionados()">Excluir selecionados</button>
 
 <br><br>
 
@@ -55,6 +57,7 @@ async function mostrarClientes(){
 
   document.getElementById('thead').innerHTML = `
     <tr>
+      <th></th>
       <th>Nome</th>
       <th>Telefone</th>
       <th>Status</th>
@@ -70,6 +73,7 @@ async function mostrarClientes(){
   data.forEach(c=>{
     html += `
       <tr>
+        <td><input type="checkbox" class="checkCliente" value="${c.id}"></td>
         <td>${c.nome || '-'}</td>
         <td>${c.telefone}</td>
         <td>${c.status || '-'}</td>
@@ -122,7 +126,46 @@ async function mostrarContatos(){
   document.getElementById('tabela').innerHTML = html;
 }
 
-// ================= IMPORTAR CSV (CORRIGIDO)
+// ================= DELETE MULTI
+async function deletarSelecionados(){
+
+  const checks = document.querySelectorAll(".checkCliente:checked");
+
+  if (checks.length === 0){
+    alert("Selecione clientes");
+    return;
+  }
+
+  if (!confirm(`Excluir ${checks.length} cliente(s)?`)) return;
+
+  for (const c of checks){
+    await client.from('clientes').delete().eq('id', c.value);
+  }
+
+  alert("Excluídos 🚀");
+  mostrarClientes();
+}
+
+// ================= BUSCA
+async function buscar(){
+
+  let termo = document.getElementById('busca').value;
+
+  const { data } = await client
+    .from(tela)
+    .select('*')
+    .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
+
+  let html = '';
+
+  data.forEach(c=>{
+    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||'-'}</td><td>${c.vencimento||'-'}</td><td>-</td></tr>`;
+  });
+
+  document.getElementById('tabela').innerHTML = html;
+}
+
+// ================= IMPORTAR CSV
 async function importarCSV(){
 
   const file = document.getElementById("inputCSV").files[0];
@@ -158,8 +201,6 @@ async function importarCSV(){
     clientes.push(obj);
   }
 
-  console.log("CLIENTES:", clientes);
-
   await fetch("/api/importar-clientes", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -186,7 +227,7 @@ async function novoCliente(){
   location.reload();
 }
 
-// ================= FUNÇÕES CRUD
+// ================= OUTROS
 async function pagar(id){
   await client.from('clientes').update({ status:'ativo' }).eq('id', id);
   mostrarClientes();
@@ -232,19 +273,10 @@ async function virarCliente(telefone){
   mostrarClientes();
 }
 
-async function buscar(){
-  let termo = document.getElementById('busca').value;
-  const { data } = await client.from(tela).select('*').ilike('telefone', `%${termo}%`);
-  let html = '';
-  data.forEach(c=>{
-    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||'-'}</td><td>${c.vencimento||'-'}</td><td>-</td></tr>`;
-  });
-  document.getElementById('tabela').innerHTML = html;
-}
-
 // INIT
 mostrarClientes();
 
 </script>
+
 </body>
 </html>
