@@ -1,82 +1,48 @@
-import { createClient } from "@supabase/supabase-js";
+export default async function handler(req, res) {
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_KEY
-);
-
-function formatarTelefone(tel) {
-  if (!tel) return null;
-
-  let numero = tel.toString().replace(/\D/g, "");
-
-  if (numero.startsWith("55")) {
-    numero = numero.slice(2);
+  if (req.method !== "POST") {
+    return res.status(200).json({ ok: true });
   }
 
-  return "55" + numero;
-}
-
-function definirStatus(vencimento) {
-  if (!vencimento) return "inativo";
-
-  const hoje = new Date();
-  const venc = new Date(vencimento);
-
-  return venc >= hoje ? "ativo" : "inativo";
-}
-
-export default async function handler(req, res) {
   try {
 
-    const clientes = req.body.clientes;
+    const body = typeof req.body === "string"
+      ? JSON.parse(req.body)
+      : req.body;
+
+    const clientes = body.clientes || [];
 
     for (const c of clientes) {
 
-      const telefone = formatarTelefone(c.telefone);
-      if (!telefone) continue;
+      const telefone = "55" + (c.telefone || "").replace(/\D/g, "");
 
-      const status = definirStatus(c.vencimento);
-
-      const { data: existente } = await supabase
-        .from("clientes")
-        .select("id")
-        .eq("telefone", telefone)
-        .maybeSingle();
-
-      if (!existente) {
-        await supabase.from("clientes").insert({
-          nome: c.nome,
+      await fetch(`${process.env.SUPABASE_URL}/rest/v1/clientes`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": process.env.SUPABASE_KEY,
+          "Authorization": `Bearer ${process.env.SUPABASE_KEY}`
+        },
+        body: JSON.stringify({
+          nome: c.nome || "Cliente",
           telefone,
           usuario: c.usuario || null,
           senha: c.senha || null,
           plano: c.plano || null,
           valor: c.valor ? Number(c.valor) : null,
           vencimento: c.vencimento || null,
-          status,
+          status: "ativo",
           servidor: c.servidor || "UNITV",
-          aplicativo: c.aplicativo || "UNITV",
-          dispositivo: c.dispositivo || null,
-          telas: c.telas ? Number(c.telas) : 1,
-          forma_pagamento: c.forma_pagamento || "PIX",
-          mac: c.mac || null,
-          observacao: c.observacao || "Importado automático",
-          criado_em: new Date()
-        });
-      }
-
-      await supabase.from("contatos").upsert({
-        telefone,
-        nome: c.nome,
-        cliente: true
-      }, { onConflict: "telefone" });
+          aplicativo: c.aplicativo || "UNITV"
+        })
+      });
 
     }
 
-    res.status(200).json({ ok: true });
+    return res.status(200).json({ ok: true });
 
   } catch (e) {
-    console.log(e);
-    res.status(500).json({ error: e.message });
+    console.log("ERRO:", e);
+    return res.status(500).json({ error: e.message });
   }
 }
