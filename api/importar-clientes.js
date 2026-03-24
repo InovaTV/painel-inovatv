@@ -1,77 +1,78 @@
-async function importarCSV(){
+export default async function handler(req, res) {
 
-  const file = document.getElementById("inputCSV").files[0];
-
-  if (!file){
-    alert("Selecione um CSV");
-    return;
+  if (req.method !== "POST") {
+    return res.status(200).json({ ok: true });
   }
 
-  let text = await file.text();
+  try {
 
-  // 🔥 normaliza quebra de linha (corrige Windows)
-  text = text.replace(/\r/g, "");
+    const body = typeof req.body === "string"
+      ? JSON.parse(req.body)
+      : req.body;
 
-  // 🔥 detecta separador
-  const separador = text.includes(";") ? ";" : ",";
+    const clientes = body.clientes || [];
 
-  const linhas = text.split("\n").filter(l => l.trim() !== "");
+    const resultados = [];
 
-  if (linhas.length < 2){
-    alert("CSV vazio ou inválido");
-    return;
+    for (const c of clientes) {
+
+      const telefone = "55" + (c.telefone || "").replace(/\D/g, "");
+
+      const response = await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/clientes?on_conflict=telefone`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": process.env.SUPABASE_KEY,
+            "Authorization": `Bearer ${process.env.SUPABASE_KEY}`,
+            "Prefer": "resolution=merge-duplicates,return=representation"
+          },
+          body: JSON.stringify({
+            nome: c.nome || "Cliente",
+            telefone,
+            usuario: c.usuario || null,
+            senha: c.senha || null,
+            plano: c.plano || null,
+            valor: c.valor ? Number(c.valor) : null,
+            vencimento: c.vencimento || null,
+            status: c.vencimento && new Date(c.vencimento) >= new Date()
+              ? "ativo"
+              : "inativo",
+            servidor: c.servidor || "UNITV",
+            aplicativo: c.aplicativo || "UNITV"
+          })
+        }
+      );
+
+      resultados.push({
+        telefone,
+        status: response.status
+      });
+
+      await fetch(
+        `${process.env.SUPABASE_URL}/rest/v1/contatos?on_conflict=telefone`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": process.env.SUPABASE_KEY,
+            "Authorization": `Bearer ${process.env.SUPABASE_KEY}`,
+            "Prefer": "resolution=merge-duplicates"
+          },
+          body: JSON.stringify({
+            telefone,
+            nome: c.nome || "Cliente",
+            cliente: true
+          })
+        }
+      );
+
+    }
+
+    return res.status(200).json({ resultados });
+
+  } catch (e) {
+    return res.status(500).json({ error: e.message });
   }
-
-  const cab = linhas[0].split(separador).map(c => c.trim().toLowerCase());
-
-  const clientes = [];
-
-  for (let i = 1; i < linhas.length; i++){
-
-    const dados = linhas[i].split(separador);
-
-    let obj = {};
-
-    cab.forEach((c, index)=>{
-      obj[c] = dados[index]?.trim();
-    });
-
-    // 🔥 valida telefone
-    if (!obj.telefone || obj.telefone.length < 8) continue;
-
-    clientes.push({
-      nome: obj.nome || "Cliente",
-      telefone: obj.telefone,
-      usuario: obj.usuario,
-      senha: obj.senha,
-      plano: obj.plano,
-      valor: obj.valor,
-      vencimento: obj.vencimento,
-      servidor: obj.servidor,
-      aplicativo: obj.aplicativo,
-      dispositivo: obj.dispositivo,
-      telas: obj.telas,
-      forma_pagamento: obj.forma_pagamento
-    });
-  }
-
-  console.log("CLIENTES LIDOS:", clientes);
-
-  if (clientes.length === 0){
-    alert("Nenhum cliente válido encontrado");
-    return;
-  }
-
-  const res = await fetch("/api/importar-clientes", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ clientes })
-  });
-
-  const result = await res.json();
-
-  console.log("RESPOSTA API:", result);
-
-  alert("Importação concluída 🚀");
-  location.reload();
 }
