@@ -7,30 +7,40 @@ async function importarCSV(){
     return;
   }
 
-  const text = await file.text();
+  let text = await file.text();
 
-  // 🔥 detecta separador automaticamente
+  // 🔥 normaliza quebra de linha (corrige Windows)
+  text = text.replace(/\r/g, "");
+
+  // 🔥 detecta separador
   const separador = text.includes(";") ? ";" : ",";
 
-  const linhas = text.split("\n");
-  const cab = linhas[0].split(separador);
+  const linhas = text.split("\n").filter(l => l.trim() !== "");
+
+  if (linhas.length < 2){
+    alert("CSV vazio ou inválido");
+    return;
+  }
+
+  const cab = linhas[0].split(separador).map(c => c.trim().toLowerCase());
 
   const clientes = [];
 
-  for (let i=1;i<linhas.length;i++){
+  for (let i = 1; i < linhas.length; i++){
 
     const dados = linhas[i].split(separador);
 
-    if (!dados[0]) continue;
-
     let obj = {};
 
-    cab.forEach((c,i)=>{
-      obj[c.trim().toLowerCase()] = dados[i]?.trim();
+    cab.forEach((c, index)=>{
+      obj[c] = dados[index]?.trim();
     });
 
+    // 🔥 valida telefone
+    if (!obj.telefone || obj.telefone.length < 8) continue;
+
     clientes.push({
-      nome: obj.nome,
+      nome: obj.nome || "Cliente",
       telefone: obj.telefone,
       usuario: obj.usuario,
       senha: obj.senha,
@@ -43,17 +53,25 @@ async function importarCSV(){
       telas: obj.telas,
       forma_pagamento: obj.forma_pagamento
     });
-
   }
 
-  console.log(clientes); // 👈 DEBUG (importante)
+  console.log("CLIENTES LIDOS:", clientes);
 
-  await fetch("/api/importar-clientes", {
+  if (clientes.length === 0){
+    alert("Nenhum cliente válido encontrado");
+    return;
+  }
+
+  const res = await fetch("/api/importar-clientes", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
     body: JSON.stringify({ clientes })
   });
 
-  alert("Importado corretamente 🚀");
+  const result = await res.json();
+
+  console.log("RESPOSTA API:", result);
+
+  alert("Importação concluída 🚀");
   location.reload();
 }
