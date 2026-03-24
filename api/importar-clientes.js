@@ -12,16 +12,19 @@ export default async function handler(req, res) {
 
     const clientes = body.clientes || [];
 
+    const resultados = [];
+
     for (const c of clientes) {
 
       const telefone = "55" + (c.telefone || "").replace(/\D/g, "");
 
-      await fetch(`${process.env.SUPABASE_URL}/rest/v1/clientes`, {
+      const response = await fetch(`${process.env.SUPABASE_URL}/rest/v1/clientes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "apikey": process.env.SUPABASE_KEY,
-          "Authorization": `Bearer ${process.env.SUPABASE_KEY}`
+          "Authorization": `Bearer ${process.env.SUPABASE_KEY}`,
+          "Prefer": "return=representation"
         },
         body: JSON.stringify({
           nome: c.nome || "Cliente",
@@ -37,12 +40,18 @@ export default async function handler(req, res) {
         })
       });
 
+      const data = await response.text();
+
+      resultados.push({
+        status: response.status,
+        resposta: data
+      });
+
     }
 
-    return res.status(200).json({ ok: true });
+    return res.status(200).json({ resultados });
 
   } catch (e) {
-    console.log("ERRO:", e);
     return res.status(500).json({ error: e.message });
   }
 }
