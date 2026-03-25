@@ -10,6 +10,7 @@
 <style>
 body { font-family: Arial; padding:20px; }
 
+/* BOTÕES */
 button {
   margin:4px;
   padding:6px 12px;
@@ -25,11 +26,25 @@ button {
 .btn-laranja { background:#ff9800; color:#fff; }
 .btn-cinza { background:#ddd; }
 
-#progressBar { width:100%; background:#ccc; height:20px; margin-top:10px; }
+.ativoTela {
+  background:#000 !important;
+  color:#fff !important;
+}
+
+/* PROGRESSO */
+#progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
+/* TABELA */
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; border:1px solid #ccc; }
+
+/* DASH */
+#dashboard {
+  background:#f5f5f5;
+  padding:10px;
+  margin-top:15px;
+}
 </style>
 </head>
 
@@ -37,8 +52,13 @@ th,td { padding:8px; border:1px solid #ccc; }
 
 <h2>Painel InovaTV</h2>
 
-<button class="btn-azul" onclick="mostrarClientes()">Clientes</button>
-<button class="btn-azul" onclick="mostrarContatos()">Contatos</button>
+<!-- STATUS ATUAL -->
+<h3 id="statusTela">Você está em: CLIENTES</h3>
+
+<button id="btnClientes" class="btn-azul ativoTela" onclick="mostrarClientes()">Clientes</button>
+<button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
+
+<button class="btn-laranja" onclick="abrirFinanceiro()">Abrir Financeiro</button>
 
 <br><br>
 
@@ -52,6 +72,15 @@ th,td { padding:8px; border:1px solid #ccc; }
 
 <div id="progressBar">
   <div id="progress">0%</div>
+</div>
+
+<hr>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+  💰 Faturamento: R$ <span id="faturamento">0</span> |
+  ✅ Ativos: <span id="ativos">0</span> |
+  ❌ Inativos: <span id="inativos">0</span>
 </div>
 
 <hr>
@@ -85,6 +114,18 @@ const client = supabase.createClient(
 
 let tela = 'clientes';
 
+// ================= TROCAR TELA VISUAL
+function atualizarTelaUI(){
+
+  statusTela.innerText = "Você está em: " + tela.toUpperCase();
+
+  btnClientes.classList.remove("ativoTela");
+  btnContatos.classList.remove("ativoTela");
+
+  if(tela==='clientes') btnClientes.classList.add("ativoTela");
+  else btnContatos.classList.add("ativoTela");
+}
+
 // ================= CONTADOR
 function atualizarContador(){
   contador.innerText =
@@ -103,52 +144,43 @@ function resetarProgresso(){
   progress.innerText = "0%";
 }
 
-// ================= SELEÇÃO
-function selecionarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=true);
-  atualizarContador();
-}
+// ================= DASHBOARD
+async function carregarDashboard(){
 
-function desmarcarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=false);
-  atualizarContador();
-}
+  const { data } = await client.from('clientes').select('*');
 
-// ================= FILTROS
-function selecionarAtivos(){
-  if(tela !== 'clientes') return;
+  let total=0, ativos=0, inativos=0;
 
-  document.querySelectorAll(".check").forEach(c=>{
-    c.checked = c.dataset.status === "ativo";
+  data.forEach(c=>{
+    total += Number(c.valor || 0);
+    if(c.status==="ativo") ativos++;
+    else inativos++;
   });
 
-  atualizarContador();
-}
+  faturamento.innerText = total;
+  ativosEl = document.getElementById("ativos");
+  inativosEl = document.getElementById("inativos");
 
-function selecionarVencidos(){
-  if(tela !== 'clientes') return;
-
-  document.querySelectorAll(".check").forEach(c=>{
-    c.checked = c.dataset.status === "inativo";
-  });
-
-  atualizarContador();
+  ativosEl.innerText = ativos;
+  inativosEl.innerText = inativos;
 }
 
 // ================= CLIENTES
 async function mostrarClientes(){
 
   tela='clientes';
+  atualizarTelaUI();
   resetarProgresso();
 
   const { data } = await client.from('clientes').select('*');
 
   thead.innerHTML = `
     <tr>
-      <th><input type="checkbox" id="checkAll"></th>
+      <th></th>
       <th>Nome</th>
       <th>Telefone</th>
       <th>Status</th>
+      <th>Vencimento</th>
       <th>Ações</th>
     </tr>
   `;
@@ -158,18 +190,12 @@ async function mostrarClientes(){
   data.forEach(c=>{
     html+=`
     <tr>
-      <td>
-        <input type="checkbox"
-          class="check"
-          data-id="${c.id}"
-          data-status="${c.status}"
-          onchange="atualizarContador()">
-      </td>
+      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status}" onchange="atualizarContador()"></td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
       <td>${c.status}</td>
+      <td>${c.vencimento||''}</td>
       <td>
-        <button class="btn-verde" onclick="renovarCliente('${c.id}')">Renovar</button>
         <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
       </td>
     </tr>
@@ -178,27 +204,22 @@ async function mostrarClientes(){
 
   tabela.innerHTML = html;
 
-  document.getElementById("checkAll").onclick = function(){
-    document.querySelectorAll(".check").forEach(c=>{
-      c.checked = this.checked;
-    });
-    atualizarContador();
-  };
-
   atualizarContador();
+  carregarDashboard();
 }
 
 // ================= CONTATOS
 async function mostrarContatos(){
 
   tela='contatos';
+  atualizarTelaUI();
   resetarProgresso();
 
   const { data } = await client.from('contatos').select('*');
 
   thead.innerHTML = `
     <tr>
-      <th><input type="checkbox" id="checkAll"></th>
+      <th></th>
       <th>Nome</th>
       <th>Telefone</th>
       <th>Ações</th>
@@ -210,12 +231,7 @@ async function mostrarContatos(){
   data.forEach(c=>{
     html+=`
     <tr>
-      <td>
-        <input type="checkbox"
-          class="check"
-          data-id="${c.id}"
-          onchange="atualizarContador()">
-      </td>
+      <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarContador()"></td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
       <td>
@@ -227,23 +243,16 @@ async function mostrarContatos(){
 
   tabela.innerHTML = html;
 
-  document.getElementById("checkAll").onclick = function(){
-    document.querySelectorAll(".check").forEach(c=>{
-      c.checked = this.checked;
-    });
-    atualizarContador();
-  };
-
   atualizarContador();
 }
 
-// ================= IMPORTAR
+// ================= IMPORTAÇÃO COMPLETA
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
 
-  if(!confirm("Deseja importar o arquivo?")) return;
+  if(!confirm("Importar dados completos do Excel?")) return;
 
   resetarProgresso();
 
@@ -255,55 +264,58 @@ async function importarArquivo(){
 
     let c = json[i];
 
-    let telefone = (c.telefone||c.Telefone||"")
-      .toString().replace(/\D/g,"");
-
-    if(!telefone) continue;
-
     await fetch("/api/importar-clientes",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body:JSON.stringify({
-        clientes:[{ nome:c.nome||c.Nome, telefone }]
+        clientes:[{
+          nome:c.nome,
+          telefone:(c.telefone||"").toString().replace(/\D/g,""),
+          usuario:c.usuario,
+          senha:c.senha,
+          vencimento:c.vencimento,
+          status:c.status,
+          valor:c.valor,
+          dispositivo:c.dispositivo,
+          aplicativo:c.aplicativo
+        }]
       })
     });
 
     atualizarProgresso(i+1,json.length);
   }
 
-  alert("Importado 🚀");
+  alert("Importação completa 🚀");
   mostrarClientes();
 }
 
-// ================= RENOVAR
-async function renovarCliente(id){
-
-  let d = new Date();
-  d.setDate(d.getDate()+30);
-
-  await client.from('clientes')
-    .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
-    .eq('id', id);
-
-  mostrarClientes();
+// ================= AÇÕES
+function selecionarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=true);
+  atualizarContador();
 }
 
-async function renovarSelecionados(){
+function desmarcarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
+  atualizarContador();
+}
 
-  let checks = document.querySelectorAll(".check:checked");
+function selecionarAtivos(){
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = c.dataset.status==="ativo";
+  });
+  atualizarContador();
+}
 
-  if(checks.length === 0) return alert("Selecione pelo menos 1");
-
-  for(let c of checks){
-    await renovarCliente(c.dataset.id);
-  }
-
-  alert("Renovados 🚀");
+function selecionarVencidos(){
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = c.dataset.status==="inativo";
+  });
+  atualizarContador();
 }
 
 // ================= DELETE
 async function deletarItem(id){
-
   if(!confirm("Excluir item?")) return;
 
   await client.from(tela).delete().eq('id', id);
@@ -316,7 +328,7 @@ async function deletarSelecionados(){
 
   let checks = document.querySelectorAll(".check:checked");
 
-  if(checks.length === 0) return alert("Selecione pelo menos 1");
+  if(checks.length===0) return alert("Selecione pelo menos 1");
 
   if(!confirm("Excluir selecionados?")) return;
 
@@ -330,23 +342,9 @@ async function deletarSelecionados(){
   else mostrarContatos();
 }
 
-// ================= BUSCA
-async function buscar(){
-
-  let termo = busca.value;
-
-  const { data } = await client
-    .from(tela)
-    .select('*')
-    .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
-
-  let html='';
-
-  data.forEach(c=>{
-    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td></tr>`;
-  });
-
-  tabela.innerHTML = html;
+// ================= FINANCEIRO NOVA ABA
+function abrirFinanceiro(){
+  window.open(window.location.href + "?financeiro=true","_blank");
 }
 
 // INIT
