@@ -22,6 +22,7 @@ button {
 .btn-azul { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
+.btn-laranja { background:#ff9800; color:#fff; }
 .btn-cinza { background:#ddd; }
 
 #progressBar { width:100%; background:#ccc; height:20px; margin-top:10px; }
@@ -61,6 +62,11 @@ th,td { padding:8px; border:1px solid #ccc; }
 
 <button class="btn-cinza" onclick="selecionarTodos()">Selecionar todos</button>
 <button class="btn-cinza" onclick="desmarcarTodos()">Desmarcar</button>
+
+<button class="btn-laranja" onclick="selecionarAtivos()">Ativos</button>
+<button class="btn-laranja" onclick="selecionarVencidos()">Vencidos</button>
+
+<button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <br><br>
@@ -81,8 +87,8 @@ let tela = 'clientes';
 
 // ================= CONTADOR
 function atualizarContador(){
-  const total = document.querySelectorAll(".check:checked").length;
-  contador.innerText = "Selecionados: " + total;
+  contador.innerText =
+    "Selecionados: " + document.querySelectorAll(".check:checked").length;
 }
 
 // ================= PROGRESSO
@@ -108,6 +114,27 @@ function desmarcarTodos(){
   atualizarContador();
 }
 
+// ================= FILTROS
+function selecionarAtivos(){
+  if(tela !== 'clientes') return;
+
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = c.dataset.status === "ativo";
+  });
+
+  atualizarContador();
+}
+
+function selecionarVencidos(){
+  if(tela !== 'clientes') return;
+
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = c.dataset.status === "inativo";
+  });
+
+  atualizarContador();
+}
+
 // ================= CLIENTES
 async function mostrarClientes(){
 
@@ -121,6 +148,7 @@ async function mostrarClientes(){
       <th><input type="checkbox" id="checkAll"></th>
       <th>Nome</th>
       <th>Telefone</th>
+      <th>Status</th>
       <th>Ações</th>
     </tr>
   `;
@@ -131,13 +159,17 @@ async function mostrarClientes(){
     html+=`
     <tr>
       <td>
-        <input type="checkbox" class="check"
-        data-id="${c.id}"
-        onchange="atualizarContador()">
+        <input type="checkbox"
+          class="check"
+          data-id="${c.id}"
+          data-status="${c.status}"
+          onchange="atualizarContador()">
       </td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
+      <td>${c.status}</td>
       <td>
+        <button class="btn-verde" onclick="renovarCliente('${c.id}')">Renovar</button>
         <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
       </td>
     </tr>
@@ -179,9 +211,10 @@ async function mostrarContatos(){
     html+=`
     <tr>
       <td>
-        <input type="checkbox" class="check"
-        data-id="${c.id}"
-        onchange="atualizarContador()">
+        <input type="checkbox"
+          class="check"
+          data-id="${c.id}"
+          onchange="atualizarContador()">
       </td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
@@ -210,7 +243,7 @@ async function importarArquivo(){
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
 
-  if(!confirm("Deseja importar este arquivo?")) return;
+  if(!confirm("Deseja importar o arquivo?")) return;
 
   resetarProgresso();
 
@@ -242,7 +275,33 @@ async function importarArquivo(){
   mostrarClientes();
 }
 
-// ================= DELETE INDIVIDUAL
+// ================= RENOVAR
+async function renovarCliente(id){
+
+  let d = new Date();
+  d.setDate(d.getDate()+30);
+
+  await client.from('clientes')
+    .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
+    .eq('id', id);
+
+  mostrarClientes();
+}
+
+async function renovarSelecionados(){
+
+  let checks = document.querySelectorAll(".check:checked");
+
+  if(checks.length === 0) return alert("Selecione pelo menos 1");
+
+  for(let c of checks){
+    await renovarCliente(c.dataset.id);
+  }
+
+  alert("Renovados 🚀");
+}
+
+// ================= DELETE
 async function deletarItem(id){
 
   if(!confirm("Excluir item?")) return;
@@ -253,30 +312,16 @@ async function deletarItem(id){
   else mostrarContatos();
 }
 
-// ================= DELETE MASSA
 async function deletarSelecionados(){
 
   let checks = document.querySelectorAll(".check:checked");
-  let total = checks.length;
 
-  if(total===0) return alert("Selecione pelo menos 1");
+  if(checks.length === 0) return alert("Selecione pelo menos 1");
 
-  let tipo = tela === 'clientes' ? 'clientes' : 'contatos';
-
-  if(!confirm(`Excluir ${total} ${tipo}?`)) return;
-
-  resetarProgresso();
-
-  let i=0;
+  if(!confirm("Excluir selecionados?")) return;
 
   for(let c of checks){
-
-    await client.from(tela)
-      .delete()
-      .eq('id', c.dataset.id);
-
-    i++;
-    atualizarProgresso(i,total);
+    await client.from(tela).delete().eq('id', c.dataset.id);
   }
 
   alert("Excluído 🚀");
@@ -298,17 +343,10 @@ async function buscar(){
   let html='';
 
   data.forEach(c=>{
-    html+=`
-      <tr>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-      </tr>
-    `;
+    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td></tr>`;
   });
 
   tabela.innerHTML = html;
-
-  atualizarContador();
 }
 
 // INIT
