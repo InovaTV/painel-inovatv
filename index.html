@@ -4,25 +4,45 @@
   <meta charset="UTF-8">
   <title>Painel InovaTV</title>
 
-  <!-- SUPABASE -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- XLSX -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
     body { font-family: Arial; padding: 20px; }
-    button { margin: 3px; }
-    table { border-collapse: collapse; width: 100%; }
-    th, td { padding: 8px; }
+
+    button {
+      margin: 3px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    .ativo {
+      background: #4CAF50;
+      color: white;
+      font-weight: bold;
+    }
+
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    th, td {
+      padding: 8px;
+    }
+
+    #progress {
+      margin-top: 10px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
 <h2>Painel InovaTV</h2>
 
-<button onclick="mostrarClientes()">Clientes</button>
-<button onclick="mostrarContatos()">Contatos</button>
+<button id="btnClientes" onclick="mostrarClientes()">Clientes</button>
+<button id="btnContatos" onclick="mostrarContatos()">Contatos</button>
 
 <br><br>
 
@@ -31,22 +51,23 @@
 
 <hr>
 
-<h3>Importação</h3>
+<h3>Importação Excel</h3>
 
-<input type="file" id="inputArquivo" accept=".xlsx,.csv" />
+<input type="file" id="inputArquivo" accept=".xlsx" />
 <button onclick="importarArquivo()">IMPORTAR EXCEL</button>
-<button onclick="novoCliente()">NOVO CLIENTE</button>
+
+<div id="progress"></div>
 
 <hr>
 
 <h3>Ações</h3>
 
 <button onclick="toggleTodos(true)">Selecionar todos</button>
-<button onclick="toggleTodos(false)">Desmarcar todos</button>
-<button onclick="selecionarAtivos()">Selecionar ativos</button>
-<button onclick="selecionarVencidos()">Selecionar vencidos</button>
-<button onclick="renovarSelecionados()">Renovar selecionados</button>
-<button onclick="deletarSelecionados()">Excluir selecionados</button>
+<button onclick="toggleTodos(false)">Desmarcar</button>
+<button onclick="selecionarAtivos()">Ativos</button>
+<button onclick="selecionarVencidos()">Vencidos</button>
+<button onclick="renovarSelecionados()">Renovar</button>
+<button onclick="deletarSelecionados()">Excluir</button>
 
 <br><br>
 
@@ -57,59 +78,81 @@
 
 <script>
 
-const { createClient } = supabase;
-
-const client = createClient(
+const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
 let tela = 'clientes';
 
-// ================= IMPORTAR XLSX
+// ================= BOTÃO ATIVO
+function ativarBotao(){
+  document.getElementById("btnClientes").classList.remove("ativo");
+  document.getElementById("btnContatos").classList.remove("ativo");
+
+  if (tela === 'clientes'){
+    document.getElementById("btnClientes").classList.add("ativo");
+  } else {
+    document.getElementById("btnContatos").classList.add("ativo");
+  }
+}
+
+// ================= IMPORTAR XLSX COM PROGRESSO
 async function importarArquivo(){
 
   const file = document.getElementById("inputArquivo").files[0];
 
-  if (!file){
-    alert("Selecione um arquivo");
-    return;
-  }
+  if (!file) return alert("Selecione um arquivo");
 
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(data);
-
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
-
   const json = XLSX.utils.sheet_to_json(sheet);
 
-  console.log("EXCEL:", json);
+  let erros = 0;
 
-  const clientes = json.map(c => ({
-    nome: c.nome || c.Nome,
-    telefone: c.telefone || c.Telefone,
-    usuario: c.usuario || c.Usuario,
-    senha: c.senha || c.Senha,
-    plano: c.plano || c.Plano,
-    valor: c.valor || c.Valor,
-    vencimento: c.vencimento || c.Vencimento,
-    dispositivo: c.dispositivo || c.Dispositivo,
-    telas: c.telas || c.Telas
-  }));
+  for (let i = 0; i < json.length; i++){
 
-  await fetch("/api/importar-clientes", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ clientes })
-  });
+    const c = json[i];
 
-  alert("Importado do Excel 🚀");
+    let telefone = (c.telefone || c.Telefone || "").toString().replace(/\D/g,"");
+
+    if (!telefone || telefone.length < 10){
+      erros++;
+      continue;
+    }
+
+    document.getElementById("progress").innerText =
+      `Importando ${i+1}/${json.length}`;
+
+    await fetch("/api/importar-clientes", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        clientes:[{
+          nome: c.nome || c.Nome,
+          telefone,
+          usuario: c.usuario || c.Usuario,
+          senha: c.senha || c.Senha,
+          plano: c.plano || c.Plano,
+          valor: c.valor || c.Valor,
+          vencimento: c.vencimento || c.Vencimento
+        }]
+      })
+    });
+  }
+
+  document.getElementById("progress").innerText =
+    `Finalizado ✅ | Erros: ${erros}`;
+
   mostrarClientes();
 }
 
 // ================= CLIENTES
 async function mostrarClientes(){
+
   tela = 'clientes';
+  ativarBotao();
 
   document.getElementById('thead').innerHTML = `
     <tr>
@@ -139,9 +182,39 @@ async function mostrarClientes(){
         <td>${c.vencimento || '-'}</td>
         <td>
           <button onclick="renovarCliente('${c.id}')">Renovar</button>
-          <button onclick="editarCliente('${c.id}','${c.nome}','${c.telefone}')">Editar</button>
           <button onclick="deletarCliente('${c.id}')">Excluir</button>
         </td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('tabela').innerHTML = html;
+}
+
+// ================= CONTATOS
+async function mostrarContatos(){
+
+  tela = 'contatos';
+  ativarBotao();
+
+  document.getElementById('thead').innerHTML = `
+    <tr>
+      <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
+      <th>Nome</th>
+      <th>Telefone</th>
+    </tr>
+  `;
+
+  const { data } = await client.from('contatos').select('*');
+
+  let html = '';
+
+  data.forEach(c=>{
+    html += `
+      <tr>
+        <td><input type="checkbox" class="checkContato" value="${c.telefone}"></td>
+        <td>${c.nome}</td>
+        <td>${c.telefone}</td>
       </tr>
     `;
   });
@@ -165,13 +238,14 @@ function selecionarVencidos(){
     .forEach(c => c.checked = c.dataset.status === "inativo");
 }
 
+// ================= RENOVAR
 async function renovarCliente(id){
 
   const nova = new Date();
   nova.setDate(nova.getDate() + 30);
 
   await client.from('clientes').update({
-    status: 'ativo',
+    status:'ativo',
     vencimento: nova.toISOString().split('T')[0]
   }).eq('id', id);
 
@@ -189,15 +263,33 @@ async function renovarSelecionados(){
   alert("Renovados 🚀");
 }
 
+// ================= DELETE
 async function deletarSelecionados(){
 
-  const checks = document.querySelectorAll(".checkCliente:checked");
+  if (tela === 'clientes'){
+    const checks = document.querySelectorAll(".checkCliente:checked");
 
-  for (const c of checks){
-    await client.from('clientes').delete().eq('id', c.value);
+    for (const c of checks){
+      await client.from('clientes').delete().eq('id', c.value);
+    }
+
+    mostrarClientes();
+
+  } else {
+    const checks = document.querySelectorAll(".checkContato:checked");
+
+    for (const c of checks){
+      await client.from('contatos').delete().eq('telefone', c.value);
+    }
+
+    mostrarContatos();
   }
 
   alert("Excluídos 🚀");
+}
+
+async function deletarCliente(id){
+  await client.from('clientes').delete().eq('id', id);
   mostrarClientes();
 }
 
@@ -207,14 +299,14 @@ async function buscar(){
   let termo = document.getElementById('busca').value;
 
   const { data } = await client
-    .from('clientes')
+    .from(tela)
     .select('*')
     .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
 
   let html = '';
 
   data.forEach(c=>{
-    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td><td>${c.vencimento}</td><td>-</td></tr>`;
+    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||''}</td></tr>`;
   });
 
   document.getElementById('tabela').innerHTML = html;
