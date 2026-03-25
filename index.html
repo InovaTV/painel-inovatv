@@ -10,13 +10,7 @@
 <style>
 body { font-family: Arial; padding:20px; }
 
-button {
-  margin:4px;
-  padding:6px 12px;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-}
+button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:pointer; }
 
 .btn-azul { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
@@ -25,23 +19,13 @@ button {
 
 .ativo { outline:3px solid #000; }
 
-#progressBar {
-  width: 100%;
-  background: #ccc;
-  height: 20px;
-  margin-top: 10px;
-}
-
-#progress {
-  width: 0%;
-  height: 100%;
-  background: green;
-  text-align: center;
-  color: white;
-}
+#progressBar { width:100%; background:#ccc; height:20px; }
+#progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; }
+
+.card { margin-top:20px; padding:10px; background:#f5f5f5; }
 </style>
 </head>
 
@@ -55,7 +39,7 @@ th,td { padding:8px; }
 <br><br>
 
 <input id="busca" placeholder="Telefone ou Nome">
-<button class="btn-neutro" onclick="buscar()">Buscar</button>
+<button onclick="buscar()">Buscar</button>
 
 <hr>
 
@@ -66,16 +50,21 @@ th,td { padding:8px; }
   <div id="progress">0%</div>
 </div>
 
+<div id="logImportacao"></div>
+
 <hr>
 
 <h3>Ações</h3>
 
 <div id="contador">Selecionados: 0</div>
 
-<button class="btn-neutro" onclick="toggleTodos(true)">Selecionar todos</button>
-<button class="btn-neutro" onclick="toggleTodos(false)">Desmarcar</button>
-<button class="btn-neutro" onclick="selecionarAtivos()">Ativos</button>
-<button class="btn-neutro" onclick="selecionarVencidos()">Vencidos</button>
+<button onclick="toggleTodos(true)">Selecionar todos</button>
+<button onclick="toggleTodos(false)">Desmarcar</button>
+<button onclick="selecionarAtivos()">Ativos</button>
+<button onclick="selecionarVencidos()">Vencidos</button>
+
+<button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
+<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <br><br>
 
@@ -83,6 +72,17 @@ th,td { padding:8px; }
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
+
+<div class="card">
+<h3>Financeiro</h3>
+
+💰 Total: <span id="total">0</span><br>
+📅 Mês atual: <span id="mes">0</span><br>
+🔮 Previsão: <span id="prev">0</span><br>
+⚠️ Vencidos hoje: <span id="hoje">0</span><br>
+⚠️ Vencem amanhã: <span id="amanha">0</span>
+
+</div>
 
 <script>
 
@@ -95,57 +95,47 @@ let tela = 'clientes';
 
 // ================= CONTADOR
 function atualizarContador(){
-
-  let total = document.querySelectorAll(".checkItem:checked").length;
-
   document.getElementById("contador").innerText =
-    "Selecionados: " + total;
-}
-
-// ================= BOTÃO ATIVO
-function ativarBotao(){
-  btnClientes.classList.remove("ativo");
-  btnContatos.classList.remove("ativo");
-
-  if(tela==='clientes'){
-    btnClientes.classList.add("ativo");
-  } else {
-    btnContatos.classList.add("ativo");
-  }
+    "Selecionados: " + document.querySelectorAll(".check:checked").length;
 }
 
 // ================= CLIENTES
 async function mostrarClientes(){
 
   tela='clientes';
-  ativarBotao();
 
   const { data } = await client.from('clientes').select('*');
 
-  document.getElementById('thead').innerHTML=`
+  atualizarFinanceiro(data);
+
+  thead.innerHTML = `
     <tr>
       <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
       <th>Telefone</th>
       <th>Status</th>
+      <th>Vencimento</th>
+      <th>Ações</th>
     </tr>
   `;
 
   let html='';
 
   data.forEach(c=>{
+
     html+=`
-      <tr>
-        <td>
-          <input type="checkbox"
-                 class="checkItem"
-                 data-status="${c.status}"
-                 onchange="atualizarContador()">
-        </td>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-        <td>${c.status}</td>
-      </tr>
+    <tr>
+      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status}" onchange="atualizarContador()"></td>
+      <td>${c.nome}</td>
+      <td>${c.telefone}</td>
+      <td>${c.status}</td>
+      <td>${c.vencimento||'-'}</td>
+      <td>
+        <button onclick="renovarCliente('${c.id}')">Renovar</button>
+        <button onclick="deletarCliente('${c.id}')">Excluir</button>
+        <button>Humano</button>
+      </td>
+    </tr>
     `;
   });
 
@@ -156,11 +146,10 @@ async function mostrarClientes(){
 async function mostrarContatos(){
 
   tela='contatos';
-  ativarBotao();
 
   const { data } = await client.from('contatos').select('*');
 
-  document.getElementById('thead').innerHTML=`
+  thead.innerHTML = `
     <tr>
       <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
@@ -172,64 +161,30 @@ async function mostrarContatos(){
 
   data.forEach(c=>{
     html+=`
-      <tr>
-        <td>
-          <input type="checkbox"
-                 class="checkItem"
-                 onchange="atualizarContador()">
-        </td>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-      </tr>
+    <tr>
+      <td><input type="checkbox" class="check" onchange="atualizarContador()"></td>
+      <td>${c.nome}</td>
+      <td>${c.telefone}</td>
+    </tr>
     `;
   });
 
   tabela.innerHTML = html;
 }
 
-// ================= FILTROS
-function selecionarAtivos(){
-
-  document.querySelectorAll(".checkItem").forEach(c=>{
-    c.checked = c.dataset.status === "ativo";
-  });
-
-  atualizarContador();
-}
-
-function selecionarVencidos(){
-
-  document.querySelectorAll(".checkItem").forEach(c=>{
-    c.checked = c.dataset.status === "inativo";
-  });
-
-  atualizarContador();
-}
-
-// ================= SELECIONAR TODOS
-function toggleTodos(checked){
-
-  document.querySelectorAll(".checkItem")
-    .forEach(c=>c.checked=checked);
-
-  atualizarContador();
-}
-
-// ================= IMPORTAÇÃO COM PROGRESSO REAL
+// ================= IMPORTAÇÃO 100%
 async function importarArquivo(){
 
-  const file = document.getElementById("inputArquivo").files[0];
-
-  if(!file) return alert("Selecione um arquivo");
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione arquivo");
 
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data);
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-  const json = XLSX.utils.sheet_to_json(sheet);
+  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-  const total = json.length;
+  let sucesso=0, erro=0;
 
-  for(let i=0;i<total;i++){
+  for(let i=0;i<json.length;i++){
 
     let c = json[i];
 
@@ -237,34 +192,156 @@ async function importarArquivo(){
       .toString()
       .replace(/\D/g,"");
 
-    if(!telefone) continue;
+    if(!telefone){
+      erro++;
+      continue;
+    }
 
-    await fetch("/api/importar-clientes",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        clientes:[{ nome:c.nome||c.Nome, telefone }]
-      })
-    });
+    try{
 
-    let porcentagem = Math.floor(((i+1)/total)*100);
+      await fetch("/api/importar-clientes",{
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({
+          clientes:[{
+            nome:c.nome||c.Nome,
+            telefone,
+            status:c.status||'ativo',
+            valor:c.valor||35
+          }]
+        })
+      });
 
-    document.getElementById("progress").style.width =
-      porcentagem + "%";
+      sucesso++;
 
-    document.getElementById("progress").innerText =
-      porcentagem + "%";
+    }catch{
+      erro++;
+    }
+
+    let p = Math.floor(((i+1)/json.length)*100);
+    progress.style.width = p+"%";
+    progress.innerText = p+"%";
   }
 
-  alert("Importação finalizada 🚀");
+  logImportacao.innerHTML =
+    `Importados: ${sucesso} | Erros: ${erro}`;
 
   mostrarClientes();
+}
+
+// ================= FILTROS
+function selecionarAtivos(){
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = c.dataset.status === "ativo";
+  });
+  atualizarContador();
+}
+
+function selecionarVencidos(){
+
+  let hoje = new Date();
+
+  document.querySelectorAll(".check").forEach(c=>{
+
+    let row = c.closest("tr").children[4].innerText;
+
+    if(!row || row==='-') return;
+
+    let venc = new Date(row);
+
+    c.checked = venc < hoje;
+  });
+
+  atualizarContador();
+}
+
+// ================= MASSA
+function toggleTodos(v){
+  document.querySelectorAll(".check").forEach(c=>c.checked=v);
+  atualizarContador();
+}
+
+// ================= RENOVAR
+async function renovarCliente(id){
+
+  let d = new Date();
+  d.setDate(d.getDate()+30);
+
+  await client.from('clientes')
+    .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
+    .eq('id', id);
+
+  mostrarClientes();
+}
+
+async function renovarSelecionados(){
+
+  let checks = document.querySelectorAll(".check:checked");
+
+  for(let c of checks){
+    await renovarCliente(c.dataset.id);
+  }
+
+  alert("Renovados");
+}
+
+// ================= DELETE
+async function deletarCliente(id){
+  await client.from('clientes').delete().eq('id', id);
+  mostrarClientes();
+}
+
+async function deletarSelecionados(){
+
+  let checks = document.querySelectorAll(".check:checked");
+
+  for(let c of checks){
+    await client.from('clientes').delete().eq('id', c.dataset.id);
+  }
+
+  mostrarClientes();
+}
+
+// ================= FINANCEIRO REAL
+function atualizarFinanceiro(data){
+
+  let hoje = new Date();
+  let amanha = new Date();
+  amanha.setDate(hoje.getDate()+1);
+
+  let total=0, mes=0, hojeV=0, amanhaV=0;
+
+  let mesAtual = hoje.toISOString().substring(0,7);
+
+  data.forEach(c=>{
+
+    let valor = c.valor||0;
+
+    if(c.status==='ativo') total+=valor;
+
+    if(c.vencimento){
+
+      if(c.vencimento.startsWith(mesAtual)) mes+=valor;
+
+      let v = new Date(c.vencimento);
+
+      if(v.toDateString()===hoje.toDateString()) hojeV++;
+      if(v.toDateString()===amanha.toDateString()) amanhaV++;
+    }
+
+  });
+
+  total.innerText = total;
+  document.getElementById("mes").innerText = mes;
+  document.getElementById("prev").innerText = total;
+  document.getElementById("hoje").innerText = hojeV;
+  document.getElementById("amanha").innerText = amanhaV;
 }
 
 // ================= BUSCA
 async function buscar(){
 
-  let termo = document.getElementById('busca').value;
+  let termo = busca.value;
 
   const { data } = await client
     .from(tela)
@@ -274,12 +351,7 @@ async function buscar(){
   let html='';
 
   data.forEach(c=>{
-    html+=`
-      <tr>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-      </tr>
-    `;
+    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td></tr>`;
   });
 
   tabela.innerHTML = html;
