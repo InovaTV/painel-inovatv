@@ -6,33 +6,42 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
 body { font-family: Arial; padding:20px; }
-.dark { background:#121212; color:#fff; }
 
-button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:pointer; }
+button {
+  margin:4px;
+  padding:6px 12px;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
+}
 
 .btn-azul { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
 .btn-neutro { background:#ddd; }
 
-.dark .btn-neutro { background:#333; color:#fff; }
-
 .ativo { outline:3px solid #000; }
+
+#progressBar {
+  width: 100%;
+  background: #ccc;
+  height: 20px;
+  margin-top: 10px;
+}
+
+#progress {
+  width: 0%;
+  height: 100%;
+  background: green;
+  text-align: center;
+  color: white;
+}
 
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; }
-
-.card { background:#fff; padding:10px; margin-top:20px; }
-.dark .card { background:#1e1e1e; }
-
-#contador {
-  font-weight: bold;
-  margin-bottom: 10px;
-}
 </style>
 </head>
 
@@ -42,7 +51,6 @@ th,td { padding:8px; }
 
 <button id="btnClientes" class="btn-azul" onclick="mostrarClientes()">Clientes</button>
 <button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
-<button class="btn-neutro" onclick="toggleDark()">🌙 Tema</button>
 
 <br><br>
 
@@ -53,6 +61,10 @@ th,td { padding:8px; }
 
 <input type="file" id="inputArquivo" accept=".xlsx" />
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
+
+<div id="progressBar">
+  <div id="progress">0%</div>
+</div>
 
 <hr>
 
@@ -65,32 +77,12 @@ th,td { padding:8px; }
 <button class="btn-neutro" onclick="selecionarAtivos()">Ativos</button>
 <button class="btn-neutro" onclick="selecionarVencidos()">Vencidos</button>
 
-<button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
-<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
-
 <br><br>
 
 <table border="1">
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
-
-<div class="card">
-<h3>Dashboard</h3>
-
-💰 Total: R$ <span id="totalValor">0</span><br>
-📅 Faturamento mês: R$ <span id="mesValor">0</span><br>
-🔮 Previsão: R$ <span id="previsao">0</span><br>
-⚠️ Vencem amanhã: <span id="venceAmanha">0</span><br>
-👥 Ativos: <span id="totalAtivos">0</span><br>
-❌ Inativos: <span id="totalInativos">0</span>
-
-<br><br>
-
-<canvas id="graficoClientes" height="100"></canvas>
-<canvas id="graficoFaturamento" height="100"></canvas>
-
-</div>
 
 <script>
 
@@ -100,89 +92,26 @@ const client = supabase.createClient(
 );
 
 let tela = 'clientes';
-let grafico1, grafico2;
 
 // ================= CONTADOR
 function atualizarContador(){
 
-  let total = document.querySelectorAll("input[type='checkbox']:checked").length;
+  let total = document.querySelectorAll(".checkItem:checked").length;
 
   document.getElementById("contador").innerText =
     "Selecionados: " + total;
 }
 
-// ================= DARK
-function toggleDark(){
-  document.body.classList.toggle("dark");
-}
-
 // ================= BOTÃO ATIVO
 function ativarBotao(){
-  document.getElementById("btnClientes").classList.remove("ativo");
-  document.getElementById("btnContatos").classList.remove("ativo");
+  btnClientes.classList.remove("ativo");
+  btnContatos.classList.remove("ativo");
 
   if(tela==='clientes'){
-    document.getElementById("btnClientes").classList.add("ativo");
+    btnClientes.classList.add("ativo");
   } else {
-    document.getElementById("btnContatos").classList.add("ativo");
+    btnContatos.classList.add("ativo");
   }
-}
-
-// ================= DASHBOARD
-function atualizarDashboard(data){
-
-  let hoje = new Date();
-  let amanha = new Date();
-  amanha.setDate(hoje.getDate()+1);
-
-  let ativos = data.filter(c=>c.status==='ativo');
-  let total = ativos.reduce((s,c)=>s+(c.valor||0),0);
-
-  let mesAtual = hoje.toISOString().substring(0,7);
-
-  let mesValor = data.filter(c=>c.vencimento?.startsWith(mesAtual))
-                     .reduce((s,c)=>s+(c.valor||0),0);
-
-  let venceAmanha = data.filter(c=>{
-    if(!c.vencimento) return false;
-    return new Date(c.vencimento).toDateString() === amanha.toDateString();
-  }).length;
-
-  document.getElementById("totalValor").innerText = total;
-  document.getElementById("mesValor").innerText = mesValor;
-  document.getElementById("previsao").innerText = total;
-  document.getElementById("venceAmanha").innerText = venceAmanha;
-  document.getElementById("totalAtivos").innerText = ativos.length;
-  document.getElementById("totalInativos").innerText =
-    data.filter(c=>c.status==='inativo').length;
-
-  // gráfico clientes
-  let meses = {};
-  data.forEach(c=>{
-    if(!c.criado_em) return;
-    let m = c.criado_em.substring(0,7);
-    meses[m] = (meses[m]||0)+1;
-  });
-
-  if(grafico1) grafico1.destroy();
-  grafico1 = new Chart(document.getElementById("graficoClientes"),{
-    type:'line',
-    data:{ labels:Object.keys(meses), datasets:[{ label:'Clientes', data:Object.values(meses) }] }
-  });
-
-  // gráfico faturamento
-  let faturamento = {};
-  data.forEach(c=>{
-    if(!c.vencimento) return;
-    let m = c.vencimento.substring(0,7);
-    faturamento[m] = (faturamento[m]||0)+(c.valor||0);
-  });
-
-  if(grafico2) grafico2.destroy();
-  grafico2 = new Chart(document.getElementById("graficoFaturamento"),{
-    type:'bar',
-    data:{ labels:Object.keys(faturamento), datasets:[{ label:'Faturamento', data:Object.values(faturamento) }] }
-  });
 }
 
 // ================= CLIENTES
@@ -192,7 +121,6 @@ async function mostrarClientes(){
   ativarBotao();
 
   const { data } = await client.from('clientes').select('*');
-  atualizarDashboard(data);
 
   document.getElementById('thead').innerHTML=`
     <tr>
@@ -208,7 +136,12 @@ async function mostrarClientes(){
   data.forEach(c=>{
     html+=`
       <tr>
-        <td><input type="checkbox" class="checkCliente" onchange="atualizarContador()"></td>
+        <td>
+          <input type="checkbox"
+                 class="checkItem"
+                 data-status="${c.status}"
+                 onchange="atualizarContador()">
+        </td>
         <td>${c.nome}</td>
         <td>${c.telefone}</td>
         <td>${c.status}</td>
@@ -216,10 +149,10 @@ async function mostrarClientes(){
     `;
   });
 
-  document.getElementById('tabela').innerHTML=html;
+  tabela.innerHTML = html;
 }
 
-// ================= CONTATOS COM CHECKBOX
+// ================= CONTATOS
 async function mostrarContatos(){
 
   tela='contatos';
@@ -240,36 +173,116 @@ async function mostrarContatos(){
   data.forEach(c=>{
     html+=`
       <tr>
-        <td><input type="checkbox" class="checkContato" onchange="atualizarContador()"></td>
+        <td>
+          <input type="checkbox"
+                 class="checkItem"
+                 onchange="atualizarContador()">
+        </td>
         <td>${c.nome}</td>
         <td>${c.telefone}</td>
       </tr>
     `;
   });
 
-  document.getElementById('tabela').innerHTML=html;
+  tabela.innerHTML = html;
 }
 
-// ================= MASSA
-function toggleTodos(checked){
-  document.querySelectorAll("input[type='checkbox']")
-    .forEach(c=>c.checked=checked);
-
-  atualizarContador();
-}
-
+// ================= FILTROS
 function selecionarAtivos(){
-  document.querySelectorAll(".checkCliente")
-    .forEach(c=>c.checked=c.dataset?.status==="ativo");
+
+  document.querySelectorAll(".checkItem").forEach(c=>{
+    c.checked = c.dataset.status === "ativo";
+  });
 
   atualizarContador();
 }
 
 function selecionarVencidos(){
-  document.querySelectorAll(".checkCliente")
-    .forEach(c=>c.checked=c.dataset?.status==="inativo");
+
+  document.querySelectorAll(".checkItem").forEach(c=>{
+    c.checked = c.dataset.status === "inativo";
+  });
 
   atualizarContador();
+}
+
+// ================= SELECIONAR TODOS
+function toggleTodos(checked){
+
+  document.querySelectorAll(".checkItem")
+    .forEach(c=>c.checked=checked);
+
+  atualizarContador();
+}
+
+// ================= IMPORTAÇÃO COM PROGRESSO REAL
+async function importarArquivo(){
+
+  const file = document.getElementById("inputArquivo").files[0];
+
+  if(!file) return alert("Selecione um arquivo");
+
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data);
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+  const json = XLSX.utils.sheet_to_json(sheet);
+
+  const total = json.length;
+
+  for(let i=0;i<total;i++){
+
+    let c = json[i];
+
+    let telefone = (c.telefone||c.Telefone||"")
+      .toString()
+      .replace(/\D/g,"");
+
+    if(!telefone) continue;
+
+    await fetch("/api/importar-clientes",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify({
+        clientes:[{ nome:c.nome||c.Nome, telefone }]
+      })
+    });
+
+    let porcentagem = Math.floor(((i+1)/total)*100);
+
+    document.getElementById("progress").style.width =
+      porcentagem + "%";
+
+    document.getElementById("progress").innerText =
+      porcentagem + "%";
+  }
+
+  alert("Importação finalizada 🚀");
+
+  mostrarClientes();
+}
+
+// ================= BUSCA
+async function buscar(){
+
+  let termo = document.getElementById('busca').value;
+
+  const { data } = await client
+    .from(tela)
+    .select('*')
+    .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
+
+  let html='';
+
+  data.forEach(c=>{
+    html+=`
+      <tr>
+        <td>${c.nome}</td>
+        <td>${c.telefone}</td>
+      </tr>
+    `;
+  });
+
+  tabela.innerHTML = html;
 }
 
 // INIT
