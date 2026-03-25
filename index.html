@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Painel InovaTV</title>
-
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <style>
@@ -31,6 +30,16 @@
 <input type="file" id="inputCSV" accept=".csv" />
 <button onclick="importarCSV()">IMPORTAR CSV</button>
 <button onclick="novoCliente()">NOVO CLIENTE</button>
+
+<hr>
+
+<h3>Ações em massa</h3>
+
+<button onclick="toggleTodos(true)">Selecionar todos</button>
+<button onclick="toggleTodos(false)">Desmarcar todos</button>
+<button onclick="selecionarAtivos()">Selecionar ativos</button>
+<button onclick="selecionarVencidos()">Selecionar vencidos</button>
+<button onclick="renovarSelecionados()">Renovar selecionados</button>
 <button onclick="deletarSelecionados()">Excluir selecionados</button>
 
 <br><br>
@@ -46,7 +55,7 @@ const { createClient } = supabase;
 
 const client = createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'SUA_ANON_KEY_AQUI'
 );
 
 let tela = 'clientes';
@@ -57,7 +66,7 @@ async function mostrarClientes(){
 
   document.getElementById('thead').innerHTML = `
     <tr>
-      <th><input type="checkbox" onclick="toggleTodos(this)"></th>
+      <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
       <th>Telefone</th>
       <th>Status</th>
@@ -66,30 +75,26 @@ async function mostrarClientes(){
     </tr>
   `;
 
-  const { data, error } = await client
+  const { data } = await client
     .from('clientes')
     .select('*')
     .order('criado_em', { ascending: false });
-
-  console.log("CLIENTES:", data, error);
 
   let html = '';
 
   data.forEach(c=>{
     html += `
       <tr>
-        <td><input type="checkbox" class="checkCliente" value="${c.id}"></td>
-        <td>${c.nome || '-'}</td>
+        <td><input type="checkbox" class="checkCliente" value="${c.id}" data-status="${c.status}"></td>
+        <td>${c.nome}</td>
         <td>${c.telefone}</td>
-        <td>${c.status || '-'}</td>
+        <td>${c.status}</td>
         <td>${c.vencimento || '-'}</td>
         <td>
+          <button onclick="renovarCliente('${c.id}')">Renovar</button>
           <button onclick="pagar('${c.id}')">Pago</button>
           <button onclick="editarCliente('${c.id}','${c.nome}','${c.telefone}')">Editar</button>
           <button onclick="deletarCliente('${c.id}')">Excluir</button>
-          <button onclick="humano('${c.id}', ${c.atendimento_humano})">
-            ${c.atendimento_humano ? 'IA ON' : 'Humano'}
-          </button>
         </td>
       </tr>
     `;
@@ -98,38 +103,13 @@ async function mostrarClientes(){
   document.getElementById('tabela').innerHTML = html;
 }
 
-// ================= SELECIONAR TODOS
-function toggleTodos(master){
-  document.querySelectorAll(".checkCliente")
-    .forEach(c => c.checked = master.checked);
-}
-
-// ================= DELETE MULTI
-async function deletarSelecionados(){
-
-  const checks = document.querySelectorAll(".checkCliente:checked");
-
-  if (!checks.length){
-    alert("Selecione clientes");
-    return;
-  }
-
-  if (!confirm(`Excluir ${checks.length} cliente(s)?`)) return;
-
-  for (const c of checks){
-    await client.from('clientes').delete().eq('id', c.value);
-  }
-
-  alert("Excluídos 🚀");
-  mostrarClientes();
-}
-
 // ================= CONTATOS
 async function mostrarContatos(){
   tela = 'contatos';
 
   document.getElementById('thead').innerHTML = `
     <tr>
+      <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
       <th>Telefone</th>
       <th>Ações</th>
@@ -143,7 +123,8 @@ async function mostrarContatos(){
   data.forEach(c=>{
     html += `
       <tr>
-        <td>${c.nome || 'Sem nome'}</td>
+        <td><input type="checkbox" class="checkContato" value="${c.telefone}"></td>
+        <td>${c.nome}</td>
         <td>${c.telefone}</td>
         <td>
           <button onclick="virarCliente('${c.telefone}')">Virar Cliente</button>
@@ -157,106 +138,84 @@ async function mostrarContatos(){
   document.getElementById('tabela').innerHTML = html;
 }
 
-// ================= BUSCA
-async function buscar(){
+// ================= TOGGLE TODOS
+function toggleTodos(checked){
+  document.querySelectorAll("input[type='checkbox']")
+    .forEach(c => c.checked = checked);
+}
 
-  let termo = document.getElementById('busca').value;
+// ================= SELECIONAR ATIVOS
+function selecionarAtivos(){
+  document.querySelectorAll(".checkCliente")
+    .forEach(c => c.checked = c.dataset.status === "ativo");
+}
 
-  if (!termo){
+// ================= SELECIONAR VENCIDOS
+function selecionarVencidos(){
+  document.querySelectorAll(".checkCliente")
+    .forEach(c => c.checked = c.dataset.status === "inativo");
+}
+
+// ================= RENOVAR 1
+async function renovarCliente(id){
+
+  const novaData = new Date();
+  novaData.setDate(novaData.getDate() + 30);
+
+  await client.from('clientes')
+    .update({
+      status: 'ativo',
+      vencimento: novaData.toISOString().split('T')[0]
+    })
+    .eq('id', id);
+
+  mostrarClientes();
+}
+
+// ================= RENOVAR MULTI
+async function renovarSelecionados(){
+
+  const checks = document.querySelectorAll(".checkCliente:checked");
+
+  if (!checks.length) return alert("Selecione clientes");
+
+  for (const c of checks){
+    await renovarCliente(c.value);
+  }
+
+  alert("Renovados 🚀");
+}
+
+// ================= DELETE MULTI
+async function deletarSelecionados(){
+
+  if (tela === 'clientes'){
+
+    const checks = document.querySelectorAll(".checkCliente:checked");
+
+    for (const c of checks){
+      await client.from('clientes').delete().eq('id', c.value);
+    }
+
     mostrarClientes();
-    return;
+
+  } else {
+
+    const checks = document.querySelectorAll(".checkContato:checked");
+
+    for (const c of checks){
+      await client.from('contatos').delete().eq('telefone', c.value);
+    }
+
+    mostrarContatos();
   }
 
-  const { data } = await client
-    .from(tela)
-    .select('*')
-    .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
-
-  let html = '';
-
-  data.forEach(c=>{
-    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||'-'}</td><td>${c.vencimento||'-'}</td><td>-</td></tr>`;
-  });
-
-  document.getElementById('tabela').innerHTML = html;
-}
-
-// ================= IMPORTAR CSV
-async function importarCSV(){
-
-  const file = document.getElementById("inputCSV").files[0];
-
-  if (!file){
-    alert("Selecione um CSV");
-    return;
-  }
-
-  let text = await file.text();
-  text = text.replace(/\r/g, "");
-
-  const separador = text.includes(";") ? ";" : ",";
-
-  const linhas = text.split("\n").filter(l => l.trim() !== "");
-
-  const cab = linhas[0].split(separador).map(c => c.trim().toLowerCase());
-
-  const clientes = [];
-
-  for (let i = 1; i < linhas.length; i++){
-
-    const dados = linhas[i].split(separador);
-
-    let obj = {};
-
-    cab.forEach((c, index)=>{
-      obj[c] = dados[index]?.trim();
-    });
-
-    if (!obj.telefone || obj.telefone.length < 8) continue;
-
-    clientes.push(obj);
-  }
-
-  console.log("IMPORTANDO:", clientes);
-
-  await fetch("/api/importar-clientes", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ clientes })
-  });
-
-  alert("Importado 🚀");
-
-  // 🔥 ATUALIZA SEM RECARREGAR
-  mostrarClientes();
-}
-
-// ================= NOVO CLIENTE
-async function novoCliente(){
-  const nome = prompt("Nome:");
-  const telefone = prompt("Telefone:");
-  if (!nome || !telefone) return;
-
-  await fetch("/api/importar-clientes", {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ clientes:[{ nome, telefone }] })
-  });
-
-  alert("Cliente criado 🚀");
-  mostrarClientes();
+  alert("Excluídos 🚀");
 }
 
 // ================= OUTROS
 async function pagar(id){
   await client.from('clientes').update({ status:'ativo' }).eq('id', id);
-  mostrarClientes();
-}
-
-async function humano(id, atual){
-  await client.from('clientes')
-    .update({ atendimento_humano: !atual })
-    .eq('id', id);
   mostrarClientes();
 }
 
@@ -270,20 +229,17 @@ async function editarCliente(id, nomeAtual, telefoneAtual){
 }
 
 async function deletarCliente(id){
-  if (!confirm("Excluir cliente?")) return;
   await client.from('clientes').delete().eq('id', id);
   mostrarClientes();
 }
 
 async function editarContato(telefone, nomeAtual){
   const nome = prompt("Nome:", nomeAtual);
-  if (!nome) return;
   await client.from('contatos').update({ nome }).eq('telefone', telefone);
   mostrarContatos();
 }
 
 async function deletarContato(telefone){
-  if (!confirm("Excluir contato?")) return;
   await client.from('contatos').delete().eq('telefone', telefone);
   mostrarContatos();
 }
