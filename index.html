@@ -11,14 +11,28 @@
     body { font-family: Arial; padding: 20px; }
 
     button {
-      margin: 3px;
-      padding: 6px 10px;
+      margin: 4px;
+      padding: 6px 12px;
+      border: none;
       cursor: pointer;
+      color: white;
+      border-radius: 4px;
+      transition: 0.2s;
     }
 
+    button:active {
+      transform: scale(0.95);
+      opacity: 0.8;
+    }
+
+    .btn-azul { background: #2196F3; }
+    .btn-verde { background: #4CAF50; }
+    .btn-vermelho { background: #f44336; }
+    .btn-amarelo { background: #ff9800; }
+    .btn-cinza { background: #777; }
+
     .ativo {
-      background: #4CAF50;
-      color: white;
+      outline: 3px solid #000;
       font-weight: bold;
     }
 
@@ -41,20 +55,20 @@
 
 <h2>Painel InovaTV</h2>
 
-<button id="btnClientes" onclick="mostrarClientes()">Clientes</button>
-<button id="btnContatos" onclick="mostrarContatos()">Contatos</button>
+<button id="btnClientes" class="btn-azul" onclick="mostrarClientes()">Clientes</button>
+<button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
 
 <br><br>
 
 <input id="busca" placeholder="Telefone ou Nome">
-<button onclick="buscar()">Buscar</button>
+<button class="btn-cinza" onclick="buscar()">Buscar</button>
 
 <hr>
 
-<h3>Importação Excel</h3>
+<h3>Importação</h3>
 
 <input type="file" id="inputArquivo" accept=".xlsx" />
-<button onclick="importarArquivo()">IMPORTAR EXCEL</button>
+<button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
 <div id="progress"></div>
 
@@ -62,12 +76,13 @@
 
 <h3>Ações</h3>
 
-<button onclick="toggleTodos(true)">Selecionar todos</button>
-<button onclick="toggleTodos(false)">Desmarcar</button>
-<button onclick="selecionarAtivos()">Ativos</button>
-<button onclick="selecionarVencidos()">Vencidos</button>
-<button onclick="renovarSelecionados()">Renovar</button>
-<button onclick="deletarSelecionados()">Excluir</button>
+<button class="btn-amarelo" onclick="toggleTodos(true)">Selecionar todos</button>
+<button class="btn-amarelo" onclick="toggleTodos(false)">Desmarcar</button>
+<button class="btn-amarelo" onclick="selecionarAtivos()">Ativos</button>
+<button class="btn-amarelo" onclick="selecionarVencidos()">Vencidos</button>
+
+<button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
+<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <br><br>
 
@@ -97,54 +112,36 @@ function ativarBotao(){
   }
 }
 
-// ================= IMPORTAR XLSX COM PROGRESSO
+// ================= IMPORTAÇÃO
 async function importarArquivo(){
 
   const file = document.getElementById("inputArquivo").files[0];
-
-  if (!file) return alert("Selecione um arquivo");
+  if (!file) return alert("Selecione arquivo");
 
   const data = await file.arrayBuffer();
   const workbook = XLSX.read(data);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const json = XLSX.utils.sheet_to_json(sheet);
 
-  let erros = 0;
-
-  for (let i = 0; i < json.length; i++){
-
-    const c = json[i];
-
-    let telefone = (c.telefone || c.Telefone || "").toString().replace(/\D/g,"");
-
-    if (!telefone || telefone.length < 10){
-      erros++;
-      continue;
-    }
+  for (let i=0;i<json.length;i++){
 
     document.getElementById("progress").innerText =
       `Importando ${i+1}/${json.length}`;
 
+    let c = json[i];
+
+    let telefone = (c.telefone || c.Telefone || "").toString().replace(/\D/g,"");
+
+    if (!telefone) continue;
+
     await fetch("/api/importar-clientes", {
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        clientes:[{
-          nome: c.nome || c.Nome,
-          telefone,
-          usuario: c.usuario || c.Usuario,
-          senha: c.senha || c.Senha,
-          plano: c.plano || c.Plano,
-          valor: c.valor || c.Valor,
-          vencimento: c.vencimento || c.Vencimento
-        }]
-      })
+      body: JSON.stringify({ clientes:[{ nome:c.nome||c.Nome, telefone }] })
     });
   }
 
-  document.getElementById("progress").innerText =
-    `Finalizado ✅ | Erros: ${erros}`;
-
+  document.getElementById("progress").innerText = "Finalizado 🚀";
   mostrarClientes();
 }
 
@@ -160,15 +157,11 @@ async function mostrarClientes(){
       <th>Nome</th>
       <th>Telefone</th>
       <th>Status</th>
-      <th>Vencimento</th>
       <th>Ações</th>
     </tr>
   `;
 
-  const { data } = await client
-    .from('clientes')
-    .select('*')
-    .order('criado_em', { ascending: false });
+  const { data } = await client.from('clientes').select('*');
 
   let html = '';
 
@@ -179,10 +172,9 @@ async function mostrarClientes(){
         <td>${c.nome}</td>
         <td>${c.telefone}</td>
         <td>${c.status}</td>
-        <td>${c.vencimento || '-'}</td>
         <td>
-          <button onclick="renovarCliente('${c.id}')">Renovar</button>
-          <button onclick="deletarCliente('${c.id}')">Excluir</button>
+          <button class="btn-verde" onclick="renovarCliente('${c.id}')">Renovar</button>
+          <button class="btn-vermelho" onclick="deletarCliente('${c.id}')">Excluir</button>
         </td>
       </tr>
     `;
@@ -222,7 +214,7 @@ async function mostrarContatos(){
   document.getElementById('tabela').innerHTML = html;
 }
 
-// ================= FUNÇÕES MASSA
+// ================= MASSA
 function toggleTodos(checked){
   document.querySelectorAll("input[type='checkbox']")
     .forEach(c => c.checked = checked);
@@ -242,12 +234,11 @@ function selecionarVencidos(){
 async function renovarCliente(id){
 
   const nova = new Date();
-  nova.setDate(nova.getDate() + 30);
+  nova.setDate(nova.getDate()+30);
 
-  await client.from('clientes').update({
-    status:'ativo',
-    vencimento: nova.toISOString().split('T')[0]
-  }).eq('id', id);
+  await client.from('clientes')
+    .update({ status:'ativo', vencimento:nova.toISOString().split('T')[0] })
+    .eq('id', id);
 
   mostrarClientes();
 }
@@ -268,21 +259,10 @@ async function deletarSelecionados(){
 
   if (tela === 'clientes'){
     const checks = document.querySelectorAll(".checkCliente:checked");
-
     for (const c of checks){
       await client.from('clientes').delete().eq('id', c.value);
     }
-
     mostrarClientes();
-
-  } else {
-    const checks = document.querySelectorAll(".checkContato:checked");
-
-    for (const c of checks){
-      await client.from('contatos').delete().eq('telefone', c.value);
-    }
-
-    mostrarContatos();
   }
 
   alert("Excluídos 🚀");
