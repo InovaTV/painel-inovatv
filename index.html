@@ -10,7 +10,6 @@
 <style>
 body { font-family: Arial; padding:20px; }
 
-/* BOTÕES */
 button {
   margin:4px;
   padding:6px 12px;
@@ -25,13 +24,9 @@ button {
 .btn-vermelho { background:#f44336; color:#fff; }
 .btn-cinza { background:#ddd; }
 
-.ativo { outline:3px solid #000; }
-
-/* PROGRESSO */
 #progressBar { width:100%; background:#ccc; height:20px; margin-top:10px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
-/* TABELA */
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; }
 </style>
@@ -41,8 +36,8 @@ th,td { padding:8px; }
 
 <h2>Painel InovaTV</h2>
 
-<button id="btnClientes" class="btn-azul" onclick="mostrarClientes()">Clientes</button>
-<button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
+<button class="btn-azul" onclick="mostrarClientes()">Clientes</button>
+<button class="btn-azul" onclick="mostrarContatos()">Contatos</button>
 
 <br><br>
 
@@ -64,10 +59,10 @@ th,td { padding:8px; }
 
 <div id="contador">Selecionados: 0</div>
 
-<button class="btn-cinza" onclick="toggleTodos(true)">Selecionar todos</button>
-<button class="btn-cinza" onclick="toggleTodos(false)">Desmarcar</button>
-<button class="btn-cinza" onclick="selecionarAtivos()">Ativos</button>
-<button class="btn-cinza" onclick="selecionarVencidos()">Vencidos</button>
+<button onclick="toggleTodos(true)">Selecionar todos</button>
+<button onclick="toggleTodos(false)">Desmarcar</button>
+<button onclick="selecionarAtivos()">Ativos</button>
+<button onclick="selecionarVencidos()">Vencidos</button>
 
 <button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
@@ -141,7 +136,7 @@ async function mostrarClientes(){
       <td>${c.status}</td>
       <td>
         <button class="btn-verde" onclick="renovarCliente('${c.id}')">Renovar</button>
-        <button class="btn-vermelho" onclick="deletarCliente('${c.id}')">Excluir</button>
+        <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
       </td>
     </tr>
     `;
@@ -150,7 +145,7 @@ async function mostrarClientes(){
   tabela.innerHTML = html;
 }
 
-// ================= CONTATOS
+// ================= CONTATOS (AGORA COM ID)
 async function mostrarContatos(){
 
   tela='contatos';
@@ -163,6 +158,7 @@ async function mostrarContatos(){
       <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
       <th>Telefone</th>
+      <th>Ações</th>
     </tr>
   `;
 
@@ -171,9 +167,17 @@ async function mostrarContatos(){
   data.forEach(c=>{
     html+=`
     <tr>
-      <td><input type="checkbox" class="check" onchange="atualizarContador()"></td>
+      <td>
+        <input type="checkbox"
+               class="check"
+               data-id="${c.id}"
+               onchange="atualizarContador()">
+      </td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
+      <td>
+        <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
+      </td>
     </tr>
     `;
   });
@@ -181,105 +185,24 @@ async function mostrarContatos(){
   tabela.innerHTML = html;
 }
 
-// ================= IMPORTAR
-async function importarArquivo(){
+// ================= DELETE UNIVERSAL
+async function deletarItem(id){
+
+  if(!confirm("Excluir item?")) return;
 
   resetarProgresso();
 
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data);
-  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-  for(let i=0;i<json.length;i++){
-
-    let c = json[i];
-
-    let telefone = (c.telefone||c.Telefone||"")
-      .toString().replace(/\D/g,"");
-
-    if(!telefone) continue;
-
-    await fetch("/api/importar-clientes",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        clientes:[{ nome:c.nome||c.Nome, telefone }]
-      })
-    });
-
-    atualizarProgresso(i+1,json.length);
-  }
-
-  alert("Importado 🚀");
-  mostrarClientes();
-}
-
-// ================= RENOVAR
-async function renovarCliente(id){
-
-  resetarProgresso();
-
-  let d = new Date();
-  d.setDate(d.getDate()+30);
-
-  await client.from('clientes')
-    .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
-    .eq('id', id);
-
-  atualizarProgresso(1,1);
-
-  mostrarClientes();
-}
-
-async function renovarSelecionados(){
-
-  let checks = document.querySelectorAll(".check:checked");
-  let total = checks.length;
-
-  if(total===0) return alert("Selecione pelo menos 1");
-
-  resetarProgresso();
-
-  let i=0;
-
-  for(let c of checks){
-
-    if(!c.dataset.id) continue;
-
-    let d = new Date();
-    d.setDate(d.getDate()+30);
-
-    await client.from('clientes')
-      .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
-      .eq('id', c.dataset.id);
-
-    i++;
-    atualizarProgresso(i,total);
-  }
-
-  alert("Renovados 🚀");
-  mostrarClientes();
-}
-
-// ================= DELETE (CORRIGIDO)
-async function deletarCliente(id){
-
-  if(!confirm("Excluir cliente?")) return;
-
-  resetarProgresso();
-
-  await client.from('clientes')
+  await client.from(tela)
     .delete()
     .eq('id', id);
 
   atualizarProgresso(1,1);
 
-  mostrarClientes();
+  if(tela==='clientes') mostrarClientes();
+  else mostrarContatos();
 }
 
+// ================= DELETE EM MASSA (CORRIGIDO)
 async function deletarSelecionados(){
 
   let checks = document.querySelectorAll(".check:checked");
@@ -297,7 +220,7 @@ async function deletarSelecionados(){
 
     if(!c.dataset.id) continue;
 
-    await client.from('clientes')
+    await client.from(tela)
       .delete()
       .eq('id', c.dataset.id);
 
@@ -306,21 +229,60 @@ async function deletarSelecionados(){
   }
 
   alert("Excluídos 🚀");
+
+  if(tela==='clientes') mostrarClientes();
+  else mostrarContatos();
+}
+
+// ================= RENOVAR
+async function renovarSelecionados(){
+
+  if(tela!=='clientes') return alert("Só funciona em clientes");
+
+  let checks = document.querySelectorAll(".check:checked");
+  let total = checks.length;
+
+  resetarProgresso();
+
+  let i=0;
+
+  for(let c of checks){
+
+    let d = new Date();
+    d.setDate(d.getDate()+30);
+
+    await client.from('clientes')
+      .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
+      .eq('id', c.dataset.id);
+
+    i++;
+    atualizarProgresso(i,total);
+  }
+
+  alert("Renovados 🚀");
   mostrarClientes();
 }
 
 // ================= FILTROS
 function selecionarAtivos(){
+
+  if(tela!=='clientes') return;
+
   document.querySelectorAll(".check").forEach(c=>{
     c.checked = c.dataset.status === "ativo";
   });
+
   atualizarContador();
 }
 
 function selecionarVencidos(){
+
+  if(tela!=='clientes') return;
+
   document.querySelectorAll(".check").forEach(c=>{
     c.checked = c.dataset.status === "inativo";
   });
+
   atualizarContador();
 }
 
@@ -343,12 +305,7 @@ async function buscar(){
   let html='';
 
   data.forEach(c=>{
-    html+=`
-      <tr>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-      </tr>
-    `;
+    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td></tr>`;
   });
 
   tabela.innerHTML = html;
