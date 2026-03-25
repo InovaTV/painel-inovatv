@@ -10,7 +10,6 @@
 <style>
 body { font-family: Arial; padding:20px; }
 
-/* BOTÕES */
 button {
   margin:4px;
   padding:6px 12px;
@@ -25,13 +24,18 @@ button {
 .btn-vermelho { background:#f44336; color:#fff; }
 .btn-cinza { background:#ddd; }
 
-/* PROGRESSO */
 #progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
-/* TABELA */
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; border:1px solid #ccc; }
+
+.hidden { display:none; }
+
+#financeiro {
+  background:#f5f5f5;
+  padding:15px;
+}
 </style>
 </head>
 
@@ -41,11 +45,14 @@ th,td { padding:8px; border:1px solid #ccc; }
 
 <h3 id="statusTela">Você está em: CLIENTES</h3>
 
+<!-- TOPO -->
+<div id="topo">
 <button class="btn-topo" onclick="mostrarClientes()">Clientes</button>
 <button class="btn-topo" onclick="mostrarContatos()">Contatos</button>
-<button class="btn-topo" onclick="abrirFinanceiro()">Abrir Financeiro</button>
+<button class="btn-topo" onclick="abrirFinanceiro()">Financeiro</button>
+</div>
 
-<br><br>
+<br>
 
 <input id="busca" placeholder="Telefone ou Nome">
 <button onclick="buscar()">Buscar</button>
@@ -61,7 +68,8 @@ th,td { padding:8px; border:1px solid #ccc; }
 
 <hr>
 
-<div>
+<!-- DASH -->
+<div id="dashboard">
 💰 Faturamento: R$ <span id="faturamento">0</span> |
 ✅ Ativos: <span id="ativos">0</span> |
 ❌ Inativos: <span id="inativos">0</span>
@@ -69,6 +77,8 @@ th,td { padding:8px; border:1px solid #ccc; }
 
 <hr>
 
+<!-- AÇÕES -->
+<div id="acoes">
 <h3>Ações</h3>
 
 <div id="contador">Selecionados: 0</div>
@@ -79,15 +89,44 @@ th,td { padding:8px; border:1px solid #ccc; }
 <button onclick="selecionarAtivos()">Ativos</button>
 <button onclick="selecionarVencidos()">Vencidos</button>
 
-<button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
+</div>
 
-<br><br>
+<br>
 
-<table>
+<!-- TABELA -->
+<table id="tabelaContainer">
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
+
+<!-- ================= FINANCEIRO ================= -->
+<div id="financeiro" class="hidden">
+
+<h2>Financeiro</h2>
+
+<button class="btn-topo" onclick="voltar()">⬅ Voltar</button>
+
+<hr>
+
+<div>
+💰 Total: R$ <span id="fTotal">0</span>
+</div>
+
+<br>
+
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>Valor</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody id="tabelaFinanceiro"></tbody>
+</table>
+
+</div>
 
 <script>
 
@@ -99,10 +138,10 @@ const client = supabase.createClient(
 let tela = 'clientes';
 let dadosAtuais = [];
 
-// ================= UI
-function atualizarTela(){
-  statusTela.innerText = "Você está em: " + tela.toUpperCase();
-}
+// ================= ENTER NA BUSCA
+busca.addEventListener("keypress", function(e){
+  if(e.key === "Enter") buscar();
+});
 
 // ================= CONTADOR
 function atualizarContador(){
@@ -137,10 +176,10 @@ function renderTabela(lista){
 
   dadosAtuais = lista;
 
-  let html = '';
+  let html='';
 
   lista.forEach(c=>{
-    html += `
+    html+=`
     <tr>
       <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status||''}" onchange="atualizarContador()"></td>
       <td>${c.nome}</td>
@@ -158,14 +197,14 @@ function renderTabela(lista){
 // ================= CLIENTES
 async function mostrarClientes(){
   tela='clientes';
-  atualizarTela();
+  statusTela.innerText = "Você está em: CLIENTES";
+
+  document.getElementById("financeiro").classList.add("hidden");
 
   const { data } = await client.from('clientes').select('*');
 
   thead.innerHTML = `
-  <tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Ações</th>
-  </tr>`;
+  <tr><th></th><th>Nome</th><th>Telefone</th><th>Ações</th></tr>`;
 
   renderTabela(data);
   atualizarDashboard(data);
@@ -174,19 +213,19 @@ async function mostrarClientes(){
 // ================= CONTATOS
 async function mostrarContatos(){
   tela='contatos';
-  atualizarTela();
+  statusTela.innerText = "Você está em: CONTATOS";
+
+  document.getElementById("financeiro").classList.add("hidden");
 
   const { data } = await client.from('contatos').select('*');
 
   thead.innerHTML = `
-  <tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Ações</th>
-  </tr>`;
+  <tr><th></th><th>Nome</th><th>Telefone</th><th>Ações</th></tr>`;
 
   renderTabela(data);
 }
 
-// ================= BUSCA (CORRIGIDO)
+// ================= BUSCA
 function buscar(){
 
   let termo = busca.value.toLowerCase();
@@ -212,14 +251,14 @@ function desmarcarTodos(){
 
 function selecionarAtivos(){
   document.querySelectorAll(".check").forEach(c=>{
-    c.checked = c.dataset.status === "ativo";
+    c.checked = c.dataset.status==="ativo";
   });
   atualizarContador();
 }
 
 function selecionarVencidos(){
   document.querySelectorAll(".check").forEach(c=>{
-    c.checked = c.dataset.status === "inativo";
+    c.checked = c.dataset.status==="inativo";
   });
   atualizarContador();
 }
@@ -253,6 +292,7 @@ async function deletarSelecionados(){
   }
 
   alert("Excluídos!");
+
   if(tela==='clientes') mostrarClientes();
   else mostrarContatos();
 }
@@ -271,12 +311,10 @@ async function importarArquivo(){
 
   for(let i=0;i<json.length;i++){
 
-    let c = json[i];
-
     await fetch("/api/importar-clientes",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ clientes:[c] })
+      body:JSON.stringify({ clientes:[json[i]] })
     });
 
     atualizarProgresso(i+1,json.length);
@@ -286,13 +324,34 @@ async function importarArquivo(){
   mostrarClientes();
 }
 
-// ================= OUTROS
-function renovarSelecionados(){
-  alert("Função renovar ok (pode evoluir depois)");
+// ================= FINANCEIRO (TELA REAL)
+async function abrirFinanceiro(){
+
+  document.getElementById("financeiro").classList.remove("hidden");
+
+  const { data } = await client.from('clientes').select('*');
+
+  let total=0;
+  let html='';
+
+  data.forEach(c=>{
+    total += Number(c.valor || 0);
+
+    html+=`
+    <tr>
+      <td>${c.nome}</td>
+      <td>R$ ${c.valor||0}</td>
+      <td>${c.status}</td>
+    </tr>`;
+  });
+
+  document.getElementById("fTotal").innerText = total;
+  tabelaFinanceiro.innerHTML = html;
 }
 
-function abrirFinanceiro(){
-  window.open(window.location.href,"_blank");
+// ================= VOLTAR
+function voltar(){
+  document.getElementById("financeiro").classList.add("hidden");
 }
 
 // INIT
