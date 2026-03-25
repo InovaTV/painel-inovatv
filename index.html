@@ -13,11 +13,12 @@ button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:po
 .btn-topo { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
+
 #progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
+
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
-.hidden { display:none; }
 </style>
 </head>
 
@@ -26,8 +27,8 @@ th,td { padding:6px; border:1px solid #ccc; }
 <h2>Painel InovaTV</h2>
 <h3 id="statusTela">Você está em: CLIENTES</h3>
 
-<button class="btn-topo" onclick="mostrarClientes()">Clientes</button>
-<button class="btn-topo" onclick="mostrarContatos()">Contatos</button>
+<button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
+<button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
 <button class="btn-topo" onclick="abrirFinanceiro()">Financeiro</button>
 
 <br><br>
@@ -56,8 +57,8 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
 <button onclick="desmarcarTodos()">Desmarcar</button>
-<button onclick="selecionarAtivos()">Ativos</button>
-<button onclick="selecionarVencidos()">Vencidos</button>
+<button onclick="filtrarAtivos()">Ativos</button>
+<button onclick="filtrarVencidos()">Vencidos</button>
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <table>
@@ -73,20 +74,139 @@ const client = supabase.createClient(
 );
 
 let tela='clientes';
-let dadosAtuais=[];
+let dados=[];
 
-// ENTER
+// ENTER busca
 busca.addEventListener("keypress", e=>{
   if(e.key==="Enter") buscar();
 });
 
-// ================= IMPORTAR PROFISSIONAL
+// ================= TROCAR TELA
+function trocarTela(tipo){
+  tela = tipo;
+  statusTela.innerText = "Você está em: " + tipo.toUpperCase();
+  carregar();
+}
+
+// ================= CARREGAR
+async function carregar(){
+
+  const { data } = await client.from(tela).select('*');
+  dados = data;
+
+  if(tela==='clientes'){
+    thead.innerHTML=`
+    <tr>
+    <th></th><th>Nome</th><th>Telefone</th><th>Vencimento</th><th>Hora</th><th>MAC</th><th>Status</th>
+    </tr>`;
+  } else {
+    thead.innerHTML=`
+    <tr>
+    <th></th><th>Nome</th><th>Telefone</th>
+    </tr>`;
+  }
+
+  render(dados);
+  atualizarDashboard();
+}
+
+// ================= RENDER
+function render(lista){
+
+  let html='';
+
+  lista.forEach(c=>{
+    html+=`
+    <tr>
+      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status||''}" onchange="contador()"></td>
+      <td>${c.nome||''}</td>
+      <td>${c.telefone||''}</td>
+      ${tela==='clientes' ? `
+        <td>${c.vencimento||''}</td>
+        <td>${c.hora_vencimento||''}</td>
+        <td>${c.mac||''}</td>
+        <td>${c.status||''}</td>
+      ` : ``}
+    </tr>`;
+  });
+
+  tabela.innerHTML=html;
+  contador();
+}
+
+// ================= CONTADOR
+function contador(){
+  contador.innerText = "Selecionados: " + document.querySelectorAll(".check:checked").length;
+}
+
+// ================= BUSCA
+function buscar(){
+
+  let termo = busca.value.toLowerCase();
+
+  let filtrado = dados.filter(c =>
+    (c.nome||'').toLowerCase().includes(termo) ||
+    (c.telefone||'').includes(termo)
+  );
+
+  render(filtrado);
+}
+
+// ================= SELEÇÃO
+function selecionarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=true);
+  contador();
+}
+
+function desmarcarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
+  contador();
+}
+
+// ================= FILTROS
+function filtrarAtivos(){
+  render(dados.filter(c=>c.status==="ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c=>c.status==="inativo"));
+}
+
+// ================= DELETE
+async function deletarSelecionados(){
+
+  let selecionados = document.querySelectorAll(".check:checked");
+
+  if(selecionados.length===0) return alert("Selecione algo");
+
+  if(!confirm("Excluir selecionados?")) return;
+
+  let i=0;
+
+  for(let c of selecionados){
+    await client.from(tela).delete().eq('id', c.dataset.id);
+    i++;
+    progresso(i, selecionados.length);
+  }
+
+  alert("Excluído");
+  carregar();
+}
+
+// ================= PROGRESSO
+function progresso(a,t){
+  let p=Math.floor((a/t)*100);
+  progress.style.width=p+"%";
+  progress.innerText=p+"%";
+}
+
+// ================= IMPORTAR (UPGRADE FINAL)
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
 
-  if(!confirm("Importar e ATUALIZAR clientes automaticamente?")) return;
+  if(!confirm("Importar e atualizar clientes automaticamente?")) return;
 
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data);
@@ -96,23 +216,20 @@ async function importarArquivo(){
 
     let c=json[i];
 
-    let telefone = (c.telefone || c.telefone_ || "").toString().replace(/\D/g,"");
+    let telefone = (c.telefone || c.telefone_ || "")
+      .toString().replace(/\D/g,"");
 
     if(!telefone) continue;
 
     let vencimento = c.vencimen || null;
     let hora = c.hora_venc || null;
 
-    // 🔥 STATUS AUTOMÁTICO
     let status="ativo";
     if(vencimento){
-      let hoje = new Date();
-      let v = new Date(vencimento);
-      if(v < hoje) status="inativo";
+      if(new Date(vencimento) < new Date()) status="inativo";
     }
 
-    // 🔥 UPSERT (SEM DUPLICAR)
-    const { data: existente } = await client
+    const { data: ex } = await client
       .from('clientes')
       .select('id')
       .eq('telefone', telefone)
@@ -134,89 +251,36 @@ async function importarArquivo(){
       plano: c.plano || ""
     };
 
-    if(existente){
+    if(ex){
       await client.from('clientes').update(payload).eq('telefone', telefone);
-    }else{
+    } else {
       await client.from('clientes').insert(payload);
     }
 
-    atualizarProgresso(i+1,json.length);
+    progresso(i+1,json.length);
   }
 
-  alert("Importação completa 🚀");
-  mostrarClientes();
+  alert("Importado 🚀");
+  carregar();
 }
 
-// ================= CLIENTES
-async function mostrarClientes(){
+// ================= DASH
+function atualizarDashboard(){
+  let total=0, ativos=0, inativos=0;
 
-  const { data } = await client.from('clientes').select('*');
-  dadosAtuais=data;
-
-  thead.innerHTML=`
-  <tr>
-  <th></th><th>Nome</th><th>Telefone</th><th>Vencimento</th><th>Hora</th><th>MAC</th><th>Status</th>
-  </tr>`;
-
-  let html='';
-
-  data.forEach(c=>{
-    html+=`
-    <tr>
-      <td><input type="checkbox" class="check"></td>
-      <td>${c.nome||''}</td>
-      <td>${c.telefone||''}</td>
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.mac||''}</td>
-      <td>${c.status||''}</td>
-    </tr>`;
+  dados.forEach(c=>{
+    total += Number(c.valor||0);
+    if(c.status==="ativo") ativos++;
+    else inativos++;
   });
 
-  tabela.innerHTML=html;
+  faturamento.innerText = total;
+  ativos.innerText = ativos;
+  inativos.innerText = inativos;
 }
 
-// ================= BUSCA CORRIGIDA
-function buscar(){
-
-  let termo = busca.value.toLowerCase();
-
-  let filtrado = dadosAtuais.filter(c =>
-    (c.nome||"").toLowerCase().includes(termo) ||
-    (c.telefone||"").includes(termo)
-  );
-
-  renderFiltrado(filtrado);
-}
-
-function renderFiltrado(lista){
-
-  let html='';
-
-  lista.forEach(c=>{
-    html+=`
-    <tr>
-      <td></td>
-      <td>${c.nome}</td>
-      <td>${c.telefone}</td>
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.mac||''}</td>
-      <td>${c.status||''}</td>
-    </tr>`;
-  });
-
-  tabela.innerHTML=html;
-}
-
-// ================= AUX
-function atualizarProgresso(a,t){
-  let p=Math.floor((a/t)*100);
-  progress.style.width=p+"%";
-  progress.innerText=p+"%";
-}
-
-mostrarClientes();
+// INIT
+carregar();
 
 </script>
 
