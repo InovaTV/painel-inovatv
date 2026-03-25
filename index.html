@@ -28,7 +28,7 @@ button {
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
 table { width:100%; border-collapse: collapse; }
-th,td { padding:8px; }
+th,td { padding:8px; border:1px solid #ccc; }
 </style>
 </head>
 
@@ -53,22 +53,19 @@ th,td { padding:8px; }
   <div id="progress">0%</div>
 </div>
 
-<div id="logImportacao"></div>
-
 <hr>
 
 <h3>Ações</h3>
 
 <div id="contador">Selecionados: 0</div>
 
-<button onclick="toggleTodos(true)">Selecionar todos</button>
-<button onclick="toggleTodos(false)">Desmarcar</button>
-
-<button class="btn-verde" onclick="deletarSelecionados()">Excluir</button>
+<button class="btn-cinza" onclick="selecionarTodos()">Selecionar todos</button>
+<button class="btn-cinza" onclick="desmarcarTodos()">Desmarcar</button>
+<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <br><br>
 
-<table border="1">
+<table>
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
@@ -100,6 +97,17 @@ function resetarProgresso(){
   progress.innerText = "0%";
 }
 
+// ================= SELEÇÃO
+function selecionarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=true);
+  atualizarContador();
+}
+
+function desmarcarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
+  atualizarContador();
+}
+
 // ================= CLIENTES
 async function mostrarClientes(){
 
@@ -123,10 +131,9 @@ async function mostrarClientes(){
     html+=`
     <tr>
       <td>
-        <input type="checkbox"
-          class="check"
-          data-id="${c.id}"
-          onchange="atualizarContador()">
+        <input type="checkbox" class="check"
+        data-id="${c.id}"
+        onchange="atualizarContador()">
       </td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
@@ -139,13 +146,12 @@ async function mostrarClientes(){
 
   tabela.innerHTML = html;
 
-  // CHECK ALL funcionando
-  document.getElementById("checkAll").addEventListener("change", function(){
+  document.getElementById("checkAll").onclick = function(){
     document.querySelectorAll(".check").forEach(c=>{
       c.checked = this.checked;
     });
     atualizarContador();
-  });
+  };
 
   atualizarContador();
 }
@@ -173,10 +179,9 @@ async function mostrarContatos(){
     html+=`
     <tr>
       <td>
-        <input type="checkbox"
-          class="check"
-          data-id="${c.id}"
-          onchange="atualizarContador()">
+        <input type="checkbox" class="check"
+        data-id="${c.id}"
+        onchange="atualizarContador()">
       </td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
@@ -189,12 +194,12 @@ async function mostrarContatos(){
 
   tabela.innerHTML = html;
 
-  document.getElementById("checkAll").addEventListener("change", function(){
+  document.getElementById("checkAll").onclick = function(){
     document.querySelectorAll(".check").forEach(c=>{
       c.checked = this.checked;
     });
     atualizarContador();
-  });
+  };
 
   atualizarContador();
 }
@@ -237,7 +242,7 @@ async function importarArquivo(){
   mostrarClientes();
 }
 
-// ================= DELETE
+// ================= DELETE INDIVIDUAL
 async function deletarItem(id){
 
   if(!confirm("Excluir item?")) return;
@@ -256,7 +261,9 @@ async function deletarSelecionados(){
 
   if(total===0) return alert("Selecione pelo menos 1");
 
-  if(!confirm(`Excluir ${total} itens?`)) return;
+  let tipo = tela === 'clientes' ? 'clientes' : 'contatos';
+
+  if(!confirm(`Excluir ${total} ${tipo}?`)) return;
 
   resetarProgresso();
 
@@ -291,7 +298,12 @@ async function buscar(){
   let html='';
 
   data.forEach(c=>{
-    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td></tr>`;
+    html+=`
+      <tr>
+        <td>${c.nome}</td>
+        <td>${c.telefone}</td>
+      </tr>
+    `;
   });
 
   tabela.innerHTML = html;
