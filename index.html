@@ -97,14 +97,17 @@ function resetarProgresso(){
   progress.innerText = "0%";
 }
 
-// ================= IMPORTAÇÃO (CORRIGIDA)
+// ================= IMPORTAÇÃO COM CONFIRMAÇÃO
 async function importarArquivo(){
-
-  resetarProgresso();
-  logImportacao.innerHTML = "Iniciando...";
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
+
+  if(!confirm(`Deseja importar este arquivo?\n\nIsso pode adicionar ou atualizar clientes.`))
+    return;
+
+  resetarProgresso();
+  logImportacao.innerHTML = "Iniciando...";
 
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data);
@@ -118,8 +121,7 @@ async function importarArquivo(){
     let c = json[i];
 
     let telefone = (c.telefone||c.Telefone||"")
-      .toString()
-      .replace(/\D/g,"");
+      .toString().replace(/\D/g,"");
 
     if(!telefone){
       erro++;
@@ -134,18 +136,13 @@ async function importarArquivo(){
         body:JSON.stringify({
           clientes:[{
             nome:c.nome||c.Nome||"Sem nome",
-            telefone,
-            status:c.status||"ativo",
-            valor:c.valor||35
+            telefone
           }]
         })
       });
 
-      if(res.ok){
-        sucesso++;
-      } else {
-        erro++;
-      }
+      if(res.ok) sucesso++;
+      else erro++;
 
     }catch(e){
       erro++;
@@ -162,6 +159,57 @@ async function importarArquivo(){
   mostrarClientes();
 }
 
+// ================= DELETE INDIVIDUAL
+async function deletarItem(id){
+
+  let tipo = tela === 'clientes' ? 'cliente' : 'contato';
+
+  if(!confirm(`Tem certeza que deseja excluir este ${tipo}?`))
+    return;
+
+  resetarProgresso();
+
+  await client.from(tela).delete().eq('id', id);
+
+  atualizarProgresso(1,1);
+
+  if(tela==='clientes') mostrarClientes();
+  else mostrarContatos();
+}
+
+// ================= DELETE MASSA COM CONFIRMAÇÃO
+async function deletarSelecionados(){
+
+  let checks = document.querySelectorAll(".check:checked");
+  let total = checks.length;
+
+  if(total===0) return alert("Selecione pelo menos 1");
+
+  let tipo = tela === 'clientes' ? 'clientes' : 'contatos';
+
+  if(!confirm(`⚠️ ATENÇÃO\n\nVocê está excluindo ${total} ${tipo}.\n\nDeseja continuar?`))
+    return;
+
+  resetarProgresso();
+
+  let i=0;
+
+  for(let c of checks){
+
+    await client.from(tela)
+      .delete()
+      .eq('id', c.dataset.id);
+
+    i++;
+    atualizarProgresso(i,total);
+  }
+
+  alert("Exclusão concluída 🚀");
+
+  if(tela==='clientes') mostrarClientes();
+  else mostrarContatos();
+}
+
 // ================= CLIENTES
 async function mostrarClientes(){
 
@@ -175,6 +223,7 @@ async function mostrarClientes(){
       <th>Nome</th>
       <th>Telefone</th>
       <th>Status</th>
+      <th>Ações</th>
     </tr>
   `;
 
@@ -183,10 +232,13 @@ async function mostrarClientes(){
   data.forEach(c=>{
     html+=`
     <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status}"></td>
+      <td><input type="checkbox" class="check" data-id="${c.id}"></td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
       <td>${c.status}</td>
+      <td>
+        <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
+      </td>
     </tr>
     `;
   });
@@ -206,6 +258,7 @@ async function mostrarContatos(){
       <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
       <th>Telefone</th>
+      <th>Ações</th>
     </tr>
   `;
 
@@ -217,6 +270,9 @@ async function mostrarContatos(){
       <td><input type="checkbox" class="check" data-id="${c.id}"></td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
+      <td>
+        <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
+      </td>
     </tr>
     `;
   });
