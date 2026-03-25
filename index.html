@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>Painel InovaTV</title>
+
+  <!-- SUPABASE -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
   <style>
     body { font-family: Arial; padding: 20px; }
@@ -27,13 +33,13 @@
 
 <h3>Importação</h3>
 
-<input type="file" id="inputCSV" accept=".csv" />
-<button onclick="importarCSV()">IMPORTAR CSV</button>
+<input type="file" id="inputArquivo" accept=".xlsx,.csv" />
+<button onclick="importarArquivo()">IMPORTAR EXCEL</button>
 <button onclick="novoCliente()">NOVO CLIENTE</button>
 
 <hr>
 
-<h3>Ações em massa</h3>
+<h3>Ações</h3>
 
 <button onclick="toggleTodos(true)">Selecionar todos</button>
 <button onclick="toggleTodos(false)">Desmarcar todos</button>
@@ -59,6 +65,47 @@ const client = createClient(
 );
 
 let tela = 'clientes';
+
+// ================= IMPORTAR XLSX
+async function importarArquivo(){
+
+  const file = document.getElementById("inputArquivo").files[0];
+
+  if (!file){
+    alert("Selecione um arquivo");
+    return;
+  }
+
+  const data = await file.arrayBuffer();
+  const workbook = XLSX.read(data);
+
+  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+
+  const json = XLSX.utils.sheet_to_json(sheet);
+
+  console.log("EXCEL:", json);
+
+  const clientes = json.map(c => ({
+    nome: c.nome || c.Nome,
+    telefone: c.telefone || c.Telefone,
+    usuario: c.usuario || c.Usuario,
+    senha: c.senha || c.Senha,
+    plano: c.plano || c.Plano,
+    valor: c.valor || c.Valor,
+    vencimento: c.vencimento || c.Vencimento,
+    dispositivo: c.dispositivo || c.Dispositivo,
+    telas: c.telas || c.Telas
+  }));
+
+  await fetch("/api/importar-clientes", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ clientes })
+  });
+
+  alert("Importado do Excel 🚀");
+  mostrarClientes();
+}
 
 // ================= CLIENTES
 async function mostrarClientes(){
@@ -92,7 +139,6 @@ async function mostrarClientes(){
         <td>${c.vencimento || '-'}</td>
         <td>
           <button onclick="renovarCliente('${c.id}')">Renovar</button>
-          <button onclick="pagar('${c.id}')">Pago</button>
           <button onclick="editarCliente('${c.id}','${c.nome}','${c.telefone}')">Editar</button>
           <button onclick="deletarCliente('${c.id}')">Excluir</button>
         </td>
@@ -103,81 +149,38 @@ async function mostrarClientes(){
   document.getElementById('tabela').innerHTML = html;
 }
 
-// ================= CONTATOS
-async function mostrarContatos(){
-  tela = 'contatos';
-
-  document.getElementById('thead').innerHTML = `
-    <tr>
-      <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Ações</th>
-    </tr>
-  `;
-
-  const { data } = await client.from('contatos').select('*');
-
-  let html = '';
-
-  data.forEach(c=>{
-    html += `
-      <tr>
-        <td><input type="checkbox" class="checkContato" value="${c.telefone}"></td>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-        <td>
-          <button onclick="virarCliente('${c.telefone}')">Virar Cliente</button>
-          <button onclick="editarContato('${c.telefone}','${c.nome}')">Editar</button>
-          <button onclick="deletarContato('${c.telefone}')">Excluir</button>
-        </td>
-      </tr>
-    `;
-  });
-
-  document.getElementById('tabela').innerHTML = html;
-}
-
-// ================= TOGGLE TODOS
+// ================= FUNÇÕES MASSA
 function toggleTodos(checked){
   document.querySelectorAll("input[type='checkbox']")
     .forEach(c => c.checked = checked);
 }
 
-// ================= SELECIONAR ATIVOS
 function selecionarAtivos(){
   document.querySelectorAll(".checkCliente")
     .forEach(c => c.checked = c.dataset.status === "ativo");
 }
 
-// ================= SELECIONAR VENCIDOS
 function selecionarVencidos(){
   document.querySelectorAll(".checkCliente")
     .forEach(c => c.checked = c.dataset.status === "inativo");
 }
 
-// ================= RENOVAR 1
 async function renovarCliente(id){
 
-  const novaData = new Date();
-  novaData.setDate(novaData.getDate() + 30);
+  const nova = new Date();
+  nova.setDate(nova.getDate() + 30);
 
-  await client.from('clientes')
-    .update({
-      status: 'ativo',
-      vencimento: novaData.toISOString().split('T')[0]
-    })
-    .eq('id', id);
+  await client.from('clientes').update({
+    status: 'ativo',
+    vencimento: nova.toISOString().split('T')[0]
+  }).eq('id', id);
 
   mostrarClientes();
 }
 
-// ================= RENOVAR MULTI
 async function renovarSelecionados(){
 
   const checks = document.querySelectorAll(".checkCliente:checked");
-
-  if (!checks.length) return alert("Selecione clientes");
 
   for (const c of checks){
     await renovarCliente(c.value);
@@ -186,67 +189,35 @@ async function renovarSelecionados(){
   alert("Renovados 🚀");
 }
 
-// ================= DELETE MULTI
 async function deletarSelecionados(){
 
-  if (tela === 'clientes'){
+  const checks = document.querySelectorAll(".checkCliente:checked");
 
-    const checks = document.querySelectorAll(".checkCliente:checked");
-
-    for (const c of checks){
-      await client.from('clientes').delete().eq('id', c.value);
-    }
-
-    mostrarClientes();
-
-  } else {
-
-    const checks = document.querySelectorAll(".checkContato:checked");
-
-    for (const c of checks){
-      await client.from('contatos').delete().eq('telefone', c.value);
-    }
-
-    mostrarContatos();
+  for (const c of checks){
+    await client.from('clientes').delete().eq('id', c.value);
   }
 
   alert("Excluídos 🚀");
-}
-
-// ================= OUTROS
-async function pagar(id){
-  await client.from('clientes').update({ status:'ativo' }).eq('id', id);
   mostrarClientes();
 }
 
-async function editarCliente(id, nomeAtual, telefoneAtual){
-  const nome = prompt("Nome:", nomeAtual);
-  const telefone = prompt("Telefone:", telefoneAtual);
-  if (!nome || !telefone) return;
+// ================= BUSCA
+async function buscar(){
 
-  await client.from('clientes').update({ nome, telefone }).eq('id', id);
-  mostrarClientes();
-}
+  let termo = document.getElementById('busca').value;
 
-async function deletarCliente(id){
-  await client.from('clientes').delete().eq('id', id);
-  mostrarClientes();
-}
+  const { data } = await client
+    .from('clientes')
+    .select('*')
+    .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
 
-async function editarContato(telefone, nomeAtual){
-  const nome = prompt("Nome:", nomeAtual);
-  await client.from('contatos').update({ nome }).eq('telefone', telefone);
-  mostrarContatos();
-}
+  let html = '';
 
-async function deletarContato(telefone){
-  await client.from('contatos').delete().eq('telefone', telefone);
-  mostrarContatos();
-}
+  data.forEach(c=>{
+    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td><td>${c.vencimento}</td><td>-</td></tr>`;
+  });
 
-async function virarCliente(telefone){
-  await client.rpc('virar_cliente', { p_telefone: telefone });
-  mostrarClientes();
+  document.getElementById('tabela').innerHTML = html;
 }
 
 // INIT
