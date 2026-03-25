@@ -10,22 +10,28 @@
 <style>
 body { font-family: Arial; padding:20px; }
 
+/* BOTÕES */
 button {
   margin:4px;
   padding:6px 12px;
   border:none;
   border-radius:4px;
   cursor:pointer;
+  font-weight:bold;
 }
 
 .btn-azul { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
-.btn-neutro { background:#ddd; }
+.btn-cinza { background:#ddd; }
 
+.ativo { outline:3px solid #000; }
+
+/* PROGRESSO */
 #progressBar { width:100%; background:#ccc; height:20px; margin-top:10px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
+/* TABELA */
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; }
 </style>
@@ -35,13 +41,13 @@ th,td { padding:8px; }
 
 <h2>Painel InovaTV</h2>
 
-<button onclick="mostrarClientes()">Clientes</button>
-<button onclick="mostrarContatos()">Contatos</button>
+<button id="btnClientes" class="btn-azul" onclick="mostrarClientes()">Clientes</button>
+<button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
 
 <br><br>
 
 <input id="busca" placeholder="Telefone ou Nome">
-<button onclick="buscar()">Buscar</button>
+<button class="btn-cinza" onclick="buscar()">Buscar</button>
 
 <hr>
 
@@ -52,18 +58,16 @@ th,td { padding:8px; }
   <div id="progress">0%</div>
 </div>
 
-<div id="logImportacao"></div>
-
 <hr>
 
 <h3>Ações</h3>
 
 <div id="contador">Selecionados: 0</div>
 
-<button onclick="toggleTodos(true)">Selecionar todos</button>
-<button onclick="toggleTodos(false)">Desmarcar</button>
-<button onclick="selecionarAtivos()">Ativos</button>
-<button onclick="selecionarVencidos()">Vencidos</button>
+<button class="btn-cinza" onclick="toggleTodos(true)">Selecionar todos</button>
+<button class="btn-cinza" onclick="toggleTodos(false)">Desmarcar</button>
+<button class="btn-cinza" onclick="selecionarAtivos()">Ativos</button>
+<button class="btn-cinza" onclick="selecionarVencidos()">Vencidos</button>
 
 <button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
@@ -82,13 +86,13 @@ const client = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
-// ================= PROGRESSO GLOBAL
-function atualizarProgresso(atual, total){
+let tela = 'clientes';
 
+// ================= PROGRESSO
+function atualizarProgresso(atual,total){
   let p = Math.floor((atual/total)*100);
-
-  progress.style.width = p + "%";
-  progress.innerText = p + "%";
+  progress.style.width = p+"%";
+  progress.innerText = p+"%";
 }
 
 function resetarProgresso(){
@@ -105,6 +109,7 @@ function atualizarContador(){
 // ================= CLIENTES
 async function mostrarClientes(){
 
+  tela='clientes';
   resetarProgresso();
 
   const { data } = await client.from('clientes').select('*');
@@ -124,13 +129,19 @@ async function mostrarClientes(){
   data.forEach(c=>{
     html+=`
     <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status}" onchange="atualizarContador()"></td>
+      <td>
+        <input type="checkbox"
+               class="check"
+               data-id="${c.id}"
+               data-status="${c.status}"
+               onchange="atualizarContador()">
+      </td>
       <td>${c.nome}</td>
       <td>${c.telefone}</td>
       <td>${c.status}</td>
       <td>
-        <button onclick="renovarCliente('${c.id}')">Renovar</button>
-        <button onclick="deletarCliente('${c.id}')">Excluir</button>
+        <button class="btn-verde" onclick="renovarCliente('${c.id}')">Renovar</button>
+        <button class="btn-vermelho" onclick="deletarCliente('${c.id}')">Excluir</button>
       </td>
     </tr>
     `;
@@ -142,6 +153,7 @@ async function mostrarClientes(){
 // ================= CONTATOS
 async function mostrarContatos(){
 
+  tela='contatos';
   resetarProgresso();
 
   const { data } = await client.from('contatos').select('*');
@@ -169,7 +181,7 @@ async function mostrarContatos(){
   tabela.innerHTML = html;
 }
 
-// ================= IMPORTAÇÃO
+// ================= IMPORTAR
 async function importarArquivo(){
 
   resetarProgresso();
@@ -185,93 +197,27 @@ async function importarArquivo(){
 
     let c = json[i];
 
-    let telefone = (c.telefone||c.Telefone||"").toString().replace(/\D/g,"");
+    let telefone = (c.telefone||c.Telefone||"")
+      .toString().replace(/\D/g,"");
 
     if(!telefone) continue;
 
     await fetch("/api/importar-clientes",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({ clientes:[{ nome:c.nome||c.Nome, telefone }] })
+      body:JSON.stringify({
+        clientes:[{ nome:c.nome||c.Nome, telefone }]
+      })
     });
 
-    atualizarProgresso(i+1, json.length);
+    atualizarProgresso(i+1,json.length);
   }
 
   alert("Importado 🚀");
   mostrarClientes();
 }
 
-// ================= RENOVAR EM MASSA
-async function renovarSelecionados(){
-
-  let checks = document.querySelectorAll(".check:checked");
-  let total = checks.length;
-
-  if(total===0) return alert("Selecione pelo menos 1");
-
-  resetarProgresso();
-
-  let i=0;
-
-  for(let c of checks){
-
-    let d = new Date();
-    d.setDate(d.getDate()+30);
-
-    await client.from('clientes')
-      .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
-      .eq('id', c.dataset.id);
-
-    i++;
-    atualizarProgresso(i, total);
-  }
-
-  alert("Renovados 🚀");
-  mostrarClientes();
-}
-
-// ================= DELETE EM MASSA
-async function deletarSelecionados(){
-
-  let checks = document.querySelectorAll(".check:checked");
-  let total = checks.length;
-
-  if(total===0) return alert("Selecione pelo menos 1");
-
-  if(!confirm("Deseja excluir?")) return;
-
-  resetarProgresso();
-
-  let i=0;
-
-  for(let c of checks){
-
-    await client.from('clientes')
-      .delete()
-      .eq('id', c.dataset.id);
-
-    i++;
-    atualizarProgresso(i, total);
-  }
-
-  alert("Excluídos 🚀");
-  mostrarClientes();
-}
-
-// ================= DELETE INDIVIDUAL COM PROGRESSO
-async function deletarCliente(id){
-
-  resetarProgresso();
-
-  await client.from('clientes').delete().eq('id', id);
-
-  atualizarProgresso(1,1);
-
-  mostrarClientes();
-}
-
-// ================= RENOVAR INDIVIDUAL
+// ================= RENOVAR
 async function renovarCliente(id){
 
   resetarProgresso();
@@ -285,6 +231,81 @@ async function renovarCliente(id){
 
   atualizarProgresso(1,1);
 
+  mostrarClientes();
+}
+
+async function renovarSelecionados(){
+
+  let checks = document.querySelectorAll(".check:checked");
+  let total = checks.length;
+
+  if(total===0) return alert("Selecione pelo menos 1");
+
+  resetarProgresso();
+
+  let i=0;
+
+  for(let c of checks){
+
+    if(!c.dataset.id) continue;
+
+    let d = new Date();
+    d.setDate(d.getDate()+30);
+
+    await client.from('clientes')
+      .update({ vencimento:d.toISOString().split('T')[0], status:'ativo' })
+      .eq('id', c.dataset.id);
+
+    i++;
+    atualizarProgresso(i,total);
+  }
+
+  alert("Renovados 🚀");
+  mostrarClientes();
+}
+
+// ================= DELETE (CORRIGIDO)
+async function deletarCliente(id){
+
+  if(!confirm("Excluir cliente?")) return;
+
+  resetarProgresso();
+
+  await client.from('clientes')
+    .delete()
+    .eq('id', id);
+
+  atualizarProgresso(1,1);
+
+  mostrarClientes();
+}
+
+async function deletarSelecionados(){
+
+  let checks = document.querySelectorAll(".check:checked");
+  let total = checks.length;
+
+  if(total===0) return alert("Selecione pelo menos 1");
+
+  if(!confirm("Excluir selecionados?")) return;
+
+  resetarProgresso();
+
+  let i=0;
+
+  for(let c of checks){
+
+    if(!c.dataset.id) continue;
+
+    await client.from('clientes')
+      .delete()
+      .eq('id', c.dataset.id);
+
+    i++;
+    atualizarProgresso(i,total);
+  }
+
+  alert("Excluídos 🚀");
   mostrarClientes();
 }
 
@@ -307,6 +328,30 @@ function selecionarVencidos(){
 function toggleTodos(v){
   document.querySelectorAll(".check").forEach(c=>c.checked=v);
   atualizarContador();
+}
+
+// ================= BUSCA
+async function buscar(){
+
+  let termo = busca.value;
+
+  const { data } = await client
+    .from(tela)
+    .select('*')
+    .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
+
+  let html='';
+
+  data.forEach(c=>{
+    html+=`
+      <tr>
+        <td>${c.nome}</td>
+        <td>${c.telefone}</td>
+      </tr>
+    `;
+  });
+
+  tabela.innerHTML = html;
 }
 
 // INIT
