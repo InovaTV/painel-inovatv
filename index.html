@@ -1,62 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Painel InovaTV</title>
+<meta charset="UTF-8">
+<title>Painel InovaTV</title>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <style>
-    body { font-family: Arial; padding: 20px; }
+<style>
+body {
+  font-family: Arial;
+  padding: 20px;
+  background: #f5f5f5;
+  color: #000;
+}
 
-    button {
-      margin: 4px;
-      padding: 6px 12px;
-      border: none;
-      cursor: pointer;
-      color: white;
-      border-radius: 4px;
-      transition: 0.2s;
-    }
+.dark {
+  background: #121212;
+  color: #fff;
+}
 
-    button:active {
-      transform: scale(0.95);
-      opacity: 0.8;
-    }
+button {
+  margin: 4px;
+  padding: 6px 12px;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+}
 
-    .btn-azul { background: #2196F3; }
-    .btn-verde { background: #4CAF50; }
-    .btn-vermelho { background: #f44336; }
-    .btn-amarelo { background: #ff9800; }
-    .btn-cinza { background: #777; }
+.btn-azul { background: #2196F3; color: #fff; }
+.btn-verde { background: #4CAF50; color: #fff; }
+.btn-vermelho { background: #f44336; color: #fff; }
+.btn-cinza { background: #777; color: #fff; }
 
-    .ativo {
-      outline: 3px solid #000;
-      font-weight: bold;
-    }
+/* 🔥 BOTÕES NEUTROS (ANTES ERAM AMARELOS) */
+.btn-neutro {
+  background: #ddd;
+  color: #000;
+}
 
-    table {
-      border-collapse: collapse;
-      width: 100%;
-    }
+.dark .btn-neutro {
+  background: #333;
+  color: #fff;
+}
 
-    th, td {
-      padding: 8px;
-    }
+.ativo {
+  outline: 3px solid #000;
+  font-weight: bold;
+}
 
-    #progress {
-      margin-top: 10px;
-      font-weight: bold;
-    }
-  </style>
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th, td {
+  padding: 8px;
+}
+
+.card {
+  padding: 10px;
+  margin: 10px 0;
+  background: #fff;
+}
+
+.dark .card {
+  background: #1e1e1e;
+}
+</style>
 </head>
+
 <body>
 
 <h2>Painel InovaTV</h2>
 
 <button id="btnClientes" class="btn-azul" onclick="mostrarClientes()">Clientes</button>
 <button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
+<button class="btn-cinza" onclick="toggleDark()">🌙 Tema</button>
 
 <br><br>
 
@@ -65,21 +86,31 @@
 
 <hr>
 
+<h3>Dashboard</h3>
+
+<div class="card">
+  💰 Total Faturamento: R$ <span id="totalValor">0</span><br>
+  👥 Clientes Ativos: <span id="totalAtivos">0</span><br>
+  ❌ Clientes Inativos: <span id="totalInativos">0</span>
+</div>
+
+<canvas id="grafico" height="100"></canvas>
+
+<hr>
+
 <h3>Importação</h3>
 
 <input type="file" id="inputArquivo" accept=".xlsx" />
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
-<div id="progress"></div>
-
 <hr>
 
 <h3>Ações</h3>
 
-<button class="btn-amarelo" onclick="toggleTodos(true)">Selecionar todos</button>
-<button class="btn-amarelo" onclick="toggleTodos(false)">Desmarcar</button>
-<button class="btn-amarelo" onclick="selecionarAtivos()">Ativos</button>
-<button class="btn-amarelo" onclick="selecionarVencidos()">Vencidos</button>
+<button class="btn-neutro" onclick="toggleTodos(true)">Selecionar todos</button>
+<button class="btn-neutro" onclick="toggleTodos(false)">Desmarcar</button>
+<button class="btn-neutro" onclick="selecionarAtivos()">Ativos</button>
+<button class="btn-neutro" onclick="selecionarVencidos()">Vencidos</button>
 
 <button class="btn-verde" onclick="renovarSelecionados()">Renovar</button>
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
@@ -87,8 +118,8 @@
 <br><br>
 
 <table border="1">
-  <thead id="thead"></thead>
-  <tbody id="tabela"></tbody>
+<thead id="thead"></thead>
+<tbody id="tabela"></tbody>
 </table>
 
 <script>
@@ -99,6 +130,12 @@ const client = supabase.createClient(
 );
 
 let tela = 'clientes';
+let grafico;
+
+// ================= DARK MODE
+function toggleDark(){
+  document.body.classList.toggle("dark");
+}
 
 // ================= BOTÃO ATIVO
 function ativarBotao(){
@@ -112,6 +149,33 @@ function ativarBotao(){
   }
 }
 
+// ================= DASHBOARD
+function atualizarDashboard(data){
+
+  let ativos = data.filter(c => c.status === 'ativo').length;
+  let inativos = data.filter(c => c.status === 'inativo').length;
+  let total = data.reduce((s,c)=> s + (c.valor || 0), 0);
+
+  document.getElementById("totalAtivos").innerText = ativos;
+  document.getElementById("totalInativos").innerText = inativos;
+  document.getElementById("totalValor").innerText = total;
+
+  if (grafico) grafico.destroy();
+
+  const ctx = document.getElementById("grafico");
+
+  grafico = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Ativos','Inativos'],
+      datasets: [{
+        label: 'Clientes',
+        data: [ativos, inativos]
+      }]
+    }
+  });
+}
+
 // ================= IMPORTAÇÃO
 async function importarArquivo(){
 
@@ -123,12 +187,7 @@ async function importarArquivo(){
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   const json = XLSX.utils.sheet_to_json(sheet);
 
-  for (let i=0;i<json.length;i++){
-
-    document.getElementById("progress").innerText =
-      `Importando ${i+1}/${json.length}`;
-
-    let c = json[i];
+  for (let c of json){
 
     let telefone = (c.telefone || c.Telefone || "").toString().replace(/\D/g,"");
 
@@ -141,7 +200,7 @@ async function importarArquivo(){
     });
   }
 
-  document.getElementById("progress").innerText = "Finalizado 🚀";
+  alert("Importado 🚀");
   mostrarClientes();
 }
 
@@ -150,6 +209,10 @@ async function mostrarClientes(){
 
   tela = 'clientes';
   ativarBotao();
+
+  const { data } = await client.from('clientes').select('*');
+
+  atualizarDashboard(data);
 
   document.getElementById('thead').innerHTML = `
     <tr>
@@ -160,8 +223,6 @@ async function mostrarClientes(){
       <th>Ações</th>
     </tr>
   `;
-
-  const { data } = await client.from('clientes').select('*');
 
   let html = '';
 
@@ -183,51 +244,19 @@ async function mostrarClientes(){
   document.getElementById('tabela').innerHTML = html;
 }
 
-// ================= CONTATOS
-async function mostrarContatos(){
-
-  tela = 'contatos';
-  ativarBotao();
-
-  document.getElementById('thead').innerHTML = `
-    <tr>
-      <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
-      <th>Nome</th>
-      <th>Telefone</th>
-    </tr>
-  `;
-
-  const { data } = await client.from('contatos').select('*');
-
-  let html = '';
-
-  data.forEach(c=>{
-    html += `
-      <tr>
-        <td><input type="checkbox" class="checkContato" value="${c.telefone}"></td>
-        <td>${c.nome}</td>
-        <td>${c.telefone}</td>
-      </tr>
-    `;
-  });
-
-  document.getElementById('tabela').innerHTML = html;
-}
-
 // ================= MASSA
 function toggleTodos(checked){
-  document.querySelectorAll("input[type='checkbox']")
-    .forEach(c => c.checked = checked);
+  document.querySelectorAll("input[type='checkbox']").forEach(c=>c.checked=checked);
 }
 
 function selecionarAtivos(){
   document.querySelectorAll(".checkCliente")
-    .forEach(c => c.checked = c.dataset.status === "ativo");
+    .forEach(c=>c.checked=c.dataset.status==="ativo");
 }
 
 function selecionarVencidos(){
   document.querySelectorAll(".checkCliente")
-    .forEach(c => c.checked = c.dataset.status === "inativo");
+    .forEach(c=>c.checked=c.dataset.status==="inativo");
 }
 
 // ================= RENOVAR
@@ -257,15 +286,14 @@ async function renovarSelecionados(){
 // ================= DELETE
 async function deletarSelecionados(){
 
-  if (tela === 'clientes'){
-    const checks = document.querySelectorAll(".checkCliente:checked");
-    for (const c of checks){
-      await client.from('clientes').delete().eq('id', c.value);
-    }
-    mostrarClientes();
+  const checks = document.querySelectorAll(".checkCliente:checked");
+
+  for (const c of checks){
+    await client.from('clientes').delete().eq('id', c.value);
   }
 
   alert("Excluídos 🚀");
+  mostrarClientes();
 }
 
 async function deletarCliente(id){
@@ -279,14 +307,14 @@ async function buscar(){
   let termo = document.getElementById('busca').value;
 
   const { data } = await client
-    .from(tela)
+    .from('clientes')
     .select('*')
     .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
 
   let html = '';
 
   data.forEach(c=>{
-    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||''}</td></tr>`;
+    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td></tr>`;
   });
 
   document.getElementById('tabela').innerHTML = html;
