@@ -9,41 +9,21 @@
 
 <style>
 body { font-family: Arial; padding:20px; }
-
-button {
-  margin:4px;
-  padding:6px 12px;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-  font-weight:bold;
-}
-
+button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
 .btn-topo { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
-.btn-cinza { background:#ddd; }
-
 #progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
-
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
-
 .hidden { display:none; }
-
-#financeiro {
-  background:#f5f5f5;
-  padding:15px;
-  margin-top:40px;
-}
 </style>
 </head>
 
 <body>
 
 <h2>Painel InovaTV</h2>
-
 <h3 id="statusTela">Você está em: CLIENTES</h3>
 
 <button class="btn-topo" onclick="mostrarClientes()">Clientes</button>
@@ -60,9 +40,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 <input type="file" id="inputArquivo" accept=".xlsx" />
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
-<div id="progressBar">
-  <div id="progress">0%</div>
-</div>
+<div id="progressBar"><div id="progress">0%</div></div>
 
 <hr>
 
@@ -74,38 +52,18 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <hr>
 
-<h3>Ações</h3>
-
 <div id="contador">Selecionados: 0</div>
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
 <button onclick="desmarcarTodos()">Desmarcar</button>
-
 <button onclick="selecionarAtivos()">Ativos</button>
 <button onclick="selecionarVencidos()">Vencidos</button>
-
 <button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
-
-<br><br>
 
 <table>
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
-
-<div id="financeiro" class="hidden">
-<h2>Financeiro</h2>
-<button class="btn-topo" onclick="voltar()">⬅ Voltar</button>
-<hr>
-<div>💰 Total: R$ <span id="fTotal">0</span></div>
-<br>
-<table>
-<thead>
-<tr><th>Nome</th><th>Valor</th><th>Status</th></tr>
-</thead>
-<tbody id="tabelaFinanceiro"></tbody>
-</table>
-</div>
 
 <script>
 
@@ -114,31 +72,21 @@ const client = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
-let tela = 'clientes';
-let dadosAtuais = [];
+let tela='clientes';
+let dadosAtuais=[];
 
-busca.addEventListener("keypress", e => {
-  if(e.key === "Enter") buscar();
+// ENTER
+busca.addEventListener("keypress", e=>{
+  if(e.key==="Enter") buscar();
 });
 
-function atualizarContador(){
-  contador.innerText =
-    "Selecionados: " + document.querySelectorAll(".check:checked").length;
-}
-
-function atualizarProgresso(atual,total){
-  let p = Math.floor((atual/total)*100);
-  progress.style.width = p+"%";
-  progress.innerText = p+"%";
-}
-
-// ================= IMPORTAR (CORRIGIDO)
+// ================= IMPORTAR PROFISSIONAL
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
 
-  if(!confirm("Importar Excel completo?")) return;
+  if(!confirm("Importar e ATUALIZAR clientes automaticamente?")) return;
 
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data);
@@ -146,64 +94,68 @@ async function importarArquivo(){
 
   for(let i=0;i<json.length;i++){
 
-    let c = json[i];
+    let c=json[i];
 
-    let telefone = (c.telefone || c.Telefone || "")
-      .toString().replace(/\D/g,"");
+    let telefone = (c.telefone || c.telefone_ || "").toString().replace(/\D/g,"");
 
     if(!telefone) continue;
 
-    await fetch("/api/importar-clientes",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body:JSON.stringify({
-        clientes:[{
-          nome: c.nome || c.Nome || "",
-          telefone,
-          usuario: c.usuario || "",
-          senha: c.senha || "",
-          vencimento: c.vencimento || null,
-          status: (c.status || "ativo").toLowerCase(),
-          valor: c.valor || 0,
-          dispositivo: c.dispositivo || "",
-          aplicativo: c.aplicativo || "",
-          mac: c.mac || "",
-          servidor: c.servidor || "",
-          plano: c.plano || ""
-        }]
-      })
-    });
+    let vencimento = c.vencimen || null;
+    let hora = c.hora_venc || null;
+
+    // 🔥 STATUS AUTOMÁTICO
+    let status="ativo";
+    if(vencimento){
+      let hoje = new Date();
+      let v = new Date(vencimento);
+      if(v < hoje) status="inativo";
+    }
+
+    // 🔥 UPSERT (SEM DUPLICAR)
+    const { data: existente } = await client
+      .from('clientes')
+      .select('id')
+      .eq('telefone', telefone)
+      .single();
+
+    let payload = {
+      nome: c.nome || "",
+      telefone,
+      usuario: c.usuario || "",
+      senha: c.senha || "",
+      vencimento,
+      hora_vencimento: hora,
+      status,
+      valor: c.valor || 0,
+      dispositivo: c.dispositiv || "",
+      aplicativo: c.aplicativo || "",
+      mac: c.mac || "",
+      servidor: c.servidor || "",
+      plano: c.plano || ""
+    };
+
+    if(existente){
+      await client.from('clientes').update(payload).eq('telefone', telefone);
+    }else{
+      await client.from('clientes').insert(payload);
+    }
 
     atualizarProgresso(i+1,json.length);
   }
 
-  alert("Importação finalizada 🚀");
+  alert("Importação completa 🚀");
   mostrarClientes();
 }
 
-// RESTO DO SEU CÓDIGO (inalterado)
+// ================= CLIENTES
 async function mostrarClientes(){
-  tela='clientes';
-  statusTela.innerText = "Você está em: CLIENTES";
 
   const { data } = await client.from('clientes').select('*');
+  dadosAtuais=data;
 
-  dadosAtuais = data;
-
-  thead.innerHTML = `
+  thead.innerHTML=`
   <tr>
-    <th></th>
-    <th>Nome</th>
-    <th>Telefone</th>
-    <th>Vencimento</th>
-    <th>Usuário</th>
-    <th>MAC</th>
-    <th>Servidor</th>
-    <th>Plano</th>
-    <th>Valor</th>
-    <th>Dispositivo</th>
-    <th>Aplicativo</th>
-    <th>Ações</th>
+  <th></th><th>Nome</th><th>Telefone</th><th>Vencimento</th><th>Hora</th><th>MAC</th><th>Status</th>
   </tr>`;
 
   let html='';
@@ -211,26 +163,57 @@ async function mostrarClientes(){
   data.forEach(c=>{
     html+=`
     <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status||''}" onchange="atualizarContador()"></td>
+      <td><input type="checkbox" class="check"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
       <td>${c.vencimento||''}</td>
-      <td>${c.usuario||''}</td>
+      <td>${c.hora_vencimento||''}</td>
       <td>${c.mac||''}</td>
-      <td>${c.servidor||''}</td>
-      <td>${c.plano||''}</td>
-      <td>${c.valor||''}</td>
-      <td>${c.dispositivo||''}</td>
-      <td>${c.aplicativo||''}</td>
-      <td>
-        <button class="btn-vermelho" onclick="deletarItem('${c.id}')">Excluir</button>
-      </td>
+      <td>${c.status||''}</td>
     </tr>`;
   });
 
-  tabela.innerHTML = html;
+  tabela.innerHTML=html;
+}
 
-  atualizarContador();
+// ================= BUSCA CORRIGIDA
+function buscar(){
+
+  let termo = busca.value.toLowerCase();
+
+  let filtrado = dadosAtuais.filter(c =>
+    (c.nome||"").toLowerCase().includes(termo) ||
+    (c.telefone||"").includes(termo)
+  );
+
+  renderFiltrado(filtrado);
+}
+
+function renderFiltrado(lista){
+
+  let html='';
+
+  lista.forEach(c=>{
+    html+=`
+    <tr>
+      <td></td>
+      <td>${c.nome}</td>
+      <td>${c.telefone}</td>
+      <td>${c.vencimento||''}</td>
+      <td>${c.hora_vencimento||''}</td>
+      <td>${c.mac||''}</td>
+      <td>${c.status||''}</td>
+    </tr>`;
+  });
+
+  tabela.innerHTML=html;
+}
+
+// ================= AUX
+function atualizarProgresso(a,t){
+  let p=Math.floor((a/t)*100);
+  progress.style.width=p+"%";
+  progress.innerText=p+"%";
 }
 
 mostrarClientes();
