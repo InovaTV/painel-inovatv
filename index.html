@@ -46,7 +46,7 @@ const { createClient } = supabase;
 
 const client = createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA49539650._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'SUA_ANON_KEY_AQUI'
 );
 
 let tela = 'clientes';
@@ -66,7 +66,12 @@ async function mostrarClientes(){
     </tr>
   `;
 
-  const { data } = await client.from('clientes').select('*');
+  const { data, error } = await client
+    .from('clientes')
+    .select('*')
+    .order('criado_em', { ascending: false });
+
+  console.log("CLIENTES:", data, error);
 
   let html = '';
 
@@ -95,13 +100,8 @@ async function mostrarClientes(){
 
 // ================= SELECIONAR TODOS
 function toggleTodos(master){
-
-  const checks = document.querySelectorAll(".checkCliente");
-
-  checks.forEach(c=>{
-    c.checked = master.checked;
-  });
-
+  document.querySelectorAll(".checkCliente")
+    .forEach(c => c.checked = master.checked);
 }
 
 // ================= DELETE MULTI
@@ -109,7 +109,7 @@ async function deletarSelecionados(){
 
   const checks = document.querySelectorAll(".checkCliente:checked");
 
-  if (checks.length === 0){
+  if (!checks.length){
     alert("Selecione clientes");
     return;
   }
@@ -162,6 +162,11 @@ async function buscar(){
 
   let termo = document.getElementById('busca').value;
 
+  if (!termo){
+    mostrarClientes();
+    return;
+  }
+
   const { data } = await client
     .from(tela)
     .select('*')
@@ -212,6 +217,8 @@ async function importarCSV(){
     clientes.push(obj);
   }
 
+  console.log("IMPORTANDO:", clientes);
+
   await fetch("/api/importar-clientes", {
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -219,7 +226,9 @@ async function importarCSV(){
   });
 
   alert("Importado 🚀");
-  location.reload();
+
+  // 🔥 ATUALIZA SEM RECARREGAR
+  mostrarClientes();
 }
 
 // ================= NOVO CLIENTE
@@ -235,7 +244,7 @@ async function novoCliente(){
   });
 
   alert("Cliente criado 🚀");
-  location.reload();
+  mostrarClientes();
 }
 
 // ================= OUTROS
