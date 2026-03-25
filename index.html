@@ -9,65 +9,37 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body {
-  font-family: Arial;
-  padding: 20px;
-  background: #f5f5f5;
-  color: #000;
-}
+body { font-family: Arial; padding: 20px; }
 
-.dark {
-  background: #121212;
-  color: #fff;
-}
+.dark { background:#121212; color:#fff; }
 
 button {
-  margin: 4px;
-  padding: 6px 12px;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
+  margin:4px;
+  padding:6px 12px;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
 }
 
-.btn-azul { background: #2196F3; color: #fff; }
-.btn-verde { background: #4CAF50; color: #fff; }
-.btn-vermelho { background: #f44336; color: #fff; }
-.btn-cinza { background: #777; color: #fff; }
+.btn-azul { background:#2196F3; color:#fff; }
+.btn-verde { background:#4CAF50; color:#fff; }
+.btn-vermelho { background:#f44336; color:#fff; }
+.btn-neutro { background:#ddd; }
 
-/* 🔥 BOTÕES NEUTROS (ANTES ERAM AMARELOS) */
-.btn-neutro {
-  background: #ddd;
-  color: #000;
-}
+.dark .btn-neutro { background:#333; color:#fff; }
 
-.dark .btn-neutro {
-  background: #333;
-  color: #fff;
-}
+.ativo { outline:3px solid #000; }
 
-.ativo {
-  outline: 3px solid #000;
-  font-weight: bold;
-}
-
-table {
-  border-collapse: collapse;
-  width: 100%;
-}
-
-th, td {
-  padding: 8px;
-}
+table { width:100%; border-collapse: collapse; }
+th,td { padding:8px; }
 
 .card {
-  padding: 10px;
-  margin: 10px 0;
-  background: #fff;
+  background:#fff;
+  padding:10px;
+  margin-top:20px;
 }
 
-.dark .card {
-  background: #1e1e1e;
-}
+.dark .card { background:#1e1e1e; }
 </style>
 </head>
 
@@ -77,24 +49,12 @@ th, td {
 
 <button id="btnClientes" class="btn-azul" onclick="mostrarClientes()">Clientes</button>
 <button id="btnContatos" class="btn-azul" onclick="mostrarContatos()">Contatos</button>
-<button class="btn-cinza" onclick="toggleDark()">🌙 Tema</button>
+<button class="btn-neutro" onclick="toggleDark()">🌙 Tema</button>
 
 <br><br>
 
 <input id="busca" placeholder="Telefone ou Nome">
-<button class="btn-cinza" onclick="buscar()">Buscar</button>
-
-<hr>
-
-<h3>Dashboard</h3>
-
-<div class="card">
-  💰 Total Faturamento: R$ <span id="totalValor">0</span><br>
-  👥 Clientes Ativos: <span id="totalAtivos">0</span><br>
-  ❌ Clientes Inativos: <span id="totalInativos">0</span>
-</div>
-
-<canvas id="grafico" height="100"></canvas>
+<button class="btn-neutro" onclick="buscar()">Buscar</button>
 
 <hr>
 
@@ -122,17 +82,29 @@ th, td {
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- 🔥 DASHBOARD AGORA EMBAIXO -->
+<div class="card">
+  <h3>Dashboard</h3>
+
+  💰 Faturamento Atual: R$ <span id="totalValor">0</span><br>
+  📈 Previsão Próximo Mês: R$ <span id="previsao">0</span><br>
+  👥 Ativos: <span id="totalAtivos">0</span><br>
+  ❌ Inativos: <span id="totalInativos">0</span>
+
+  <canvas id="grafico" height="100"></canvas>
+</div>
+
 <script>
 
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'SUA_ANON_KEY_AQUI'
 );
 
 let tela = 'clientes';
 let grafico;
 
-// ================= DARK MODE
+// ================= DARK
 function toggleDark(){
   document.body.classList.toggle("dark");
 }
@@ -142,7 +114,7 @@ function ativarBotao(){
   document.getElementById("btnClientes").classList.remove("ativo");
   document.getElementById("btnContatos").classList.remove("ativo");
 
-  if (tela === 'clientes'){
+  if(tela==='clientes'){
     document.getElementById("btnClientes").classList.add("ativo");
   } else {
     document.getElementById("btnContatos").classList.add("ativo");
@@ -152,51 +124,67 @@ function ativarBotao(){
 // ================= DASHBOARD
 function atualizarDashboard(data){
 
-  let ativos = data.filter(c => c.status === 'ativo').length;
-  let inativos = data.filter(c => c.status === 'inativo').length;
-  let total = data.reduce((s,c)=> s + (c.valor || 0), 0);
+  let ativos = data.filter(c=>c.status==='ativo');
+  let inativos = data.filter(c=>c.status==='inativo');
 
-  document.getElementById("totalAtivos").innerText = ativos;
-  document.getElementById("totalInativos").innerText = inativos;
+  let total = ativos.reduce((s,c)=>s+(c.valor||0),0);
+
+  let previsao = total; // mesma base (pode evoluir depois)
+
   document.getElementById("totalValor").innerText = total;
+  document.getElementById("previsao").innerText = previsao;
+  document.getElementById("totalAtivos").innerText = ativos.length;
+  document.getElementById("totalInativos").innerText = inativos.length;
 
-  if (grafico) grafico.destroy();
+  // AGRUPAR POR MÊS
+  let meses = {};
 
-  const ctx = document.getElementById("grafico");
+  data.forEach(c=>{
+    if(!c.criado_em) return;
 
-  grafico = new Chart(ctx, {
-    type: 'bar',
-    data: {
-      labels: ['Ativos','Inativos'],
-      datasets: [{
-        label: 'Clientes',
-        data: [ativos, inativos]
+    let mes = c.criado_em.substring(0,7);
+
+    meses[mes] = (meses[mes] || 0) + 1;
+  });
+
+  let labels = Object.keys(meses);
+  let valores = Object.values(meses);
+
+  if(grafico) grafico.destroy();
+
+  grafico = new Chart(document.getElementById("grafico"),{
+    type:'line',
+    data:{
+      labels: labels,
+      datasets:[{
+        label:'Crescimento de Clientes',
+        data: valores
       }]
     }
   });
 }
 
-// ================= IMPORTAÇÃO
+// ================= IMPORTAR
 async function importarArquivo(){
 
   const file = document.getElementById("inputArquivo").files[0];
-  if (!file) return alert("Selecione arquivo");
+  if(!file) return alert("Selecione arquivo");
 
   const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data);
-  const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const wb = XLSX.read(data);
+  const sheet = wb.Sheets[wb.SheetNames[0]];
   const json = XLSX.utils.sheet_to_json(sheet);
 
-  for (let c of json){
+  for(let c of json){
 
-    let telefone = (c.telefone || c.Telefone || "").toString().replace(/\D/g,"");
+    let telefone = (c.telefone||c.Telefone||"").toString().replace(/\D/g,"");
 
-    if (!telefone) continue;
+    if(!telefone) continue;
 
-    await fetch("/api/importar-clientes", {
+    await fetch("/api/importar-clientes",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ clientes:[{ nome:c.nome||c.Nome, telefone }] })
+      body:JSON.stringify({ clientes:[{ nome:c.nome||c.Nome, telefone }] })
     });
   }
 
@@ -207,14 +195,14 @@ async function importarArquivo(){
 // ================= CLIENTES
 async function mostrarClientes(){
 
-  tela = 'clientes';
+  tela='clientes';
   ativarBotao();
 
   const { data } = await client.from('clientes').select('*');
 
   atualizarDashboard(data);
 
-  document.getElementById('thead').innerHTML = `
+  document.getElementById('thead').innerHTML=`
     <tr>
       <th><input type="checkbox" onclick="toggleTodos(this.checked)"></th>
       <th>Nome</th>
@@ -224,10 +212,10 @@ async function mostrarClientes(){
     </tr>
   `;
 
-  let html = '';
+  let html='';
 
   data.forEach(c=>{
-    html += `
+    html+=`
       <tr>
         <td><input type="checkbox" class="checkCliente" value="${c.id}" data-status="${c.status}"></td>
         <td>${c.nome}</td>
@@ -241,7 +229,7 @@ async function mostrarClientes(){
     `;
   });
 
-  document.getElementById('tabela').innerHTML = html;
+  document.getElementById('tabela').innerHTML=html;
 }
 
 // ================= MASSA
@@ -250,13 +238,11 @@ function toggleTodos(checked){
 }
 
 function selecionarAtivos(){
-  document.querySelectorAll(".checkCliente")
-    .forEach(c=>c.checked=c.dataset.status==="ativo");
+  document.querySelectorAll(".checkCliente").forEach(c=>c.checked=c.dataset.status==="ativo");
 }
 
 function selecionarVencidos(){
-  document.querySelectorAll(".checkCliente")
-    .forEach(c=>c.checked=c.dataset.status==="inativo");
+  document.querySelectorAll(".checkCliente").forEach(c=>c.checked=c.dataset.status==="inativo");
 }
 
 // ================= RENOVAR
@@ -274,9 +260,9 @@ async function renovarCliente(id){
 
 async function renovarSelecionados(){
 
-  const checks = document.querySelectorAll(".checkCliente:checked");
+  const checks=document.querySelectorAll(".checkCliente:checked");
 
-  for (const c of checks){
+  for(const c of checks){
     await renovarCliente(c.value);
   }
 
@@ -286,10 +272,10 @@ async function renovarSelecionados(){
 // ================= DELETE
 async function deletarSelecionados(){
 
-  const checks = document.querySelectorAll(".checkCliente:checked");
+  const checks=document.querySelectorAll(".checkCliente:checked");
 
-  for (const c of checks){
-    await client.from('clientes').delete().eq('id', c.value);
+  for(const c of checks){
+    await client.from('clientes').delete().eq('id',c.value);
   }
 
   alert("Excluídos 🚀");
@@ -297,27 +283,27 @@ async function deletarSelecionados(){
 }
 
 async function deletarCliente(id){
-  await client.from('clientes').delete().eq('id', id);
+  await client.from('clientes').delete().eq('id',id);
   mostrarClientes();
 }
 
 // ================= BUSCA
 async function buscar(){
 
-  let termo = document.getElementById('busca').value;
+  let termo=document.getElementById('busca').value;
 
   const { data } = await client
     .from('clientes')
     .select('*')
     .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
 
-  let html = '';
+  let html='';
 
   data.forEach(c=>{
-    html += `<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td></tr>`;
+    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td></tr>`;
   });
 
-  document.getElementById('tabela').innerHTML = html;
+  document.getElementById('tabela').innerHTML=html;
 }
 
 // INIT
