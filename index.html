@@ -9,17 +9,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { font-family: Arial; padding: 20px; }
-
+body { font-family: Arial; padding:20px; }
 .dark { background:#121212; color:#fff; }
 
-button {
-  margin:4px;
-  padding:6px 12px;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-}
+button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:pointer; }
 
 .btn-azul { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
@@ -33,12 +26,7 @@ button {
 table { width:100%; border-collapse: collapse; }
 th,td { padding:8px; }
 
-.card {
-  background:#fff;
-  padding:10px;
-  margin-top:20px;
-}
-
+.card { background:#fff; padding:10px; margin-top:20px; }
 .dark .card { background:#1e1e1e; }
 </style>
 </head>
@@ -57,8 +45,6 @@ th,td { padding:8px; }
 <button class="btn-neutro" onclick="buscar()">Buscar</button>
 
 <hr>
-
-<h3>Importação</h3>
 
 <input type="file" id="inputArquivo" accept=".xlsx" />
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
@@ -82,16 +68,22 @@ th,td { padding:8px; }
 <tbody id="tabela"></tbody>
 </table>
 
-<!-- 🔥 DASHBOARD AGORA EMBAIXO -->
+<!-- DASHBOARD -->
 <div class="card">
-  <h3>Dashboard</h3>
+<h3>Dashboard</h3>
 
-  💰 Faturamento Atual: R$ <span id="totalValor">0</span><br>
-  📈 Previsão Próximo Mês: R$ <span id="previsao">0</span><br>
-  👥 Ativos: <span id="totalAtivos">0</span><br>
-  ❌ Inativos: <span id="totalInativos">0</span>
+💰 Total: R$ <span id="totalValor">0</span><br>
+📅 Faturamento mês: R$ <span id="mesValor">0</span><br>
+🔮 Previsão próximo mês: R$ <span id="previsao">0</span><br>
+⚠️ Vencem amanhã: <span id="venceAmanha">0</span><br>
+👥 Ativos: <span id="totalAtivos">0</span><br>
+❌ Inativos: <span id="totalInativos">0</span>
 
-  <canvas id="grafico" height="100"></canvas>
+<br><br>
+
+<canvas id="graficoClientes" height="100"></canvas>
+<canvas id="graficoFaturamento" height="100"></canvas>
+
 </div>
 
 <script>
@@ -102,7 +94,7 @@ const client = supabase.createClient(
 );
 
 let tela = 'clientes';
-let grafico;
+let grafico1, grafico2;
 
 // ================= DARK
 function toggleDark(){
@@ -124,43 +116,66 @@ function ativarBotao(){
 // ================= DASHBOARD
 function atualizarDashboard(data){
 
+  let hoje = new Date();
+  let amanha = new Date();
+  amanha.setDate(hoje.getDate()+1);
+
   let ativos = data.filter(c=>c.status==='ativo');
   let inativos = data.filter(c=>c.status==='inativo');
 
   let total = ativos.reduce((s,c)=>s+(c.valor||0),0);
 
-  let previsao = total; // mesma base (pode evoluir depois)
+  // mês atual
+  let mesAtual = hoje.toISOString().substring(0,7);
+
+  let mesValor = data.filter(c=>c.vencimento?.startsWith(mesAtual))
+                     .reduce((s,c)=>s+(c.valor||0),0);
+
+  // previsão
+  let previsao = total;
+
+  // vence amanhã
+  let venceAmanha = data.filter(c=>{
+    if(!c.vencimento) return false;
+    let v = new Date(c.vencimento);
+    return v.toDateString() === amanha.toDateString();
+  }).length;
 
   document.getElementById("totalValor").innerText = total;
+  document.getElementById("mesValor").innerText = mesValor;
   document.getElementById("previsao").innerText = previsao;
+  document.getElementById("venceAmanha").innerText = venceAmanha;
   document.getElementById("totalAtivos").innerText = ativos.length;
   document.getElementById("totalInativos").innerText = inativos.length;
 
-  // AGRUPAR POR MÊS
+  // gráfico clientes
   let meses = {};
-
   data.forEach(c=>{
     if(!c.criado_em) return;
-
-    let mes = c.criado_em.substring(0,7);
-
-    meses[mes] = (meses[mes] || 0) + 1;
+    let m = c.criado_em.substring(0,7);
+    meses[m] = (meses[m]||0)+1;
   });
 
-  let labels = Object.keys(meses);
-  let valores = Object.values(meses);
+  if(grafico1) grafico1.destroy();
 
-  if(grafico) grafico.destroy();
-
-  grafico = new Chart(document.getElementById("grafico"),{
+  grafico1 = new Chart(document.getElementById("graficoClientes"),{
     type:'line',
-    data:{
-      labels: labels,
-      datasets:[{
-        label:'Crescimento de Clientes',
-        data: valores
-      }]
-    }
+    data:{ labels:Object.keys(meses), datasets:[{ label:'Clientes', data:Object.values(meses) }] }
+  });
+
+  // gráfico faturamento
+  let faturamento = {};
+  data.forEach(c=>{
+    if(!c.vencimento) return;
+    let m = c.vencimento.substring(0,7);
+    faturamento[m] = (faturamento[m]||0)+(c.valor||0);
+  });
+
+  if(grafico2) grafico2.destroy();
+
+  grafico2 = new Chart(document.getElementById("graficoFaturamento"),{
+    type:'bar',
+    data:{ labels:Object.keys(faturamento), datasets:[{ label:'Faturamento', data:Object.values(faturamento) }] }
   });
 }
 
@@ -232,6 +247,35 @@ async function mostrarClientes(){
   document.getElementById('tabela').innerHTML=html;
 }
 
+// ================= CONTATOS (AGORA FUNCIONANDO)
+async function mostrarContatos(){
+
+  tela='contatos';
+  ativarBotao();
+
+  const { data } = await client.from('contatos').select('*');
+
+  document.getElementById('thead').innerHTML=`
+    <tr>
+      <th>Nome</th>
+      <th>Telefone</th>
+    </tr>
+  `;
+
+  let html='';
+
+  data.forEach(c=>{
+    html+=`
+      <tr>
+        <td>${c.nome}</td>
+        <td>${c.telefone}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById('tabela').innerHTML=html;
+}
+
 // ================= MASSA
 function toggleTodos(checked){
   document.querySelectorAll("input[type='checkbox']").forEach(c=>c.checked=checked);
@@ -293,14 +337,14 @@ async function buscar(){
   let termo=document.getElementById('busca').value;
 
   const { data } = await client
-    .from('clientes')
+    .from(tela)
     .select('*')
     .or(`telefone.ilike.%${termo}%,nome.ilike.%${termo}%`);
 
   let html='';
 
   data.forEach(c=>{
-    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status}</td></tr>`;
+    html+=`<tr><td>${c.nome}</td><td>${c.telefone}</td><td>${c.status||''}</td></tr>`;
   });
 
   document.getElementById('tabela').innerHTML=html;
