@@ -68,7 +68,7 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-// STATUS DINÂMICO
+// STATUS
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
 
@@ -175,9 +175,8 @@ function atualizarSelecionados(){
   contadorSelecionados.innerText = "Selecionados: "+total;
 }
 
-// ✅ BUSCA CORRIGIDA (ÚNICA ALTERAÇÃO)
+// BUSCA (já corrigida)
 function buscar(){
-
   const input = document.getElementById("busca");
   const termo = input.value.toLowerCase().trim();
 
@@ -187,22 +186,17 @@ function buscar(){
   }
 
   const filtrado = dados.filter(c => {
-
     const nome = (c.nome || "").toLowerCase();
     const telefone = (c.telefone || "").toString();
-
     return nome.includes(termo) || telefone.includes(termo);
   });
 
   render(filtrado);
 }
 
-// ENTER NA BUSCA
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("busca").addEventListener("keyup", function(e){
-    if(e.key === "Enter"){
-      buscar();
-    }
+    if(e.key === "Enter") buscar();
   });
 });
 
@@ -232,7 +226,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// IMPORTAÇÃO (SEU CÓDIGO MANTIDO)
+// 🔥 IMPORTAÇÃO COM DEBUG
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
@@ -241,6 +235,8 @@ async function importarArquivo(){
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data);
   const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+  let erros = 0;
 
   for(let i=0;i<json.length;i++){
 
@@ -255,39 +251,54 @@ async function importarArquivo(){
 
     let usuario = c.usuario || "sem_usuario";
 
-    const { data: lista } = await client
-      .from('clientes')
-      .select('id')
-      .eq('telefone', telefone)
-      .eq('usuario', usuario);
+    try {
 
-    let payload = {
-      nome: c.nome,
-      telefone,
-      usuario,
-      senha: c.senha,
-      plano: c.plano,
-      valor: Number(c.valor || 0),
-      vencimento: c.vencimento,
-      hora_vencimento: c.hora_vencimento,
-      servidor: c.servidor,
-      aplicativo: c.aplicativo,
-      dispositivo: c.dispositivo,
-      telas: Number(c.telas || 1),
-      forma_pagamento: c.forma_de_pagamento,
-      mac: c.mac
-    };
+      const { data: lista } = await client
+        .from('clientes')
+        .select('id')
+        .eq('telefone', telefone)
+        .eq('usuario', usuario);
 
-    if(lista && lista.length > 0){
-      await client.from('clientes').update(payload).eq('id', lista[0].id);
-    } else {
-      await client.from('clientes').insert(payload);
+      let payload = {
+        nome: c.nome,
+        telefone,
+        usuario,
+        senha: c.senha,
+        plano: c.plano,
+        valor: Number(c.valor || 0),
+        vencimento: c.vencimento,
+        hora_vencimento: c.hora_vencimento,
+        servidor: c.servidor,
+        aplicativo: c.aplicativo,
+        dispositivo: c.dispositivo,
+        telas: Number(c.telas || 1),
+        forma_pagamento: c.forma_de_pagamento,
+        mac: c.mac
+      };
+
+      if(lista && lista.length > 0){
+        const { error } = await client.from('clientes').update(payload).eq('id', lista[0].id);
+        if(error){
+          console.log("ERRO UPDATE LINHA:", i+1, c, error);
+          erros++;
+        }
+      } else {
+        const { error } = await client.from('clientes').insert(payload);
+        if(error){
+          console.log("ERRO INSERT LINHA:", i+1, c, error);
+          erros++;
+        }
+      }
+
+    } catch(e){
+      console.log("ERRO GERAL LINHA:", i+1, c, e);
+      erros++;
     }
 
     atualizarProgresso(i+1,json.length);
   }
 
-  alert("Importação concluída 🚀");
+  alert(`Importação concluída 🚀\nErros: ${erros}`);
   carregar();
 }
 
