@@ -31,7 +31,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
 <button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
-<button class="btn-topo" onclick="abrirFinanceiro()">Financeiro</button>
 
 <br><br>
 
@@ -64,7 +63,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24i'
 );
 
 let tela='clientes';
@@ -76,14 +75,12 @@ function atualizarProgresso(a,t){
   progress.innerText=p+"%";
 }
 
-// ================= TROCAR TELA
 function trocarTela(tipo){
   tela=tipo;
   statusTela.innerText="Você está em: "+tipo.toUpperCase();
   carregar();
 }
 
-// ================= CARREGAR
 async function carregar(){
 
   const { data } = await client.from(tela).select('*');
@@ -95,15 +92,6 @@ async function carregar(){
     <th></th>
     <th>Nome</th>
     <th>Telefone</th>
-    <th>Vencimento</th>
-    <th>Hora</th>
-    <th>Usuário</th>
-    <th>MAC</th>
-    <th>Servidor</th>
-    <th>Plano</th>
-    <th>Valor</th>
-    <th>Dispositivo</th>
-    <th>Aplicativo</th>
     <th>Status</th>
     <th>Ações</th>
     </tr>`;
@@ -120,41 +108,79 @@ async function carregar(){
   render(dados);
 }
 
-// ================= RENDER
 function render(lista){
 
   let html='';
 
   lista.forEach(c=>{
-
     html+=`
     <tr>
       <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarSelecionados()"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
-      
-      ${tela==='clientes' ? `
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.usuario||''}</td>
-      <td>${c.mac||''}</td>
-      <td>${c.servidor||''}</td>
-      <td>${c.plano||''}</td>
-      <td>${c.valor||''}</td>
-      <td>${c.dispositivo||''}</td>
-      <td>${c.aplicativo||''}</td>
-      <td>${c.status||''}</td>
-      <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
-      ` : `
-      <td><button onclick="editarContato('${c.id}')">Editar</button></td>
-      `}
+      ${tela==='clientes' ? `<td>${c.status||''}</td>` : ``}
+      <td>
+        ${tela==='clientes'
+          ? `<button onclick="editarCliente('${c.id}')">Editar</button>`
+          : `<button onclick="editarContato('${c.id}')">Editar</button>`
+        }
+      </td>
     </tr>`;
   });
 
   tabela.innerHTML=html;
+  atualizarSelecionados();
 }
 
-// ================= IMPORTAR (CORRIGIDO)
+// ✅ CORREÇÃO AQUI
+function selecionarTodos(){
+  const checks = document.querySelectorAll("#tabela .check");
+  checks.forEach(c => c.checked = true);
+  atualizarSelecionados();
+}
+
+function desmarcarTodos(){
+  const checks = document.querySelectorAll("#tabela .check");
+  checks.forEach(c => c.checked = false);
+  atualizarSelecionados();
+}
+
+function atualizarSelecionados(){
+  let total = document.querySelectorAll("#tabela .check:checked").length;
+  contadorSelecionados.innerText = "Selecionados: "+total;
+}
+
+function buscar(){
+  let termo = busca.value.toLowerCase();
+
+  let filtrado = dados.filter(c =>
+    (c.nome||'').toLowerCase().includes(termo) ||
+    (c.telefone||'').includes(termo)
+  );
+
+  render(filtrado);
+}
+
+async function deletarSelecionados(){
+
+  let selecionados = document.querySelectorAll("#tabela .check:checked");
+
+  if(selecionados.length===0) return alert("Selecione algo");
+
+  if(!confirm("Excluir selecionados?")) return;
+
+  let i=0;
+
+  for(let c of selecionados){
+    await client.from(tela).delete().eq('id', c.dataset.id);
+    i++;
+    atualizarProgresso(i, selecionados.length);
+  }
+
+  alert("Excluído");
+  carregar();
+}
+
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
@@ -174,75 +200,31 @@ async function importarArquivo(){
     await client.from('clientes').upsert({
       nome: c.nome || "",
       telefone,
-      usuario: c.usuario || "",
-      senha: c.senha || "",
       plano: c.plano || "",
-      valor: c.valor || 0,
-      vencimento: c.vencimento || null,
-      hora_vencimento: c.hora_vencimento || null
+      valor: c.valor || 0
     }, { onConflict: 'telefone' });
 
     atualizarProgresso(i+1,json.length);
   }
 
-  alert("Importado com sucesso 🚀");
+  alert("Importado 🚀");
   carregar();
 }
 
-// ================= DELETE COM PROGRESSO
-async function deletarSelecionados(){
-
-  let selecionados = document.querySelectorAll(".check:checked");
-
-  if(selecionados.length===0) return alert("Selecione algo");
-
-  if(!confirm("Excluir selecionados?")) return;
-
-  let i=0;
-
-  for(let c of selecionados){
-    await client.from(tela).delete().eq('id', c.dataset.id);
-    i++;
-    atualizarProgresso(i, selecionados.length);
-  }
-
-  alert("Excluído");
-  carregar();
-}
-
-// ================= EDITAR CLIENTE
 async function editarCliente(id){
-
   const { data } = await client.from('clientes').select('*').eq('id', id).single();
-
   let nome = prompt("Nome:", data.nome || "");
-  let plano = prompt("Plano:", data.plano || "");
-  let valor = prompt("Valor:", data.valor || "");
-
-  await client.from('clientes').update({
-    nome,
-    plano,
-    valor: Number(valor)
-  }).eq('id', id);
-
-  alert("Atualizado");
+  await client.from('clientes').update({ nome }).eq('id', id);
   carregar();
 }
 
-// ================= EDITAR CONTATO
 async function editarContato(id){
-
   const { data } = await client.from('contatos').select('*').eq('id', id).single();
-
   let nome = prompt("Nome:", data.nome || "");
-
   await client.from('contatos').update({ nome }).eq('id', id);
-
-  alert("Atualizado");
   carregar();
 }
 
-// INIT
 carregar();
 
 </script>
