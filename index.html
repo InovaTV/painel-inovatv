@@ -209,7 +209,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// 🔥 IMPORTAÇÃO CORRIGIDA SEM QUEBRAR NADA
+// 🔥 IMPORTAÇÃO FINAL CORRIGIDA
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
@@ -232,13 +232,12 @@ async function importarArquivo(){
 
     let usuario = c.usuario || "sem_usuario";
 
-    // 🔎 VERIFICA EXISTENTE
-    const { data: existe } = await client
+    // 🔎 BUSCA TODOS (SEM maybeSingle)
+    const { data: lista } = await client
       .from('clientes')
       .select('id')
       .eq('telefone', telefone)
-      .eq('usuario', usuario)
-      .maybeSingle();
+      .eq('usuario', usuario);
 
     let payload = {
       nome: c.nome,
@@ -257,8 +256,8 @@ async function importarArquivo(){
       mac: c.mac
     };
 
-    if(existe){
-      await client.from('clientes').update(payload).eq('id', existe.id);
+    if(lista && lista.length > 0){
+      await client.from('clientes').update(payload).eq('id', lista[0].id);
     } else {
       await client.from('clientes').insert(payload);
     }
