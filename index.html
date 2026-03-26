@@ -156,23 +156,18 @@ function render(lista){
   atualizarSelecionados();
 }
 
-// 🔥 CORREÇÃO AQUI
 function atualizarSelecionados(){
   let total = document.querySelectorAll(".check:checked").length;
   contadorSelecionados.innerText = "Selecionados: " + total;
 }
 
 function selecionarTodos(){
-  document.querySelectorAll(".check").forEach(c=>{
-    c.checked = true;
-  });
+  document.querySelectorAll(".check").forEach(c=>c.checked=true);
   atualizarSelecionados();
 }
 
 function desmarcarTodos(){
-  document.querySelectorAll(".check").forEach(c=>{
-    c.checked = false;
-  });
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
   atualizarSelecionados();
 }
 
@@ -185,6 +180,18 @@ function buscar(){
     (c.telefone||'').includes(termo)
   ));
 }
+
+// 🔥 CORREÇÃO DO ENTER (ÚNICA ALTERAÇÃO)
+window.onload = function(){
+  const input = document.getElementById("busca");
+
+  input.addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      e.preventDefault();
+      buscar();
+    }
+  });
+};
 
 function filtrarAtivos(){
   render(dados.filter(c=>calcularStatus(c)==="ativo"));
@@ -213,7 +220,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// IMPORTAÇÃO (MANTIDA + LOG)
+// IMPORTAÇÃO COM LOG
 async function importarArquivo(){
 
   logErro.innerHTML = "";
