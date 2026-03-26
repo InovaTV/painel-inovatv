@@ -29,6 +29,37 @@ button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:po
 
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
+
+/* 🔥 MODAL */
+#modalEdit {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.5);
+  align-items:center;
+  justify-content:center;
+}
+
+#modalBox {
+  background:#111;
+  padding:20px;
+  border-radius:10px;
+  width:350px;
+  color:#fff;
+}
+
+#modalBox input {
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+}
+
+.modal-buttons {
+  margin-top:15px;
+  display:flex;
+  justify-content:space-between;
+}
 </style>
 </head>
 
@@ -68,6 +99,19 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- 🔥 MODAL -->
+<div id="modalEdit">
+  <div id="modalBox">
+    <div id="modalLabel"></div>
+    <input id="modalInput" />
+    <div class="modal-buttons">
+      <button onclick="modalCancelar()">Cancelar</button>
+      <button onclick="modalSalvar()">Salvar edição</button>
+      <button onclick="modalOk()">OK</button>
+    </div>
+  </div>
+</div>
+
 <script>
 
 const client = supabase.createClient(
@@ -78,36 +122,52 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
+// 🔥 MODAL
+let modalResolve;
+
+function abrirModal(label, valor){
+  return new Promise(resolve=>{
+    modalResolve = resolve;
+    modalEdit.style.display="flex";
+    modalLabel.innerText = label;
+    modalInput.value = valor || "";
+  });
+}
+
+function modalOk(){
+  modalEdit.style.display="none";
+  modalResolve({ tipo:"ok", valor:modalInput.value });
+}
+
+function modalCancelar(){
+  modalEdit.style.display="none";
+  modalResolve({ tipo:"cancelar" });
+}
+
+function modalSalvar(){
+  modalEdit.style.display="none";
+  modalResolve({ tipo:"salvar", valor:modalInput.value });
+}
+
 // NORMALIZAR
 function normalizar(texto){
-  return (texto || "")
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "");
+  return (texto || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 // STATUS
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
-
   let agora = new Date();
-  let venc = new Date(
-    c.hora_vencimento
-      ? `${c.vencimento}T${c.hora_vencimento}`
-      : c.vencimento
-  );
-
+  let venc = new Date(c.hora_vencimento ? `${c.vencimento}T${c.hora_vencimento}` : c.vencimento);
   return venc < agora ? "inativo" : "ativo";
 }
 
-// PROGRESSO
 function atualizarProgresso(a,t){
   let p=Math.floor((a/t)*100);
   progress.style.width=p+"%";
   progress.innerText=p+"%";
 }
 
-// TROCAR TELA
 function trocarTela(tipo){
   tela=tipo;
   statusTela.innerText="Você está em: "+tipo.toUpperCase();
@@ -165,177 +225,67 @@ function render(lista){
   atualizarSelecionados();
 }
 
-// 🔥 BUSCAR (GARANTIDO GLOBAL)
-function buscar(){
-  const termo = normalizar(document.getElementById("busca").value);
+// 🔥 EDITAR CLIENTE COM BOTÃO REAL
+async function editarCliente(id){
 
-  if(!termo){
-    render(dados);
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
+
+  let atualizado = {};
+
+  let campos = [
+    ["Nome","nome"],
+    ["Telefone","telefone"],
+    ["Usuário","usuario"],
+    ["Senha","senha"],
+    ["Servidor","servidor"],
+    ["Plano","plano"],
+    ["Valor","valor"],
+    ["Vencimento","vencimento"],
+    ["Hora","hora_vencimento"],
+    ["MAC","mac"]
+  ];
+
+  for(let [label,campo] of campos){
+
+    let res = await abrirModal(label, data[campo]);
+
+    if(res.tipo === "cancelar") return;
+
+    atualizado[campo] = res.valor;
+
+    if(res.tipo === "salvar"){
+      await client.from('clientes').update(atualizado).eq('id', id);
+      carregar();
+      return;
+    }
+  }
+
+  await client.from('clientes').update(atualizado).eq('id', id);
+  carregar();
+}
+
+// 🔥 EDITAR CONTATO
+async function editarContato(id){
+
+  const { data } = await client.from('contatos').select('*').eq('id', id).single();
+
+  let nome = await abrirModal("Nome", data.nome);
+  if(nome.tipo === "cancelar") return;
+
+  if(nome.tipo === "salvar"){
+    await client.from('contatos').update({ nome: nome.valor }).eq('id', id);
+    carregar();
     return;
   }
 
-  render(dados.filter(c =>
-    normalizar(c.nome).includes(termo) ||
-    (c.telefone||"").includes(termo)
-  ));
-}
+  let telefone = await abrirModal("Telefone", data.telefone);
+  if(telefone.tipo === "cancelar") return;
 
-// ENTER
-window.onload = function(){
-  document.getElementById("busca").addEventListener("keydown", function(e){
-    if(e.key === "Enter"){
-      e.preventDefault();
-      buscar();
-    }
-  });
-};
-
-// 🔥 BOTÕES (GARANTIDOS)
-function selecionarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=true);
-  atualizarSelecionados();
-}
-
-function desmarcarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=false);
-  atualizarSelecionados();
-}
-
-function filtrarAtivos(){
-  render(dados.filter(c => calcularStatus(c)==="ativo"));
-}
-
-function filtrarVencidos(){
-  render(dados.filter(c => calcularStatus(c)==="inativo"));
-}
-
-function atualizarSelecionados(){
-  contadorSelecionados.innerText = "Selecionados: " + document.querySelectorAll(".check:checked").length;
-}
-
-// DELETE
-async function deletarSelecionados(){
-  let selecionados = document.querySelectorAll(".check:checked");
-
-  if(selecionados.length===0) return alert("Selecione algo");
-  if(!confirm("Excluir selecionados?")) return;
-
-  let i=0;
-
-  for(let c of selecionados){
-    await client.from(tela).delete().eq('id', c.dataset.id);
-    i++;
-    atualizarProgresso(i, selecionados.length);
-  }
-
-  alert("Excluído");
-  carregar();
-}
-
-// IMPORTAR (mantido)
-async function importarArquivo(){
-
-  logErro.innerHTML = "";
-
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data);
-  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-  let erros = 0;
-
-  for(let i=0;i<json.length;i++){
-
-    let c = json[i];
-
-    let telefone = (c.telefone || "").toString().replace(/\D/g,"");
-    if(!telefone) continue;
-
-    if(!telefone.startsWith("55")){
-      telefone = "55"+telefone;
-    }
-
-    if(!c.vencimento || !c.hora_vencimento){
-      erros++;
-      logErro.innerHTML += `<pre>
-ERRO LINHA ${i+1}
-Nome: ${c.nome}
-Telefone: ${telefone}
-Erro: Data ou hora de vencimento ausente
--------------------</pre>`;
-      continue;
-    }
-
-    let usuario = c.usuario || "sem_usuario";
-
-    const { data: lista } = await client
-      .from('clientes')
-      .select('id')
-      .eq('telefone', telefone)
-      .eq('usuario', usuario);
-
-    let payload = {
-      nome: c.nome,
-      telefone,
-      usuario,
-      senha: c.senha,
-      plano: c.plano,
-      valor: Number(c.valor || 0),
-      vencimento: c.vencimento,
-      hora_vencimento: c.hora_vencimento,
-      servidor: c.servidor,
-      aplicativo: c.aplicativo,
-      dispositivo: c.dispositivo,
-      telas: Number(c.telas || 1),
-      forma_pagamento: c.forma_de_pagamento,
-      mac: c.mac
-    };
-
-    if(lista && lista.length > 0){
-      await client.from('clientes').update(payload).eq('id', lista[0].id);
-    } else {
-      await client.from('clientes').insert(payload);
-    }
-
-    atualizarProgresso(i+1,json.length);
-  }
-
-  alert(`Importação concluída 🚀\nErros: ${erros}`);
-  carregar();
-}
-
-// EDITAR
-async function editarCliente(id){
-  const { data } = await client.from('clientes').select('*').eq('id', id).single();
-
-  let nome = prompt("Nome:", data.nome); if(nome===null) return;
-  let telefone = prompt("Telefone:", data.telefone); if(telefone===null) return;
-  let usuario = prompt("Usuário:", data.usuario); if(usuario===null) return;
-  let senha = prompt("Senha:", data.senha); if(senha===null) return;
-  let servidor = prompt("Servidor:", data.servidor); if(servidor===null) return;
-  let plano = prompt("Plano:", data.plano); if(plano===null) return;
-  let valor = prompt("Valor:", data.valor); if(valor===null) return;
-  let vencimento = prompt("Vencimento:", data.vencimento); if(vencimento===null) return;
-  let hora = prompt("Hora:", data.hora_vencimento); if(hora===null) return;
-  let mac = prompt("MAC:", data.mac); if(mac===null) return;
-
-  await client.from('clientes').update({
-    nome, telefone, usuario, senha, servidor, plano, valor,
-    vencimento, hora_vencimento: hora, mac
+  await client.from('contatos').update({
+    nome: nome.valor,
+    telefone: telefone.valor
   }).eq('id', id);
 
-  carregar();
-}
-
-async function editarContato(id){
-  const { data } = await client.from('contatos').select('*').eq('id', id).single();
-
-  let nome = prompt("Nome:", data.nome); if(nome===null) return;
-  let telefone = prompt("Telefone:", data.telefone); if(telefone===null) return;
-
-  await client.from('contatos').update({ nome, telefone }).eq('id', id);
   carregar();
 }
 
@@ -345,4 +295,3 @@ carregar();
 
 </body>
 </html>
-
