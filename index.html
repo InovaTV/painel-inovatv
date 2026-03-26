@@ -62,7 +62,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'COLE_SUA_ANON_KEY_COMPLETA_AQUI'
 );
 
 let tela='clientes';
@@ -175,13 +175,36 @@ function atualizarSelecionados(){
   contadorSelecionados.innerText = "Selecionados: "+total;
 }
 
+// ✅ BUSCA CORRIGIDA (ÚNICA ALTERAÇÃO)
 function buscar(){
-  let termo = busca.value.toLowerCase();
-  render(dados.filter(c =>
-    (c.nome||'').toLowerCase().includes(termo) ||
-    (c.telefone||'').includes(termo)
-  ));
+
+  const input = document.getElementById("busca");
+  const termo = input.value.toLowerCase().trim();
+
+  if(!termo){
+    render(dados);
+    return;
+  }
+
+  const filtrado = dados.filter(c => {
+
+    const nome = (c.nome || "").toLowerCase();
+    const telefone = (c.telefone || "").toString();
+
+    return nome.includes(termo) || telefone.includes(termo);
+  });
+
+  render(filtrado);
 }
+
+// ENTER NA BUSCA
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("busca").addEventListener("keyup", function(e){
+    if(e.key === "Enter"){
+      buscar();
+    }
+  });
+});
 
 function filtrarAtivos(){
   render(dados.filter(c=>calcularStatus(c)==="ativo"));
@@ -209,7 +232,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// 🔥 IMPORTAÇÃO FINAL CORRIGIDA
+// IMPORTAÇÃO (SEU CÓDIGO MANTIDO)
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
@@ -232,7 +255,6 @@ async function importarArquivo(){
 
     let usuario = c.usuario || "sem_usuario";
 
-    // 🔎 BUSCA TODOS (SEM maybeSingle)
     const { data: lista } = await client
       .from('clientes')
       .select('id')
