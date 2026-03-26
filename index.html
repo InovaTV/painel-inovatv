@@ -30,7 +30,7 @@ button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:po
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
 
-/* 🔥 MODAL */
+/* MODAL */
 #modalEdit {
   display:none;
   position:fixed;
@@ -54,12 +54,6 @@ th,td { padding:6px; border:1px solid #ccc; }
   padding:8px;
   margin-top:10px;
 }
-
-.modal-buttons {
-  margin-top:15px;
-  display:flex;
-  justify-content:space-between;
-}
 </style>
 </head>
 
@@ -73,7 +67,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <br><br>
 
-<input id="busca" placeholder="Telefone ou Nome">
+<input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') buscar()">
 <button onclick="buscar()">Buscar</button>
 
 <hr>
@@ -99,16 +93,15 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
-<!-- 🔥 MODAL -->
+<!-- MODAL -->
 <div id="modalEdit">
   <div id="modalBox">
     <div id="modalLabel"></div>
     <input id="modalInput" />
-    <div class="modal-buttons">
-      <button onclick="modalCancelar()">Cancelar</button>
-      <button onclick="modalSalvar()">Salvar edição</button>
-      <button onclick="modalOk()">OK</button>
-    </div>
+    <br><br>
+    <button onclick="modalCancelar()">Cancelar</button>
+    <button onclick="modalSalvar()">Salvar edição</button>
+    <button onclick="modalOk()">OK</button>
   </div>
 </div>
 
@@ -122,7 +115,7 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-// 🔥 MODAL
+// MODAL
 let modalResolve;
 
 function abrirModal(label, valor){
@@ -150,8 +143,8 @@ function modalSalvar(){
 }
 
 // NORMALIZAR
-function normalizar(texto){
-  return (texto || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+function normalizar(t){
+  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
 
 // STATUS
@@ -162,33 +155,19 @@ function calcularStatus(c){
   return venc < agora ? "inativo" : "ativo";
 }
 
-function atualizarProgresso(a,t){
-  let p=Math.floor((a/t)*100);
-  progress.style.width=p+"%";
-  progress.innerText=p+"%";
-}
-
-function trocarTela(tipo){
-  tela=tipo;
-  statusTela.innerText="Você está em: "+tipo.toUpperCase();
-  carregar();
-}
-
 // CARREGAR
 async function carregar(){
   const { data } = await client.from(tela).select('*');
-  dados=data || [];
+  dados = data || [];
 
   if(tela==='clientes'){
     thead.innerHTML=`<tr>
       <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Servidor</th>
       <th>Plano</th><th>Valor</th><th>Vencimento</th><th>Hora</th>
-      <th>MAC</th><th>Status</th><th>Ações</th>
-    </tr>`;
+      <th>MAC</th><th>Status</th><th>Ações</th></tr>`;
   } else {
     thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Ações</th>
-    </tr>`;
+      <th></th><th>Nome</th><th>Telefone</th><th>Ações</th></tr>`;
   }
 
   render(dados);
@@ -196,16 +175,13 @@ async function carregar(){
 
 // RENDER
 function render(lista){
-  let html='';
-
-  lista.forEach(c=>{
-    html+=`
+  tabela.innerHTML = lista.map(c=>`
     <tr>
       <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarSelecionados()"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
 
-      ${tela==='clientes' ? `
+      ${tela==='clientes'?`
         <td>${c.usuario||''}</td>
         <td>${c.servidor||''}</td>
         <td>${c.plano||''}</td>
@@ -215,45 +191,82 @@ function render(lista){
         <td>${c.mac||''}</td>
         <td>${calcularStatus(c)}</td>
         <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
-      ` : `
+      `:`
         <td><button onclick="editarContato('${c.id}')">Editar</button></td>
       `}
-    </tr>`;
-  });
+    </tr>
+  `).join('');
 
-  tabela.innerHTML=html;
   atualizarSelecionados();
 }
 
-// 🔥 EDITAR CLIENTE COM BOTÃO REAL
+// BUSCA
+function buscar(){
+  let termo = normalizar(busca.value);
+  let filtrado = dados.filter(c =>
+    normalizar(c.nome).includes(termo) ||
+    (c.telefone||"").includes(termo)
+  );
+  render(filtrado);
+}
+
+// CHECKBOX
+function selecionarTodos(){
+  document.querySelectorAll('.check').forEach(c=>c.checked=true);
+  atualizarSelecionados();
+}
+
+function desmarcarTodos(){
+  document.querySelectorAll('.check').forEach(c=>c.checked=false);
+  atualizarSelecionados();
+}
+
+function atualizarSelecionados(){
+  let total = document.querySelectorAll('.check:checked').length;
+  contadorSelecionados.innerText="Selecionados: "+total;
+}
+
+// FILTROS
+function filtrarAtivos(){
+  render(dados.filter(c=>calcularStatus(c)==="ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c=>calcularStatus(c)==="inativo"));
+}
+
+// EXCLUIR
+async function deletarSelecionados(){
+  let ids = [...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
+  if(ids.length===0) return alert("Nada selecionado");
+
+  for(let id of ids){
+    await client.from(tela).delete().eq('id', id);
+  }
+
+  carregar();
+}
+
+// EDITAR CLIENTE
 async function editarCliente(id){
-
   const { data } = await client.from('clientes').select('*').eq('id', id).single();
-
   let atualizado = {};
 
   let campos = [
-    ["Nome","nome"],
-    ["Telefone","telefone"],
-    ["Usuário","usuario"],
-    ["Senha","senha"],
-    ["Servidor","servidor"],
-    ["Plano","plano"],
-    ["Valor","valor"],
-    ["Vencimento","vencimento"],
-    ["Hora","hora_vencimento"],
-    ["MAC","mac"]
+    ["Nome","nome"],["Telefone","telefone"],["Usuário","usuario"],
+    ["Senha","senha"],["Servidor","servidor"],["Plano","plano"],
+    ["Valor","valor"],["Vencimento","vencimento"],
+    ["Hora","hora_vencimento"],["MAC","mac"]
   ];
 
   for(let [label,campo] of campos){
-
     let res = await abrirModal(label, data[campo]);
 
-    if(res.tipo === "cancelar") return;
+    if(res.tipo==="cancelar") return;
 
-    atualizado[campo] = res.valor;
+    atualizado[campo]=res.valor;
 
-    if(res.tipo === "salvar"){
+    if(res.tipo==="salvar"){
       await client.from('clientes').update(atualizado).eq('id', id);
       carregar();
       return;
@@ -264,29 +277,73 @@ async function editarCliente(id){
   carregar();
 }
 
-// 🔥 EDITAR CONTATO
+// EDITAR CONTATO
 async function editarContato(id){
-
   const { data } = await client.from('contatos').select('*').eq('id', id).single();
 
   let nome = await abrirModal("Nome", data.nome);
-  if(nome.tipo === "cancelar") return;
+  if(nome.tipo==="cancelar") return;
 
-  if(nome.tipo === "salvar"){
-    await client.from('contatos').update({ nome: nome.valor }).eq('id', id);
+  if(nome.tipo==="salvar"){
+    await client.from('contatos').update({ nome:nome.valor }).eq('id', id);
     carregar();
     return;
   }
 
   let telefone = await abrirModal("Telefone", data.telefone);
-  if(telefone.tipo === "cancelar") return;
+  if(telefone.tipo==="cancelar") return;
 
   await client.from('contatos').update({
-    nome: nome.valor,
-    telefone: telefone.valor
+    nome:nome.valor,
+    telefone:telefone.valor
   }).eq('id', id);
 
   carregar();
+}
+
+// IMPORTAR (mantido básico funcional)
+async function importarArquivo(){
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione arquivo");
+
+  const reader = new FileReader();
+
+  reader.onload = async (e)=>{
+    const wb = XLSX.read(e.target.result, { type:'binary' });
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+    let erros=0;
+
+    for(let i=0;i<json.length;i++){
+      try{
+        let c = json[i];
+
+        await client.from('clientes').upsert({
+          nome:c.nome,
+          telefone:(c.telefone||"").replace(/\D/g,""),
+          usuario:c.usuario,
+          plano:c.plano,
+          valor:c.valor,
+          vencimento:c.vencimento,
+          hora_vencimento:c.hora_vencimento,
+          servidor:c.servidor,
+          mac:c.mac
+        });
+
+      }catch(e){
+        erros++;
+        logErro.innerHTML += `ERRO LINHA ${i+1}<br>`;
+      }
+
+      progress.style.width = ((i+1)/json.length*100)+"%";
+      progress.innerText = Math.floor((i+1)/json.length*100)+"%";
+    }
+
+    alert("Importação concluída 🚀\nErros: "+erros);
+    carregar();
+  };
+
+  reader.readAsBinaryString(file);
 }
 
 carregar();
