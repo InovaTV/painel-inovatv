@@ -181,11 +181,9 @@ function buscar(){
   ));
 }
 
-// 🔥 CORREÇÃO DO ENTER (ÚNICA ALTERAÇÃO)
+// ENTER BUSCA
 window.onload = function(){
-  const input = document.getElementById("busca");
-
-  input.addEventListener("keydown", function(e){
+  document.getElementById("busca").addEventListener("keydown", function(e){
     if(e.key === "Enter"){
       e.preventDefault();
       buscar();
@@ -263,7 +261,7 @@ async function importarArquivo(){
         plano: c.plano,
         valor: Number(c.valor || 0),
         vencimento: c.vencimento,
-        hora_vencimento: c.hora_vencimento,
+        hora_vencimento: c.hora_vencimento || null,
         servidor: c.servidor,
         aplicativo: c.aplicativo,
         dispositivo: c.dispositivo,
@@ -313,6 +311,37 @@ Erro: ${e.message}
   alert(`Importação concluída 🚀\nErros: ${erros}`);
   carregar();
 }
+
+// 🔥 LOG GLOBAL (NUNCA REMOVER)
+window.onerror = function(msg, url, line, col, error){
+
+  let texto = `
+ERRO GLOBAL JS
+Mensagem: ${msg}
+Linha: ${line}
+Arquivo: ${url}
+-------------------`;
+
+  console.log(texto);
+
+  if(document.getElementById("logErro")){
+    logErro.innerHTML += "<pre>"+texto+"</pre>";
+  }
+};
+
+window.addEventListener("unhandledrejection", function(event){
+
+  let texto = `
+ERRO PROMISE
+Mensagem: ${event.reason}
+-------------------`;
+
+  console.log(texto);
+
+  if(document.getElementById("logErro")){
+    logErro.innerHTML += "<pre>"+texto+"</pre>";
+  }
+});
 
 async function editarCliente(id){
   const { data } = await client.from('clientes').select('*').eq('id', id).single();
