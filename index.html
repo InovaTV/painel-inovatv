@@ -110,23 +110,21 @@ async function carregar(){
   const { data } = await client.from(tela).select('*');
   dados=data || [];
 
-  if(tela==='clientes'){
-    thead.innerHTML=`
-    <tr>
-    <th></th>
-    <th>Nome</th>
-    <th>Telefone</th>
-    <th>Usuário</th>
-    <th>Servidor</th>
-    <th>Plano</th>
-    <th>Valor</th>
-    <th>Vencimento</th>
-    <th>Hora</th>
-    <th>MAC</th>
-    <th>Status</th>
-    <th>Ações</th>
-    </tr>`;
-  }
+  thead.innerHTML=`
+  <tr>
+  <th></th>
+  <th>Nome</th>
+  <th>Telefone</th>
+  <th>Usuário</th>
+  <th>Servidor</th>
+  <th>Plano</th>
+  <th>Valor</th>
+  <th>Vencimento</th>
+  <th>Hora</th>
+  <th>MAC</th>
+  <th>Status</th>
+  <th>Ações</th>
+  </tr>`;
 
   render(dados);
 }
@@ -139,7 +137,7 @@ function render(lista){
 
     html+=`
     <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}"></td>
+      <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarSelecionados()"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
       <td>${c.usuario||''}</td>
@@ -155,6 +153,27 @@ function render(lista){
   });
 
   tabela.innerHTML=html;
+  atualizarSelecionados();
+}
+
+// 🔥 CORREÇÃO AQUI
+function atualizarSelecionados(){
+  let total = document.querySelectorAll(".check:checked").length;
+  contadorSelecionados.innerText = "Selecionados: " + total;
+}
+
+function selecionarTodos(){
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = true;
+  });
+  atualizarSelecionados();
+}
+
+function desmarcarTodos(){
+  document.querySelectorAll(".check").forEach(c=>{
+    c.checked = false;
+  });
+  atualizarSelecionados();
 }
 
 function buscar(){
@@ -167,7 +186,34 @@ function buscar(){
   ));
 }
 
-// 🔥 IMPORTAÇÃO COM LOG VISÍVEL
+function filtrarAtivos(){
+  render(dados.filter(c=>calcularStatus(c)==="ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c=>calcularStatus(c)==="inativo"));
+}
+
+async function deletarSelecionados(){
+  let selecionados = document.querySelectorAll(".check:checked");
+
+  if(selecionados.length===0) return alert("Selecione algo");
+
+  if(!confirm("Excluir selecionados?")) return;
+
+  let i=0;
+
+  for(let c of selecionados){
+    await client.from('clientes').delete().eq('id', c.dataset.id);
+    i++;
+    atualizarProgresso(i, selecionados.length);
+  }
+
+  alert("Excluído");
+  carregar();
+}
+
+// IMPORTAÇÃO (MANTIDA + LOG)
 async function importarArquivo(){
 
   logErro.innerHTML = "";
@@ -239,7 +285,6 @@ Telefone: ${telefone}
 Erro: ${error.message}
 -------------------`;
 
-        console.log(msg);
         logErro.innerHTML += "<pre>"+msg+"</pre>";
       }
 
@@ -252,7 +297,6 @@ Nome: ${c.nome}
 Erro: ${e.message}
 -------------------`;
 
-      console.log(msg);
       logErro.innerHTML += "<pre>"+msg+"</pre>";
     }
 
@@ -260,6 +304,13 @@ Erro: ${e.message}
   }
 
   alert(`Importação concluída 🚀\nErros: ${erros}`);
+  carregar();
+}
+
+async function editarCliente(id){
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
+  let nome = prompt("Nome:", data.nome);
+  await client.from('clientes').update({ nome }).eq('id', id);
   carregar();
 }
 
