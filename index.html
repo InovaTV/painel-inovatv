@@ -63,11 +63,27 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS'
 );
 
 let tela='clientes';
 let dados=[];
+
+// 🔥 CALCULAR STATUS EM TEMPO REAL
+function calcularStatus(c){
+
+  if(!c.vencimento) return "ativo";
+
+  let agora = new Date();
+
+  let vencimento = new Date(
+    c.hora_vencimento
+    ? `${c.vencimento}T${c.hora_vencimento}`
+    : c.vencimento
+  );
+
+  return vencimento < agora ? "inativo" : "ativo";
+}
 
 function atualizarProgresso(a,t){
   let p=Math.floor((a/t)*100);
@@ -92,8 +108,12 @@ async function carregar(){
     <th></th>
     <th>Nome</th>
     <th>Telefone</th>
+    <th>Servidor</th>
     <th>Plano</th>
     <th>Valor</th>
+    <th>Vencimento</th>
+    <th>Hora</th>
+    <th>MAC</th>
     <th>Status</th>
     <th>Ações</th>
     </tr>`;
@@ -115,15 +135,23 @@ function render(lista){
   let html='';
 
   lista.forEach(c=>{
+
+    let status = calcularStatus(c);
+
     html+=`
     <tr>
       <td><input type="checkbox" class="check" data-id="${c.id}"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
+
       ${tela==='clientes' ? `
+        <td>${c.servidor||''}</td>
         <td>${c.plano||''}</td>
         <td>${c.valor||''}</td>
-        <td>${c.status||''}</td>
+        <td>${c.vencimento||''}</td>
+        <td>${c.hora_vencimento||''}</td>
+        <td>${c.mac||''}</td>
+        <td>${status}</td>
         <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
       ` : `
         <td><button onclick="editarContato('${c.id}')">Editar</button></td>
@@ -133,6 +161,15 @@ function render(lista){
 
   tabela.innerHTML=html;
   atualizarSelecionados();
+}
+
+// FILTROS CORRIGIDOS
+function filtrarAtivos(){
+  render(dados.filter(c=>calcularStatus(c)==="ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c=>calcularStatus(c)==="inativo"));
 }
 
 function selecionarTodos(){
@@ -178,7 +215,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// 🔥 IMPORTAÇÃO FUNCIONANDO COM SEU EXCEL
+// IMPORTAÇÃO (mantida funcionando)
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
@@ -192,10 +229,7 @@ async function importarArquivo(){
 
     let c = json[i];
 
-    let telefone = (c.telefone || "")
-      .toString()
-      .replace(/\D/g,"");
-
+    let telefone = (c.telefone || "").toString().replace(/\D/g,"");
     if(!telefone) continue;
 
     if(!telefone.startsWith("55")){
