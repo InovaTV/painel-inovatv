@@ -78,7 +78,6 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-// 🔥 REMOVE ACENTO
 function normalizar(texto){
   return (texto || "")
     .toLowerCase()
@@ -86,7 +85,6 @@ function normalizar(texto){
     .replace(/[\u0300-\u036f]/g, "");
 }
 
-// STATUS
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
 
@@ -117,28 +115,14 @@ async function carregar(){
   dados=data || [];
 
   if(tela==='clientes'){
-    thead.innerHTML=`
-    <tr>
-      <th></th>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Usuário</th>
-      <th>Servidor</th>
-      <th>Plano</th>
-      <th>Valor</th>
-      <th>Vencimento</th>
-      <th>Hora</th>
-      <th>MAC</th>
-      <th>Status</th>
-      <th>Ações</th>
+    thead.innerHTML=`<tr>
+      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Servidor</th>
+      <th>Plano</th><th>Valor</th><th>Vencimento</th><th>Hora</th>
+      <th>MAC</th><th>Status</th><th>Ações</th>
     </tr>`;
   } else {
-    thead.innerHTML=`
-    <tr>
-      <th></th>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Ações</th>
+    thead.innerHTML=`<tr>
+      <th></th><th>Nome</th><th>Telefone</th><th>Ações</th>
     </tr>`;
   }
 
@@ -149,7 +133,6 @@ function render(lista){
   let html='';
 
   lista.forEach(c=>{
-
     html+=`
     <tr>
       <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarSelecionados()"></td>
@@ -176,14 +159,51 @@ function render(lista){
   atualizarSelecionados();
 }
 
-// 🔥 BUSCA COM ACENTO
+// 🔥 EDITAR COMPLETO CLIENTE
+async function editarCliente(id){
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
+
+  let atualizado = {
+    nome: prompt("Nome:", data.nome),
+    telefone: prompt("Telefone:", data.telefone),
+    usuario: prompt("Usuário:", data.usuario),
+    senha: prompt("Senha:", data.senha),
+    servidor: prompt("Servidor:", data.servidor),
+    plano: prompt("Plano:", data.plano),
+    valor: prompt("Valor:", data.valor),
+    vencimento: prompt("Vencimento (YYYY-MM-DD):", data.vencimento),
+    hora_vencimento: prompt("Hora (HH:MM):", data.hora_vencimento),
+    mac: prompt("MAC:", data.mac),
+    aplicativo: prompt("Aplicativo:", data.aplicativo),
+    dispositivo: prompt("Dispositivo:", data.dispositivo),
+    telas: prompt("Telas:", data.telas),
+    forma_pagamento: prompt("Forma de pagamento:", data.forma_pagamento),
+    observacao: prompt("Observação:", data.observacao)
+  };
+
+  await client.from('clientes').update(atualizado).eq('id', id);
+  carregar();
+}
+
+// 🔥 EDITAR CONTATO COMPLETO
+async function editarContato(id){
+  const { data } = await client.from('contatos').select('*').eq('id', id).single();
+
+  let atualizado = {
+    nome: prompt("Nome:", data.nome),
+    telefone: prompt("Telefone:", data.telefone),
+    origem: prompt("Origem:", data.origem),
+    pushname: prompt("Pushname:", data.pushname),
+    etapa: prompt("Etapa:", data.etapa)
+  };
+
+  await client.from('contatos').update(atualizado).eq('id', id);
+  carregar();
+}
+
 function buscar(){
   const termo = normalizar(document.getElementById("busca").value);
-
-  if(!termo){
-    render(dados);
-    return;
-  }
+  if(!termo){ render(dados); return; }
 
   render(dados.filter(c =>
     normalizar(c.nome).includes(termo) ||
@@ -191,7 +211,6 @@ function buscar(){
   ));
 }
 
-// ENTER
 window.onload = function(){
   document.getElementById("busca").addEventListener("keydown", function(e){
     if(e.key === "Enter"){
@@ -201,40 +220,22 @@ window.onload = function(){
   });
 };
 
-// 🔥 FILTROS CORRIGIDOS
-function filtrarAtivos(){
-  render(dados.filter(c => calcularStatus(c) === "ativo"));
-}
+function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
+function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
 
-function filtrarVencidos(){
-  render(dados.filter(c => calcularStatus(c) === "inativo"));
-}
-
-// CHECKS
 function atualizarSelecionados(){
-  let total = document.querySelectorAll(".check:checked").length;
-  contadorSelecionados.innerText = "Selecionados: " + total;
+  contadorSelecionados.innerText = "Selecionados: " + document.querySelectorAll(".check:checked").length;
 }
 
-function selecionarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=true);
-  atualizarSelecionados();
-}
+function selecionarTodos(){ document.querySelectorAll(".check").forEach(c=>c.checked=true); atualizarSelecionados(); }
+function desmarcarTodos(){ document.querySelectorAll(".check").forEach(c=>c.checked=false); atualizarSelecionados(); }
 
-function desmarcarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=false);
-  atualizarSelecionados();
-}
-
-// DELETE
 async function deletarSelecionados(){
   let selecionados = document.querySelectorAll(".check:checked");
-
   if(selecionados.length===0) return alert("Selecione algo");
   if(!confirm("Excluir selecionados?")) return;
 
   let i=0;
-
   for(let c of selecionados){
     await client.from(tela).delete().eq('id', c.dataset.id);
     i++;
@@ -245,141 +246,8 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// 🔥 IMPORTAÇÃO COM LOG COMPLETO
-async function importarArquivo(){
-
-  logErro.innerHTML = "";
-
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data);
-  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-  let erros = 0;
-
-  for(let i=0;i<json.length;i++){
-
-    let c = json[i];
-
-    let telefone = (c.telefone || "").toString().replace(/\D/g,"");
-    if(!telefone) continue;
-
-    if(!telefone.startsWith("55")){
-      telefone = "55"+telefone;
-    }
-
-    if(!c.vencimento || !c.hora_vencimento){
-      erros++;
-
-      let msg = `
-ERRO LINHA ${i+1}
-Nome: ${c.nome}
-Telefone: ${telefone}
-Erro: Data ou hora de vencimento ausente
--------------------`;
-
-      logErro.innerHTML += "<pre>"+msg+"</pre>";
-      continue;
-    }
-
-    let usuario = c.usuario || "sem_usuario";
-
-    try {
-
-      const { data: lista } = await client
-        .from('clientes')
-        .select('id')
-        .eq('telefone', telefone)
-        .eq('usuario', usuario);
-
-      let payload = {
-        nome: c.nome,
-        telefone,
-        usuario,
-        senha: c.senha,
-        plano: c.plano,
-        valor: Number(c.valor || 0),
-        vencimento: c.vencimento,
-        hora_vencimento: c.hora_vencimento,
-        servidor: c.servidor,
-        aplicativo: c.aplicativo,
-        dispositivo: c.dispositivo,
-        telas: Number(c.telas || 1),
-        forma_pagamento: c.forma_de_pagamento,
-        mac: c.mac
-      };
-
-      let error = null;
-
-      if(lista && lista.length > 0){
-        const res = await client.from('clientes').update(payload).eq('id', lista[0].id);
-        error = res.error;
-      } else {
-        const res = await client.from('clientes').insert(payload);
-        error = res.error;
-      }
-
-      if(error){
-        erros++;
-
-        let msg = `
-ERRO LINHA ${i+1}
-Nome: ${c.nome}
-Telefone: ${telefone}
-Erro: ${error.message}
--------------------`;
-
-        logErro.innerHTML += "<pre>"+msg+"</pre>";
-      }
-
-    } catch(e){
-      erros++;
-
-      let msg = `
-ERRO CRÍTICO LINHA ${i+1}
-Nome: ${c.nome}
-Erro: ${e.message}
--------------------`;
-
-      logErro.innerHTML += "<pre>"+msg+"</pre>";
-    }
-
-    atualizarProgresso(i+1,json.length);
-  }
-
-  alert(`Importação concluída 🚀\nErros: ${erros}`);
-  carregar();
-}
-
-// EDITAR
-async function editarCliente(id){
-  const { data } = await client.from('clientes').select('*').eq('id', id).single();
-  let nome = prompt("Nome:", data.nome);
-  await client.from('clientes').update({ nome }).eq('id', id);
-  carregar();
-}
-
-async function editarContato(id){
-  const { data } = await client.from('contatos').select('*').eq('id', id).single();
-  let nome = prompt("Nome:", data.nome);
-  await client.from('contatos').update({ nome }).eq('id', id);
-  carregar();
-}
-
-// LOG GLOBAL
-window.onerror = function(msg){
-  logErro.innerHTML += `<pre>ERRO GLOBAL: ${msg}</pre>`;
-};
-
-window.addEventListener("unhandledrejection", function(event){
-  logErro.innerHTML += `<pre>ERRO PROMISE: ${event.reason}</pre>`;
-});
-
 carregar();
 
 </script>
-
 </body>
 </html>
