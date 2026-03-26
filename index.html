@@ -115,14 +115,14 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-// 🔥 CORREÇÃO BOTÕES TOPO
+// 🔥 TROCAR TELA
 function trocarTela(tipo){
   tela = tipo;
   statusTela.innerText = "Você está em: " + tipo.toUpperCase();
   carregar();
 }
 
-// MODAL
+// 🔥 MODAL
 let modalResolve;
 
 function abrirModal(label, valor){
@@ -149,12 +149,12 @@ function modalSalvar(){
   modalResolve({ tipo:"salvar", valor:modalInput.value });
 }
 
-// NORMALIZAR
+// 🔥 NORMALIZAR TEXTO
 function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
 
-// STATUS
+// 🔥 STATUS
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
   let agora = new Date();
@@ -162,14 +162,14 @@ function calcularStatus(c){
   return venc < agora ? "inativo" : "ativo";
 }
 
-// PROGRESSO
+// 🔥 PROGRESSO
 function atualizarProgresso(a,t){
   let p=Math.floor((a/t)*100);
   progress.style.width=p+"%";
   progress.innerText=p+"%";
 }
 
-// CARREGAR
+// 🔥 CARREGAR
 async function carregar(){
   const { data } = await client.from(tela).select('*');
   dados = data || [];
@@ -187,7 +187,7 @@ async function carregar(){
   render(dados);
 }
 
-// RENDER
+// 🔥 RENDER
 function render(lista){
   tabela.innerHTML = lista.map(c=>`
     <tr>
@@ -214,7 +214,7 @@ function render(lista){
   atualizarSelecionados();
 }
 
-// BUSCA
+// 🔥 BUSCA
 function buscar(){
   let termo = normalizar(busca.value);
   render(dados.filter(c =>
@@ -223,7 +223,7 @@ function buscar(){
   ));
 }
 
-// CHECKBOX
+// 🔥 CHECKBOX
 function selecionarTodos(){
   document.querySelectorAll('.check').forEach(c=>c.checked=true);
   atualizarSelecionados();
@@ -238,7 +238,7 @@ function atualizarSelecionados(){
   contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
 
-// FILTROS
+// 🔥 FILTROS
 function filtrarAtivos(){
   render(dados.filter(c=>calcularStatus(c)==="ativo"));
 }
@@ -265,7 +265,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// EDITAR CLIENTE
+// 🔥 EDITAR CLIENTE
 async function editarCliente(id){
   const { data } = await client.from('clientes').select('*').eq('id', id).single();
   let atualizado = {};
@@ -295,7 +295,7 @@ async function editarCliente(id){
   carregar();
 }
 
-// EDITAR CONTATO
+// 🔥 EDITAR CONTATO
 async function editarContato(id){
   const { data } = await client.from('contatos').select('*').eq('id', id).single();
 
@@ -317,6 +317,85 @@ async function editarContato(id){
   }).eq('id', id);
 
   carregar();
+}
+
+// 🔥 IMPORTAÇÃO COMPLETA
+async function importarArquivo(){
+
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione um arquivo");
+
+  logErro.innerHTML = "";
+  progress.style.width = "0%";
+  progress.innerText = "0%";
+
+  const reader = new FileReader();
+
+  reader.onload = async (e)=>{
+
+    const wb = XLSX.read(e.target.result, { type:'binary' });
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+    let erros = 0;
+
+    for(let i=0;i<json.length;i++){
+
+      let linha = json[i];
+
+      try{
+
+        let telefone = (linha.telefone||"").toString().replace(/\D/g,"");
+        telefone = telefone.replace(/^0+/,"");
+        if(!telefone.startsWith("55")) telefone="55"+telefone;
+
+        let nome = linha.nome || linha.Nome || "Cliente";
+        let usuario = linha.usuario || null;
+        let plano = linha.plano || null;
+        let valor = linha.valor ? Number(linha.valor) : null;
+
+        let vencimento = linha.vencimento || null;
+        let hora = linha.hora_vencimento || linha.hora || null;
+
+        let servidor = linha.servidor || "UNITV";
+        let mac = linha.mac || null;
+
+        if(!vencimento || !hora){
+          throw new Error("Faltando vencimento ou hora");
+        }
+
+        await client.from('clientes').upsert({
+          nome,
+          telefone,
+          usuario,
+          plano,
+          valor,
+          vencimento,
+          hora_vencimento: hora,
+          servidor,
+          mac
+        });
+
+      }catch(e){
+
+        erros++;
+
+        logErro.innerHTML += `
+        ERRO LINHA ${i+1}<br>
+        Nome: ${linha.nome || ''}<br>
+        Telefone: ${linha.telefone || ''}<br>
+        Erro: ${e.message}<br>
+        -------------------<br>
+        `;
+      }
+
+      atualizarProgresso(i+1, json.length);
+    }
+
+    alert("Importação concluída 🚀\nErros: "+erros);
+    carregar();
+  };
+
+  reader.readAsBinaryString(file);
 }
 
 carregar();
