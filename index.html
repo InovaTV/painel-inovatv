@@ -1,12 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Painel InovaTV</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+<style>
+body { font-family: Arial; padding:20px; }
+button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
+.btn-topo { background:#2196F3; color:#fff; }
+.btn-verde { background:#4CAF50; color:#fff; }
+.btn-vermelho { background:#f44336; color:#fff; }
+
+#progressBar { width:100%; background:#ccc; height:20px; }
+#progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
+
+table { width:100%; border-collapse: collapse; font-size:13px; }
+th,td { padding:6px; border:1px solid #ccc; }
+
+.hidden { display:none; }
+</style>
+</head>
+
+<body>
+
+<h2>Painel InovaTV</h2>
+<h3 id="statusTela">Você está em: CLIENTES</h3>
+
+<button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
+<button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
+
+<br><br>
+
+<input id="busca" placeholder="Telefone ou Nome">
+<button onclick="buscar()">Buscar</button>
+
+<hr>
+
+<input type="file" id="inputArquivo" accept=".xlsx" />
+<button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
+
+<div id="progressBar"><div id="progress">0%</div></div>
+
+<hr>
+
+<div id="contadorSelecionados">Selecionados: 0</div>
+
+<button onclick="selecionarTodos()">Selecionar todos</button>
+<button onclick="desmarcarTodos()">Desmarcar</button>
+<button onclick="filtrarAtivos()">Ativos</button>
+<button onclick="filtrarVencidos()">Vencidos</button>
+<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
+
+<table>
+<thead id="thead"></thead>
+<tbody id="tabela"></tbody>
+</table>
+
 <script>
 
-// ================= IMPORTAÇÃO CORRIGIDA PARA SEU EXCEL REAL
+const client = supabase.createClient(
+  'https://tiupgtbzikwmseecxbvo.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+);
+
+let tela='clientes';
+let dados=[];
+
+function atualizarProgresso(a,t){
+  let p=Math.floor((a/t)*100);
+  progress.style.width=p+"%";
+  progress.innerText=p+"%";
+}
+
+function trocarTela(tipo){
+  tela=tipo;
+  statusTela.innerText="Você está em: "+tipo.toUpperCase();
+  carregar();
+}
+
+async function carregar(){
+
+  const { data } = await client.from(tela).select('*');
+  dados=data || [];
+
+  if(tela==='clientes'){
+    thead.innerHTML=`
+    <tr>
+    <th></th>
+    <th>Nome</th>
+    <th>Telefone</th>
+    <th>Plano</th>
+    <th>Valor</th>
+    <th>Status</th>
+    <th>Ações</th>
+    </tr>`;
+  } else {
+    thead.innerHTML=`
+    <tr>
+    <th></th>
+    <th>Nome</th>
+    <th>Telefone</th>
+    <th>Ações</th>
+    </tr>`;
+  }
+
+  render(dados);
+}
+
+function render(lista){
+
+  let html='';
+
+  lista.forEach(c=>{
+    html+=`
+    <tr>
+      <td><input type="checkbox" class="check" data-id="${c.id}"></td>
+      <td>${c.nome||''}</td>
+      <td>${c.telefone||''}</td>
+      ${tela==='clientes' ? `
+        <td>${c.plano||''}</td>
+        <td>${c.valor||''}</td>
+        <td>${c.status||''}</td>
+        <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
+      ` : `
+        <td><button onclick="editarContato('${c.id}')">Editar</button></td>
+      `}
+    </tr>`;
+  });
+
+  tabela.innerHTML=html;
+  atualizarSelecionados();
+}
+
+function selecionarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=true);
+  atualizarSelecionados();
+}
+
+function desmarcarTodos(){
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
+  atualizarSelecionados();
+}
+
+function atualizarSelecionados(){
+  let total = document.querySelectorAll(".check:checked").length;
+  contadorSelecionados.innerText = "Selecionados: "+total;
+}
+
+function buscar(){
+  let termo = busca.value.toLowerCase();
+  render(dados.filter(c =>
+    (c.nome||'').toLowerCase().includes(termo) ||
+    (c.telefone||'').includes(termo)
+  ));
+}
+
+async function deletarSelecionados(){
+
+  let selecionados = document.querySelectorAll(".check:checked");
+
+  if(selecionados.length===0) return alert("Selecione algo");
+
+  if(!confirm("Excluir selecionados?")) return;
+
+  let i=0;
+
+  for(let c of selecionados){
+    await client.from(tela).delete().eq('id', c.dataset.id);
+    i++;
+    atualizarProgresso(i, selecionados.length);
+  }
+
+  alert("Excluído");
+  carregar();
+}
+
+// 🔥 IMPORTAÇÃO FUNCIONANDO COM SEU EXCEL
 async function importarArquivo(){
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
-
-  if(!confirm("Importar clientes?")) return;
 
   const data = await file.arrayBuffer();
   const wb = XLSX.read(data);
@@ -16,11 +192,9 @@ async function importarArquivo(){
 
     let c = json[i];
 
-    // TELEFONE
     let telefone = (c.telefone || "")
       .toString()
-      .replace(/\D/g,"")
-      .replace(/^0+/, "");
+      .replace(/\D/g,"");
 
     if(!telefone) continue;
 
@@ -28,53 +202,47 @@ async function importarArquivo(){
       telefone = "55"+telefone;
     }
 
-    // DATA
-    let dataFormatada = c.vencimento || null;
-
-    // HORA
-    let horaFormatada = c.hora_vencimento || null;
-
-    // STATUS
-    let status = "ativo";
-
-    if(dataFormatada){
-      let agora = new Date();
-
-      let venc = new Date(
-        horaFormatada
-        ? `${dataFormatada}T${horaFormatada}`
-        : dataFormatada
-      );
-
-      if(venc < agora){
-        status = "inativo";
-      }
-    }
-
     await client.from('clientes').upsert({
-      nome: c.nome || "Cliente",
+      nome: c.nome,
       telefone,
-      usuario: c.usuario || null,
-      senha: c.senha || null,
-      plano: c.plano || null,
-      valor: c.valor ? Number(c.valor) : null,
-      vencimento: dataFormatada,
-      hora_vencimento: horaFormatada,
-      status,
-      servidor: c.servidor || null,
-      aplicativo: c.aplicativo || null,
-      dispositivo: c.dispositivo || null,
-      telas: c.telas ? Number(c.telas) : 1,
-      forma_pagamento: c.forma_de_pagamento || "PIX",
-      mac: c.mac || null,
-      observacao: c.observacao || null
+      usuario: c.usuario,
+      senha: c.senha,
+      plano: c.plano,
+      valor: Number(c.valor || 0),
+      vencimento: c.vencimento,
+      hora_vencimento: c.hora_vencimento,
+      servidor: c.servidor,
+      aplicativo: c.aplicativo,
+      dispositivo: c.dispositivo,
+      telas: Number(c.telas || 1),
+      forma_pagamento: c.forma_de_pagamento,
+      mac: c.mac
     }, { onConflict: 'telefone' });
 
-    atualizarProgresso(i+1, json.length);
+    atualizarProgresso(i+1,json.length);
   }
 
-  alert("Importação concluída 🚀");
+  alert("Importado 🚀");
   carregar();
 }
 
+async function editarCliente(id){
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
+  let nome = prompt("Nome:", data.nome);
+  await client.from('clientes').update({ nome }).eq('id', id);
+  carregar();
+}
+
+async function editarContato(id){
+  const { data } = await client.from('contatos').select('*').eq('id', id).single();
+  let nome = prompt("Nome:", data.nome);
+  await client.from('contatos').update({ nome }).eq('id', id);
+  carregar();
+}
+
+carregar();
+
 </script>
+
+</body>
+</html>
