@@ -159,7 +159,68 @@ function render(lista){
   atualizarSelecionados();
 }
 
-// 🔥 IMPORTAÇÃO RESTAURADA
+function buscar(){
+  const termo = normalizar(document.getElementById("busca").value);
+  if(!termo){ render(dados); return; }
+
+  render(dados.filter(c =>
+    normalizar(c.nome).includes(termo) ||
+    (c.telefone||"").includes(termo)
+  ));
+}
+
+window.onload = function(){
+  document.getElementById("busca").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      e.preventDefault();
+      buscar();
+    }
+  });
+};
+
+// 🔥 BOTÕES RESTAURADOS
+function selecionarTodos(){
+  document.querySelectorAll(".check").forEach(c => c.checked = true);
+  atualizarSelecionados();
+}
+
+function desmarcarTodos(){
+  document.querySelectorAll(".check").forEach(c => c.checked = false);
+  atualizarSelecionados();
+}
+
+function filtrarAtivos(){
+  render(dados.filter(c => calcularStatus(c) === "ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c => calcularStatus(c) === "inativo"));
+}
+
+function atualizarSelecionados(){
+  let total = document.querySelectorAll(".check:checked").length;
+  contadorSelecionados.innerText = "Selecionados: " + total;
+}
+
+async function deletarSelecionados(){
+  let selecionados = document.querySelectorAll(".check:checked");
+
+  if(selecionados.length===0) return alert("Selecione algo");
+  if(!confirm("Excluir selecionados?")) return;
+
+  let i=0;
+
+  for(let c of selecionados){
+    await client.from(tela).delete().eq('id', c.dataset.id);
+    i++;
+    atualizarProgresso(i, selecionados.length);
+  }
+
+  alert("Excluído");
+  carregar();
+}
+
+// IMPORTAÇÃO (mantida)
 async function importarArquivo(){
 
   logErro.innerHTML = "";
@@ -233,22 +294,36 @@ Erro: Data ou hora de vencimento ausente
   carregar();
 }
 
-// 🔥 EDITAR CONTATO SIMPLES
+// EDITAR
+async function editarCliente(id){
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
+
+  let atualizado = {
+    nome: prompt("Nome:", data.nome),
+    telefone: prompt("Telefone:", data.telefone),
+    usuario: prompt("Usuário:", data.usuario),
+    senha: prompt("Senha:", data.senha),
+    servidor: prompt("Servidor:", data.servidor),
+    plano: prompt("Plano:", data.plano),
+    valor: prompt("Valor:", data.valor),
+    vencimento: prompt("Vencimento:", data.vencimento),
+    hora_vencimento: prompt("Hora:", data.hora_vencimento),
+    mac: prompt("MAC:", data.mac)
+  };
+
+  await client.from('clientes').update(atualizado).eq('id', id);
+  carregar();
+}
+
 async function editarContato(id){
   const { data } = await client.from('contatos').select('*').eq('id', id).single();
 
   let nome = prompt("Nome:", data.nome);
   let telefone = prompt("Telefone:", data.telefone);
 
-  await client.from('contatos').update({
-    nome,
-    telefone
-  }).eq('id', id);
-
+  await client.from('contatos').update({ nome, telefone }).eq('id', id);
   carregar();
 }
-
-// RESTO PERMANECE IGUAL (SEM ALTERAÇÃO)
 
 carregar();
 
