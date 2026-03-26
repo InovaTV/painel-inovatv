@@ -79,7 +79,6 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-// STATUS
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
 
@@ -181,7 +180,6 @@ function buscar(){
   ));
 }
 
-// ENTER BUSCA
 window.onload = function(){
   document.getElementById("busca").addEventListener("keydown", function(e){
     if(e.key === "Enter"){
@@ -218,7 +216,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// IMPORTAÇÃO COM LOG
+// 🔥 IMPORTAÇÃO COM VALIDAÇÃO OBRIGATÓRIA
 async function importarArquivo(){
 
   logErro.innerHTML = "";
@@ -243,6 +241,22 @@ async function importarArquivo(){
       telefone = "55"+telefone;
     }
 
+    // 🔴 VALIDAÇÃO OBRIGATÓRIA
+    if(!c.vencimento || !c.hora_vencimento){
+
+      erros++;
+
+      let msg = `
+ERRO VALIDAÇÃO LINHA ${i+1}
+Nome: ${c.nome}
+Telefone: ${telefone}
+Motivo: Data ou hora de vencimento ausente
+-------------------`;
+
+      logErro.innerHTML += "<pre>"+msg+"</pre>";
+      continue;
+    }
+
     let usuario = c.usuario || "sem_usuario";
 
     try {
@@ -261,7 +275,7 @@ async function importarArquivo(){
         plano: c.plano,
         valor: Number(c.valor || 0),
         vencimento: c.vencimento,
-        hora_vencimento: c.hora_vencimento || null,
+        hora_vencimento: c.hora_vencimento,
         servidor: c.servidor,
         aplicativo: c.aplicativo,
         dispositivo: c.dispositivo,
@@ -270,27 +284,10 @@ async function importarArquivo(){
         mac: c.mac
       };
 
-      let error = null;
-
       if(lista && lista.length > 0){
-        const res = await client.from('clientes').update(payload).eq('id', lista[0].id);
-        error = res.error;
+        await client.from('clientes').update(payload).eq('id', lista[0].id);
       } else {
-        const res = await client.from('clientes').insert(payload);
-        error = res.error;
-      }
-
-      if(error){
-        erros++;
-
-        let msg = `
-ERRO LINHA ${i+1}
-Nome: ${c.nome}
-Telefone: ${telefone}
-Erro: ${error.message}
--------------------`;
-
-        logErro.innerHTML += "<pre>"+msg+"</pre>";
+        await client.from('clientes').insert(payload);
       }
 
     } catch(e){
@@ -312,43 +309,14 @@ Erro: ${e.message}
   carregar();
 }
 
-// 🔥 LOG GLOBAL (NUNCA REMOVER)
-window.onerror = function(msg, url, line, col, error){
-
-  let texto = `
-ERRO GLOBAL JS
-Mensagem: ${msg}
-Linha: ${line}
-Arquivo: ${url}
--------------------`;
-
-  console.log(texto);
-
-  if(document.getElementById("logErro")){
-    logErro.innerHTML += "<pre>"+texto+"</pre>";
-  }
+// LOG GLOBAL
+window.onerror = function(msg, url, line){
+  logErro.innerHTML += `<pre>ERRO GLOBAL: ${msg} (linha ${line})</pre>`;
 };
 
 window.addEventListener("unhandledrejection", function(event){
-
-  let texto = `
-ERRO PROMISE
-Mensagem: ${event.reason}
--------------------`;
-
-  console.log(texto);
-
-  if(document.getElementById("logErro")){
-    logErro.innerHTML += "<pre>"+texto+"</pre>";
-  }
+  logErro.innerHTML += `<pre>ERRO PROMISE: ${event.reason}</pre>`;
 });
-
-async function editarCliente(id){
-  const { data } = await client.from('clientes').select('*').eq('id', id).single();
-  let nome = prompt("Nome:", data.nome);
-  await client.from('clientes').update({ nome }).eq('id', id);
-  carregar();
-}
 
 carregar();
 
