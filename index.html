@@ -115,6 +115,13 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
+// 🔥 CORREÇÃO BOTÕES TOPO
+function trocarTela(tipo){
+  tela = tipo;
+  statusTela.innerText = "Você está em: " + tipo.toUpperCase();
+  carregar();
+}
+
 // MODAL
 let modalResolve;
 
@@ -153,6 +160,13 @@ function calcularStatus(c){
   let agora = new Date();
   let venc = new Date(c.hora_vencimento ? `${c.vencimento}T${c.hora_vencimento}` : c.vencimento);
   return venc < agora ? "inativo" : "ativo";
+}
+
+// PROGRESSO
+function atualizarProgresso(a,t){
+  let p=Math.floor((a/t)*100);
+  progress.style.width=p+"%";
+  progress.innerText=p+"%";
 }
 
 // CARREGAR
@@ -203,11 +217,10 @@ function render(lista){
 // BUSCA
 function buscar(){
   let termo = normalizar(busca.value);
-  let filtrado = dados.filter(c =>
+  render(dados.filter(c =>
     normalizar(c.nome).includes(termo) ||
     (c.telefone||"").includes(termo)
-  );
-  render(filtrado);
+  ));
 }
 
 // CHECKBOX
@@ -222,8 +235,7 @@ function desmarcarTodos(){
 }
 
 function atualizarSelecionados(){
-  let total = document.querySelectorAll('.check:checked').length;
-  contadorSelecionados.innerText="Selecionados: "+total;
+  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
 
 // FILTROS
@@ -235,15 +247,21 @@ function filtrarVencidos(){
   render(dados.filter(c=>calcularStatus(c)==="inativo"));
 }
 
-// EXCLUIR
+// 🔥 EXCLUIR COM CONFIRMAÇÃO + PROGRESSO
 async function deletarSelecionados(){
+
   let ids = [...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
+
   if(ids.length===0) return alert("Nada selecionado");
 
-  for(let id of ids){
-    await client.from(tela).delete().eq('id', id);
+  if(!confirm("Tem certeza que deseja excluir os selecionados?")) return;
+
+  for(let i=0;i<ids.length;i++){
+    await client.from(tela).delete().eq('id', ids[i]);
+    atualizarProgresso(i+1, ids.length);
   }
 
+  alert("Excluído com sucesso!");
   carregar();
 }
 
@@ -299,51 +317,6 @@ async function editarContato(id){
   }).eq('id', id);
 
   carregar();
-}
-
-// IMPORTAR (mantido básico funcional)
-async function importarArquivo(){
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  const reader = new FileReader();
-
-  reader.onload = async (e)=>{
-    const wb = XLSX.read(e.target.result, { type:'binary' });
-    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-    let erros=0;
-
-    for(let i=0;i<json.length;i++){
-      try{
-        let c = json[i];
-
-        await client.from('clientes').upsert({
-          nome:c.nome,
-          telefone:(c.telefone||"").replace(/\D/g,""),
-          usuario:c.usuario,
-          plano:c.plano,
-          valor:c.valor,
-          vencimento:c.vencimento,
-          hora_vencimento:c.hora_vencimento,
-          servidor:c.servidor,
-          mac:c.mac
-        });
-
-      }catch(e){
-        erros++;
-        logErro.innerHTML += `ERRO LINHA ${i+1}<br>`;
-      }
-
-      progress.style.width = ((i+1)/json.length*100)+"%";
-      progress.innerText = Math.floor((i+1)/json.length*100)+"%";
-    }
-
-    alert("Importação concluída 🚀\nErros: "+erros);
-    carregar();
-  };
-
-  reader.readAsBinaryString(file);
 }
 
 carregar();
