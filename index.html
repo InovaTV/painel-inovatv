@@ -47,14 +47,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <hr>
 
-<div>
-💰 Faturamento: R$ <span id="faturamento">0</span> |
-✅ Ativos: <span id="ativos">0</span> |
-❌ Inativos: <span id="inativos">0</span>
-</div>
-
-<hr>
-
 <div id="contadorSelecionados">Selecionados: 0</div>
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
@@ -68,16 +60,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
-<div id="financeiro" class="hidden">
-<h2>Financeiro</h2>
-<button onclick="fecharFinanceiro()">Voltar</button>
-<div>💰 Total: R$ <span id="fTotal">0</span></div>
-<table>
-<thead><tr><th>Nome</th><th>Valor</th><th>Status</th></tr></thead>
-<tbody id="tabelaFinanceiro"></tbody>
-</table>
-</div>
-
 <script>
 
 const client = supabase.createClient(
@@ -88,16 +70,20 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-busca.addEventListener("keypress", e=>{
-  if(e.key==="Enter") buscar();
-});
+function atualizarProgresso(a,t){
+  let p=Math.floor((a/t)*100);
+  progress.style.width=p+"%";
+  progress.innerText=p+"%";
+}
 
+// ================= TROCAR TELA
 function trocarTela(tipo){
   tela=tipo;
   statusTela.innerText="Você está em: "+tipo.toUpperCase();
   carregar();
 }
 
+// ================= CARREGAR
 async function carregar(){
 
   const { data } = await client.from(tela).select('*');
@@ -134,6 +120,7 @@ async function carregar(){
   render(dados);
 }
 
+// ================= RENDER
 function render(lista){
 
   let html='';
@@ -157,13 +144,9 @@ function render(lista){
       <td>${c.dispositivo||''}</td>
       <td>${c.aplicativo||''}</td>
       <td>${c.status||''}</td>
-      <td>
-        <button onclick="editarCliente('${c.id}')">Editar</button>
-      </td>
+      <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
       ` : `
-      <td>
-        <button onclick="editarContato('${c.id}')">Editar</button>
-      </td>
+      <td><button onclick="editarContato('${c.id}')">Editar</button></td>
       `}
     </tr>`;
   });
@@ -171,40 +154,42 @@ function render(lista){
   tabela.innerHTML=html;
 }
 
-function atualizarSelecionados(){
-  let total = document.querySelectorAll(".check:checked").length;
-  contadorSelecionados.innerText = "Selecionados: "+total;
+// ================= IMPORTAR (CORRIGIDO)
+async function importarArquivo(){
+
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione arquivo");
+
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data);
+  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+  for(let i=0;i<json.length;i++){
+
+    let c = json[i];
+
+    let telefone = (c.telefone || "").toString().replace(/\D/g,"");
+    if(!telefone) continue;
+
+    await client.from('clientes').upsert({
+      nome: c.nome || "",
+      telefone,
+      usuario: c.usuario || "",
+      senha: c.senha || "",
+      plano: c.plano || "",
+      valor: c.valor || 0,
+      vencimento: c.vencimento || null,
+      hora_vencimento: c.hora_vencimento || null
+    }, { onConflict: 'telefone' });
+
+    atualizarProgresso(i+1,json.length);
+  }
+
+  alert("Importado com sucesso 🚀");
+  carregar();
 }
 
-function buscar(){
-  let termo = busca.value.toLowerCase();
-
-  let filtrado = dados.filter(c =>
-    (c.nome||'').toLowerCase().includes(termo) ||
-    (c.telefone||'').includes(termo)
-  );
-
-  render(filtrado);
-}
-
-function selecionarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=true);
-  atualizarSelecionados();
-}
-
-function desmarcarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=false);
-  atualizarSelecionados();
-}
-
-function filtrarAtivos(){
-  render(dados.filter(c=>c.status==="ativo"));
-}
-
-function filtrarVencidos(){
-  render(dados.filter(c=>c.status==="inativo"));
-}
-
+// ================= DELETE COM PROGRESSO
 async function deletarSelecionados(){
 
   let selecionados = document.querySelectorAll(".check:checked");
@@ -213,8 +198,12 @@ async function deletarSelecionados(){
 
   if(!confirm("Excluir selecionados?")) return;
 
+  let i=0;
+
   for(let c of selecionados){
     await client.from(tela).delete().eq('id', c.dataset.id);
+    i++;
+    atualizarProgresso(i, selecionados.length);
   }
 
   alert("Excluído");
@@ -227,24 +216,16 @@ async function editarCliente(id){
   const { data } = await client.from('clientes').select('*').eq('id', id).single();
 
   let nome = prompt("Nome:", data.nome || "");
-  let usuario = prompt("Usuário:", data.usuario || "");
-  let senha = prompt("Senha:", data.senha || "");
   let plano = prompt("Plano:", data.plano || "");
   let valor = prompt("Valor:", data.valor || "");
-  let vencimento = prompt("Vencimento (YYYY-MM-DD):", data.vencimento || "");
-  let hora = prompt("Hora (HH:MM:SS):", data.hora_vencimento || "");
 
   await client.from('clientes').update({
     nome,
-    usuario,
-    senha,
     plano,
-    valor: Number(valor),
-    vencimento,
-    hora_vencimento: hora
+    valor: Number(valor)
   }).eq('id', id);
 
-  alert("Cliente atualizado 🚀");
+  alert("Atualizado");
   carregar();
 }
 
@@ -254,17 +235,14 @@ async function editarContato(id){
   const { data } = await client.from('contatos').select('*').eq('id', id).single();
 
   let nome = prompt("Nome:", data.nome || "");
-  let telefone = prompt("Telefone:", data.telefone || "");
 
-  await client.from('contatos').update({
-    nome,
-    telefone
-  }).eq('id', id);
+  await client.from('contatos').update({ nome }).eq('id', id);
 
-  alert("Contato atualizado 👍");
+  alert("Atualizado");
   carregar();
 }
 
+// INIT
 carregar();
 
 </script>
