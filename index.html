@@ -51,7 +51,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
 <div id="progressBar"><div id="progress">0%</div></div>
-
 <div id="logErro"></div>
 
 <hr>
@@ -79,15 +78,15 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
+// STATUS
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
 
   let agora = new Date();
-
   let venc = new Date(
     c.hora_vencimento
-    ? `${c.vencimento}T${c.hora_vencimento}`
-    : c.vencimento
+      ? `${c.vencimento}T${c.hora_vencimento}`
+      : c.vencimento
   );
 
   return venc < agora ? "inativo" : "ativo";
@@ -109,21 +108,31 @@ async function carregar(){
   const { data } = await client.from(tela).select('*');
   dados=data || [];
 
-  thead.innerHTML=`
-  <tr>
-  <th></th>
-  <th>Nome</th>
-  <th>Telefone</th>
-  <th>Usuário</th>
-  <th>Servidor</th>
-  <th>Plano</th>
-  <th>Valor</th>
-  <th>Vencimento</th>
-  <th>Hora</th>
-  <th>MAC</th>
-  <th>Status</th>
-  <th>Ações</th>
-  </tr>`;
+  if(tela==='clientes'){
+    thead.innerHTML=`
+    <tr>
+      <th></th>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Usuário</th>
+      <th>Servidor</th>
+      <th>Plano</th>
+      <th>Valor</th>
+      <th>Vencimento</th>
+      <th>Hora</th>
+      <th>MAC</th>
+      <th>Status</th>
+      <th>Ações</th>
+    </tr>`;
+  } else {
+    thead.innerHTML=`
+    <tr>
+      <th></th>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Ações</th>
+    </tr>`;
+  }
 
   render(dados);
 }
@@ -132,22 +141,26 @@ function render(lista){
   let html='';
 
   lista.forEach(c=>{
-    let status = calcularStatus(c);
 
     html+=`
     <tr>
       <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarSelecionados()"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
-      <td>${c.usuario||''}</td>
-      <td>${c.servidor||''}</td>
-      <td>${c.plano||''}</td>
-      <td>${c.valor||''}</td>
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.mac||''}</td>
-      <td>${status}</td>
-      <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
+
+      ${tela==='clientes' ? `
+        <td>${c.usuario||''}</td>
+        <td>${c.servidor||''}</td>
+        <td>${c.plano||''}</td>
+        <td>${c.valor||''}</td>
+        <td>${c.vencimento||''}</td>
+        <td>${c.hora_vencimento||''}</td>
+        <td>${c.mac||''}</td>
+        <td>${calcularStatus(c)}</td>
+        <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
+      ` : `
+        <td><button onclick="editarContato('${c.id}')">Editar</button></td>
+      `}
     </tr>`;
   });
 
@@ -155,6 +168,28 @@ function render(lista){
   atualizarSelecionados();
 }
 
+// BUSCA
+function buscar(){
+  const termo = document.getElementById("busca").value.toLowerCase().trim();
+  if(!termo){ render(dados); return; }
+
+  render(dados.filter(c =>
+    (c.nome||'').toLowerCase().includes(termo) ||
+    (c.telefone||'').includes(termo)
+  ));
+}
+
+// ENTER
+window.onload = function(){
+  document.getElementById("busca").addEventListener("keydown", function(e){
+    if(e.key === "Enter"){
+      e.preventDefault();
+      buscar();
+    }
+  });
+};
+
+// CHECKS
 function atualizarSelecionados(){
   let total = document.querySelectorAll(".check:checked").length;
   contadorSelecionados.innerText = "Selecionados: " + total;
@@ -170,40 +205,11 @@ function desmarcarTodos(){
   atualizarSelecionados();
 }
 
-function buscar(){
-  const termo = document.getElementById("busca").value.toLowerCase().trim();
-  if(!termo){ render(dados); return; }
-
-  render(dados.filter(c =>
-    (c.nome||'').toLowerCase().includes(termo) ||
-    (c.telefone||'').includes(termo)
-  ));
-}
-
-window.onload = function(){
-  document.getElementById("busca").addEventListener("keydown", function(e){
-    if(e.key === "Enter"){
-      e.preventDefault();
-      buscar();
-    }
-  });
-};
-
-function filtrarAtivos(){
-  render(dados.filter(c=>calcularStatus(c)==="ativo"));
-}
-
-function filtrarVencidos(){
-  render(dados.filter(c=>calcularStatus(c)==="inativo"));
-}
-
-// 🔥 CORREÇÃO AQUI
+// DELETE (corrigido)
 async function deletarSelecionados(){
-
   let selecionados = document.querySelectorAll(".check:checked");
 
   if(selecionados.length===0) return alert("Selecione algo");
-
   if(!confirm("Excluir selecionados?")) return;
 
   let i=0;
@@ -218,7 +224,99 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// (RESTO DO CÓDIGO IGUAL — IMPORTAÇÃO + LOG NÃO ALTERADOS)
+// 🔥 IMPORTAÇÃO (FUNCIONANDO)
+async function importarArquivo(){
+
+  logErro.innerHTML = "";
+
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione arquivo");
+
+  const data = await file.arrayBuffer();
+  const wb = XLSX.read(data);
+  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+  for(let i=0;i<json.length;i++){
+
+    let c = json[i];
+
+    let telefone = (c.telefone || "").toString().replace(/\D/g,"");
+    if(!telefone) continue;
+
+    if(!telefone.startsWith("55")){
+      telefone = "55"+telefone;
+    }
+
+    // VALIDAÇÃO (mantida)
+    if(!c.vencimento || !c.hora_vencimento){
+      logErro.innerHTML += `<pre>Erro linha ${i+1} - falta vencimento/hora</pre>`;
+      continue;
+    }
+
+    let usuario = c.usuario || "sem_usuario";
+
+    const { data: lista } = await client
+      .from('clientes')
+      .select('id')
+      .eq('telefone', telefone)
+      .eq('usuario', usuario);
+
+    let payload = {
+      nome: c.nome,
+      telefone,
+      usuario,
+      senha: c.senha,
+      plano: c.plano,
+      valor: Number(c.valor || 0),
+      vencimento: c.vencimento,
+      hora_vencimento: c.hora_vencimento,
+      servidor: c.servidor,
+      aplicativo: c.aplicativo,
+      dispositivo: c.dispositivo,
+      telas: Number(c.telas || 1),
+      forma_pagamento: c.forma_de_pagamento,
+      mac: c.mac
+    };
+
+    if(lista && lista.length > 0){
+      await client.from('clientes').update(payload).eq('id', lista[0].id);
+    } else {
+      await client.from('clientes').insert(payload);
+    }
+
+    atualizarProgresso(i+1,json.length);
+  }
+
+  alert("Importado 🚀");
+  carregar();
+}
+
+// EDITAR CLIENTE
+async function editarCliente(id){
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
+  let nome = prompt("Nome:", data.nome);
+  await client.from('clientes').update({ nome }).eq('id', id);
+  carregar();
+}
+
+// 🔥 EDITAR CONTATO (CORRIGIDO)
+async function editarContato(id){
+  const { data } = await client.from('contatos').select('*').eq('id', id).single();
+  let nome = prompt("Nome:", data.nome);
+  await client.from('contatos').update({ nome }).eq('id', id);
+  carregar();
+}
+
+// LOG GLOBAL (mantido)
+window.onerror = function(msg, url, line){
+  logErro.innerHTML += `<pre>ERRO GLOBAL: ${msg}</pre>`;
+};
+
+window.addEventListener("unhandledrejection", function(event){
+  logErro.innerHTML += `<pre>ERRO PROMISE: ${event.reason}</pre>`;
+});
+
+carregar();
 
 </script>
 
