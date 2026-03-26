@@ -17,71 +17,38 @@ button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:po
 #progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
+#logErro {
+  background:#111;
+  color:#0f0;
+  padding:10px;
+  margin-top:10px;
+  font-size:12px;
+  max-height:200px;
+  overflow:auto;
+}
+
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
-.hidden { display:none; }
 </style>
 </head>
 
 <body>
 
 <h2>Painel InovaTV</h2>
-<h3 id="statusTela">Você está em: CLIENTES</h3>
-
-<button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
-<button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
-
-<br><br>
-
-<input id="busca" placeholder="Telefone ou Nome">
-<button onclick="buscar()">Buscar</button>
-
-<hr>
 
 <input type="file" id="inputArquivo" accept=".xlsx" />
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
 <div id="progressBar"><div id="progress">0%</div></div>
 
-<hr>
-
-<div id="contadorSelecionados">Selecionados: 0</div>
-
-<button onclick="selecionarTodos()">Selecionar todos</button>
-<button onclick="desmarcarTodos()">Desmarcar</button>
-<button onclick="filtrarAtivos()">Ativos</button>
-<button onclick="filtrarVencidos()">Vencidos</button>
-<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
-
-<table>
-<thead id="thead"></thead>
-<tbody id="tabela"></tbody>
-</table>
+<div id="logErro"></div>
 
 <script>
 
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+  'COLE_SUA_ANON_KEY_COMPLETA_AQUI'
 );
-
-let tela='clientes';
-let dados=[];
-
-// STATUS
-function calcularStatus(c){
-  if(!c.vencimento) return "ativo";
-
-  let agora = new Date();
-
-  let venc = new Date(
-    c.hora_vencimento
-    ? `${c.vencimento}T${c.hora_vencimento}`
-    : c.vencimento
-  );
-
-  return venc < agora ? "inativo" : "ativo";
-}
 
 function atualizarProgresso(a,t){
   let p=Math.floor((a/t)*100);
@@ -89,145 +56,10 @@ function atualizarProgresso(a,t){
   progress.innerText=p+"%";
 }
 
-function trocarTela(tipo){
-  tela=tipo;
-  statusTela.innerText="Você está em: "+tipo.toUpperCase();
-  carregar();
-}
-
-async function carregar(){
-  const { data } = await client.from(tela).select('*');
-  dados=data || [];
-
-  if(tela==='clientes'){
-    thead.innerHTML=`
-    <tr>
-    <th></th>
-    <th>Nome</th>
-    <th>Telefone</th>
-    <th>Usuário</th>
-    <th>Servidor</th>
-    <th>Plano</th>
-    <th>Valor</th>
-    <th>Vencimento</th>
-    <th>Hora</th>
-    <th>MAC</th>
-    <th>Status</th>
-    <th>Ações</th>
-    </tr>`;
-  } else {
-    thead.innerHTML=`
-    <tr>
-    <th></th>
-    <th>Nome</th>
-    <th>Telefone</th>
-    <th>Ações</th>
-    </tr>`;
-  }
-
-  render(dados);
-}
-
-function render(lista){
-  let html='';
-
-  lista.forEach(c=>{
-    let status = calcularStatus(c);
-
-    html+=`
-    <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}"></td>
-      <td>${c.nome||''}</td>
-      <td>${c.telefone||''}</td>
-
-      ${tela==='clientes' ? `
-        <td>${c.usuario||''}</td>
-        <td>${c.servidor||''}</td>
-        <td>${c.plano||''}</td>
-        <td>${c.valor||''}</td>
-        <td>${c.vencimento||''}</td>
-        <td>${c.hora_vencimento||''}</td>
-        <td>${c.mac||''}</td>
-        <td>${status}</td>
-        <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
-      ` : `
-        <td><button onclick="editarContato('${c.id}')">Editar</button></td>
-      `}
-    </tr>`;
-  });
-
-  tabela.innerHTML=html;
-  atualizarSelecionados();
-}
-
-function selecionarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=true);
-  atualizarSelecionados();
-}
-
-function desmarcarTodos(){
-  document.querySelectorAll(".check").forEach(c=>c.checked=false);
-  atualizarSelecionados();
-}
-
-function atualizarSelecionados(){
-  let total = document.querySelectorAll(".check:checked").length;
-  contadorSelecionados.innerText = "Selecionados: "+total;
-}
-
-// BUSCA (já corrigida)
-function buscar(){
-  const input = document.getElementById("busca");
-  const termo = input.value.toLowerCase().trim();
-
-  if(!termo){
-    render(dados);
-    return;
-  }
-
-  const filtrado = dados.filter(c => {
-    const nome = (c.nome || "").toLowerCase();
-    const telefone = (c.telefone || "").toString();
-    return nome.includes(termo) || telefone.includes(termo);
-  });
-
-  render(filtrado);
-}
-
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("busca").addEventListener("keyup", function(e){
-    if(e.key === "Enter") buscar();
-  });
-});
-
-function filtrarAtivos(){
-  render(dados.filter(c=>calcularStatus(c)==="ativo"));
-}
-
-function filtrarVencidos(){
-  render(dados.filter(c=>calcularStatus(c)==="inativo"));
-}
-
-async function deletarSelecionados(){
-  let selecionados = document.querySelectorAll(".check:checked");
-  if(selecionados.length===0) return alert("Selecione algo");
-
-  if(!confirm("Excluir selecionados?")) return;
-
-  let i=0;
-
-  for(let c of selecionados){
-    await client.from(tela).delete().eq('id', c.dataset.id);
-    i++;
-    atualizarProgresso(i, selecionados.length);
-  }
-
-  alert("Excluído");
-  carregar();
-}
-
-// 🔥 IMPORTAÇÃO COM DEBUG
+// 🔥 IMPORTAÇÃO COM LOG VISUAL
 async function importarArquivo(){
+
+  logErro.innerHTML = "";
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
@@ -276,47 +108,50 @@ async function importarArquivo(){
         mac: c.mac
       };
 
+      let error = null;
+
       if(lista && lista.length > 0){
-        const { error } = await client.from('clientes').update(payload).eq('id', lista[0].id);
-        if(error){
-          console.log("ERRO UPDATE LINHA:", i+1, c, error);
-          erros++;
-        }
+        const res = await client.from('clientes').update(payload).eq('id', lista[0].id);
+        error = res.error;
       } else {
-        const { error } = await client.from('clientes').insert(payload);
-        if(error){
-          console.log("ERRO INSERT LINHA:", i+1, c, error);
-          erros++;
-        }
+        const res = await client.from('clientes').insert(payload);
+        error = res.error;
+      }
+
+      if(error){
+        erros++;
+
+        let msg = `
+❌ ERRO NA LINHA ${i+1}
+Nome: ${c.nome}
+Telefone: ${telefone}
+Erro: ${error.message}
+-----------------------
+`;
+
+        console.log(msg);
+        logErro.innerHTML += "<pre>"+msg+"</pre>";
       }
 
     } catch(e){
-      console.log("ERRO GERAL LINHA:", i+1, c, e);
       erros++;
+
+      let msg = `
+❌ ERRO CRÍTICO LINHA ${i+1}
+Nome: ${c.nome}
+Erro: ${e.message}
+-----------------------
+`;
+
+      console.log(msg);
+      logErro.innerHTML += "<pre>"+msg+"</pre>";
     }
 
     atualizarProgresso(i+1,json.length);
   }
 
   alert(`Importação concluída 🚀\nErros: ${erros}`);
-  carregar();
 }
-
-async function editarCliente(id){
-  const { data } = await client.from('clientes').select('*').eq('id', id).single();
-  let nome = prompt("Nome:", data.nome);
-  await client.from('clientes').update({ nome }).eq('id', id);
-  carregar();
-}
-
-async function editarContato(id){
-  const { data } = await client.from('contatos').select('*').eq('id', id).single();
-  let nome = prompt("Nome:", data.nome);
-  await client.from('contatos').update({ nome }).eq('id', id);
-  carregar();
-}
-
-carregar();
 
 </script>
 
