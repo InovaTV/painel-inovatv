@@ -68,7 +68,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
-<!-- FINANCEIRO -->
 <div id="financeiro" class="hidden">
 <h2>Financeiro</h2>
 <button onclick="fecharFinanceiro()">Voltar</button>
@@ -89,19 +88,16 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 
-// ENTER busca
 busca.addEventListener("keypress", e=>{
   if(e.key==="Enter") buscar();
 });
 
-// ================= TROCAR TELA
 function trocarTela(tipo){
   tela=tipo;
   statusTela.innerText="Você está em: "+tipo.toUpperCase();
   carregar();
 }
 
-// ================= CARREGAR
 async function carregar(){
 
   const { data } = await client.from(tela).select('*');
@@ -123,27 +119,33 @@ async function carregar(){
     <th>Dispositivo</th>
     <th>Aplicativo</th>
     <th>Status</th>
+    <th>Ações</th>
     </tr>`;
   } else {
     thead.innerHTML=`
-    <tr><th></th><th>Nome</th><th>Telefone</th></tr>`;
+    <tr>
+    <th></th>
+    <th>Nome</th>
+    <th>Telefone</th>
+    <th>Ações</th>
+    </tr>`;
   }
 
   render(dados);
-  atualizarDashboard();
 }
 
-// ================= RENDER
 function render(lista){
 
   let html='';
 
   lista.forEach(c=>{
+
     html+=`
     <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}" data-status="${c.status||''}" onchange="atualizarSelecionados()"></td>
+      <td><input type="checkbox" class="check" data-id="${c.id}" onchange="atualizarSelecionados()"></td>
       <td>${c.nome||''}</td>
       <td>${c.telefone||''}</td>
+      
       ${tela==='clientes' ? `
       <td>${c.vencimento||''}</td>
       <td>${c.hora_vencimento||''}</td>
@@ -155,21 +157,25 @@ function render(lista){
       <td>${c.dispositivo||''}</td>
       <td>${c.aplicativo||''}</td>
       <td>${c.status||''}</td>
-      ` : ``}
+      <td>
+        <button onclick="editarCliente('${c.id}')">Editar</button>
+      </td>
+      ` : `
+      <td>
+        <button onclick="editarContato('${c.id}')">Editar</button>
+      </td>
+      `}
     </tr>`;
   });
 
   tabela.innerHTML=html;
-  atualizarSelecionados();
 }
 
-// ================= CONTADOR
 function atualizarSelecionados(){
   let total = document.querySelectorAll(".check:checked").length;
   contadorSelecionados.innerText = "Selecionados: "+total;
 }
 
-// ================= BUSCA
 function buscar(){
   let termo = busca.value.toLowerCase();
 
@@ -181,7 +187,6 @@ function buscar(){
   render(filtrado);
 }
 
-// ================= SELEÇÃO
 function selecionarTodos(){
   document.querySelectorAll(".check").forEach(c=>c.checked=true);
   atualizarSelecionados();
@@ -192,7 +197,6 @@ function desmarcarTodos(){
   atualizarSelecionados();
 }
 
-// ================= FILTROS
 function filtrarAtivos(){
   render(dados.filter(c=>c.status==="ativo"));
 }
@@ -201,7 +205,6 @@ function filtrarVencidos(){
   render(dados.filter(c=>c.status==="inativo"));
 }
 
-// ================= DELETE
 async function deletarSelecionados(){
 
   let selecionados = document.querySelectorAll(".check:checked");
@@ -210,154 +213,58 @@ async function deletarSelecionados(){
 
   if(!confirm("Excluir selecionados?")) return;
 
-  let i=0;
-
   for(let c of selecionados){
     await client.from(tela).delete().eq('id', c.dataset.id);
-    i++;
-    atualizarProgresso(i, selecionados.length);
   }
 
   alert("Excluído");
   carregar();
 }
 
-// ================= PROGRESSO
-function atualizarProgresso(a,t){
-  let p=Math.floor((a/t)*100);
-  progress.style.width=p+"%";
-  progress.innerText=p+"%";
-}
+// ================= EDITAR CLIENTE
+async function editarCliente(id){
 
-// ================= FINANCEIRO
-async function abrirFinanceiro(){
+  const { data } = await client.from('clientes').select('*').eq('id', id).single();
 
-  const { data } = await client.from('clientes').select('*');
+  let nome = prompt("Nome:", data.nome || "");
+  let usuario = prompt("Usuário:", data.usuario || "");
+  let senha = prompt("Senha:", data.senha || "");
+  let plano = prompt("Plano:", data.plano || "");
+  let valor = prompt("Valor:", data.valor || "");
+  let vencimento = prompt("Vencimento (YYYY-MM-DD):", data.vencimento || "");
+  let hora = prompt("Hora (HH:MM:SS):", data.hora_vencimento || "");
 
-  let total=0, html='';
+  await client.from('clientes').update({
+    nome,
+    usuario,
+    senha,
+    plano,
+    valor: Number(valor),
+    vencimento,
+    hora_vencimento: hora
+  }).eq('id', id);
 
-  data.forEach(c=>{
-    total+=Number(c.valor||0);
-    html+=`<tr><td>${c.nome}</td><td>${c.valor}</td><td>${c.status}</td></tr>`;
-  });
-
-  fTotal.innerText=total;
-  tabelaFinanceiro.innerHTML=html;
-
-  financeiro.classList.remove("hidden");
-  window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
-}
-
-function fecharFinanceiro(){
-  financeiro.classList.add("hidden");
-}
-
-// ================= IMPORTAR CORRIGIDO 100%
-async function importarArquivo(){
-
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  if(!confirm("Importar e atualizar clientes?")) return;
-
-  const data = await file.arrayBuffer();
-  const wb = XLSX.read(data);
-  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-  for(let i=0;i<json.length;i++){
-
-    let c = json[i];
-
-    let telefone = (c.telefone || c.telefone_ || "")
-      .toString().replace(/\D/g,"");
-
-    if(!telefone) continue;
-
-    // 🔥 CAPTURA CORRETA DO EXCEL
-    let dataVenc = c.vencimen || c.vencimento || null;
-    let horaVenc = c.hora_venc || c.hora_vencimento || null;
-
-    // 🔥 NORMALIZA DATA
-    let dataFormatada = null;
-
-    if(dataVenc){
-      let d = new Date(dataVenc);
-      if(!isNaN(d)){
-        dataFormatada = d.toISOString().split("T")[0];
-      }
-    }
-
-    // 🔥 NORMALIZA HORA
-    let horaFormatada = null;
-
-    if(horaVenc){
-      if(typeof horaVenc === "number"){
-        let totalSegundos = Math.floor(horaVenc * 86400);
-        let h = Math.floor(totalSegundos / 3600);
-        let m = Math.floor((totalSegundos % 3600)/60);
-        let s = totalSegundos % 60;
-        horaFormatada = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-      } else {
-        horaFormatada = horaVenc;
-      }
-    }
-
-    // 🔥 STATUS BASEADO EM DATA + HORA
-    let status = "ativo";
-
-    if(dataFormatada){
-
-      let agora = new Date();
-
-      let vencimentoCompleto;
-
-      if(horaFormatada){
-        vencimentoCompleto = new Date(`${dataFormatada}T${horaFormatada}`);
-      } else {
-        vencimentoCompleto = new Date(dataFormatada);
-      }
-
-      if(vencimentoCompleto < agora){
-        status = "inativo";
-      }
-    }
-
-    // 🔥 UPSERT
-    const { data: ex } = await client
-      .from('clientes')
-      .select('id')
-      .eq('telefone', telefone)
-      .single();
-
-    let payload = {
-      nome: c.nome || "",
-      telefone,
-      usuario: c.usuario || "",
-      senha: c.senha || "",
-      vencimento: dataFormatada,
-      hora_vencimento: horaFormatada,
-      status,
-      valor: c.valor || 0,
-      dispositivo: c.dispositiv || "",
-      aplicativo: c.aplicativo || "",
-      mac: c.mac || "",
-      servidor: c.servidor || "",
-      plano: c.plano || ""
-    };
-
-    if(ex){
-      await client.from('clientes').update(payload).eq('telefone', telefone);
-    }else{
-      await client.from('clientes').insert(payload);
-    }
-
-    atualizarProgresso(i+1,json.length);
-  }
-
-  alert("Importação corrigida 🚀");
+  alert("Cliente atualizado 🚀");
   carregar();
 }
-// INIT
+
+// ================= EDITAR CONTATO
+async function editarContato(id){
+
+  const { data } = await client.from('contatos').select('*').eq('id', id).single();
+
+  let nome = prompt("Nome:", data.nome || "");
+  let telefone = prompt("Telefone:", data.telefone || "");
+
+  await client.from('contatos').update({
+    nome,
+    telefone
+  }).eq('id', id);
+
+  alert("Contato atualizado 👍");
+  carregar();
+}
+
 carregar();
 
 </script>
