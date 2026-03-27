@@ -9,18 +9,59 @@
 
 <style>
 body { font-family: Arial; padding:20px; }
-button { margin:4px; padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-weight:bold; }
+
+button {
+  margin:4px;
+  padding:6px 12px;
+  border:none;
+  border-radius:4px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
 .btn-topo { background:#2196F3; color:#fff; }
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
+
 #progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
-#logErro { background:#000; color:#0f0; padding:10px; margin-top:10px; font-size:12px; max-height:200px; overflow:auto; }
+
+#logErro {
+  background:#000;
+  color:#0f0;
+  padding:10px;
+  margin-top:10px;
+  font-size:12px;
+  max-height:200px;
+  overflow:auto;
+}
+
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
-#modalEdit { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); align-items:center; justify-content:center; }
-#modalBox { background:#111; padding:20px; border-radius:10px; color:#fff; width:350px; }
-#modalBox input { width:100%; padding:8px; margin-top:10px; }
+
+#modalEdit {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  align-items:center;
+  justify-content:center;
+}
+
+#modalBox {
+  background:#111;
+  padding:20px;
+  border-radius:10px;
+  color:#fff;
+  width:350px;
+}
+
+#modalBox input {
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -85,7 +126,6 @@ let dadosEditados={};
 
 // ===== CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
-
   const { error } = await client.from('contatos').insert(dados);
 
   if(error){
@@ -111,15 +151,35 @@ function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valo
 function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
 function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
 
-// ===== STATUS =====
+// ===== STATUS CORRIGIDO =====
 function calcularStatus(c){
-  if(!c.vencimento || !c.hora_vencimento) return "inativo";
-  let agora=new Date();
-  let venc=new Date(`${c.vencimento}T${c.hora_vencimento}`);
-  return venc<agora?"inativo":"ativo";
+
+  if(!c.vencimento || !c.hora_vencimento){
+    return "erro";
+  }
+
+  let agora = new Date();
+
+  let data = c.vencimento.split("-");
+  let hora = c.hora_vencimento.split(":");
+
+  let venc = new Date(
+    data[0],
+    data[1]-1,
+    data[2],
+    hora[0],
+    hora[1],
+    hora[2] || 0
+  );
+
+  if(isNaN(venc.getTime())){
+    return "erro";
+  }
+
+  return venc < agora ? "inativo" : "ativo";
 }
 
-// ===== TELA =====
+// ===== TROCAR TELA =====
 function trocarTela(t){
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
@@ -174,22 +234,26 @@ function render(lista){
   contarSelecionados();
 }
 
-// ===== OUTROS (mantidos iguais) =====
+// ===== CONTADOR =====
 function contarSelecionados(){
   contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
+
 function selecionarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=true); contarSelecionados(); }
 function desmarcarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=false); contarSelecionados(); }
 function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
 function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
 
+// ===== EXCLUIR =====
 async function deletarSelecionados(){
   let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
+
   if(ids.length===0)return alert("Nada selecionado");
   if(!confirm("Deseja excluir?"))return;
 
   for(let i=0;i<ids.length;i++){
     await client.from(tela).delete().eq('id',ids[i]);
+
     let p=Math.floor(((i+1)/ids.length)*100);
     progress.style.width=p+"%";
     progress.innerText=p+"%";
@@ -203,12 +267,52 @@ async function deletarSelecionados(){
 function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
+
 function buscar(){
   let termo=normalizar(busca.value);
   render(dados.filter(c =>
     normalizar(c.nome).includes(termo) ||
     (c.telefone||"").includes(termo)
   ));
+}
+
+// ===== EDITAR CORRIGIDO =====
+async function editar(id){
+
+  const { data } = await client.from(tela).select('*').eq('id',id).single();
+
+  let campos=['nome','telefone','usuario'];
+  dadosEditados={};
+
+  for(let campo of campos){
+
+    let r=await abrirModal(campo,data[campo]);
+
+    if(r.tipo==="cancelar") return;
+
+    dadosEditados[campo]=r.valor;
+
+    if(r.tipo==="salvar"){
+      await salvar(id);
+      return;
+    }
+  }
+
+  await salvar(id);
+}
+
+async function salvar(id){
+
+  await client.from(tela).update(dadosEditados).eq('id',id);
+
+  await salvarContatoSeguro({
+    telefone: dadosEditados.telefone,
+    usuario: dadosEditados.usuario,
+    nome: dadosEditados.nome,
+    cliente: true
+  });
+
+  carregar();
 }
 
 // ===== IMPORTAÇÃO =====
