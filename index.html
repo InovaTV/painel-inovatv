@@ -62,6 +62,12 @@ th,td { padding:6px; border:1px solid #ccc; }
   padding:8px;
   margin-top:10px;
 }
+
+/* NOVO */
+#contadorStatus {
+  margin:10px 0;
+  font-weight:bold;
+}
 </style>
 </head>
 
@@ -89,6 +95,9 @@ th,td { padding:6px; border:1px solid #ccc; }
 <hr>
 
 <div id="contadorSelecionados">Selecionados: 0</div>
+
+<!-- NOVO -->
+<div id="contadorStatus">Ativos: 0 | Vencidos: 0</div>
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
 <button onclick="desmarcarTodos()">Desmarcar</button>
@@ -127,7 +136,6 @@ let dadosEditados={};
 // ===== CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
   const { error } = await client.from('contatos').insert(dados);
-
   if(error){
     if(error.message.includes("duplicate key")){
       console.log("Contato duplicado ignorado");
@@ -151,32 +159,35 @@ function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valo
 function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
 function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
 
-// ===== STATUS CORRIGIDO =====
+// ===== STATUS =====
 function calcularStatus(c){
 
   if(!c.vencimento || !c.hora_vencimento){
     return "erro";
   }
 
-  let agora = new Date();
+  let hoje = new Date();
+  hoje.setHours(0,0,0,0);
 
   let data = c.vencimento.split("-");
-  let hora = c.hora_vencimento.split(":");
+  let venc = new Date(data[0], data[1]-1, data[2]);
 
-  let venc = new Date(
-    data[0],
-    data[1]-1,
-    data[2],
-    hora[0],
-    hora[1],
-    hora[2] || 0
-  );
+  return venc < hoje ? "inativo" : "ativo";
+}
 
-  if(isNaN(venc.getTime())){
-    return "erro";
-  }
+// ===== CONTADOR =====
+function atualizarContadorStatus(lista){
 
-  return venc < agora ? "inativo" : "ativo";
+  let ativos = 0;
+  let vencidos = 0;
+
+  lista.forEach(c=>{
+    let status = calcularStatus(c);
+    if(status === "ativo") ativos++;
+    if(status === "inativo") vencidos++;
+  });
+
+  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
 }
 
 // ===== TROCAR TELA =====
@@ -189,7 +200,11 @@ function trocarTela(t){
 // ===== CARREGAR =====
 async function carregar(){
   const { data } = await client.from(tela).select('*');
-  dados=data||[];
+
+  // 🔥 ORDENAÇÃO ALFABÉTICA
+  dados = (data || []).sort((a,b)=>{
+    return (a.nome || "").localeCompare(b.nome || "");
+  });
 
   if(tela==='clientes'){
     thead.innerHTML=`<tr>
@@ -232,28 +247,31 @@ function render(lista){
   `).join('');
 
   contarSelecionados();
+  atualizarContadorStatus(lista);
 }
 
-// ===== CONTADOR =====
+// ===== CRON AUTOMÁTICO =====
+setInterval(()=>{
+  console.log("Sincronizando...");
+  carregar();
+}, 60000);
+
+// ===== RESTO DO CÓDIGO (INTACTO) =====
 function contarSelecionados(){
   contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
-
 function selecionarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=true); contarSelecionados(); }
 function desmarcarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=false); contarSelecionados(); }
 function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
 function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
 
-// ===== EXCLUIR =====
 async function deletarSelecionados(){
   let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
-
   if(ids.length===0)return alert("Nada selecionado");
   if(!confirm("Deseja excluir?"))return;
 
   for(let i=0;i<ids.length;i++){
     await client.from(tela).delete().eq('id',ids[i]);
-
     let p=Math.floor(((i+1)/ids.length)*100);
     progress.style.width=p+"%";
     progress.innerText=p+"%";
@@ -263,7 +281,6 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// ===== BUSCA =====
 function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
@@ -276,7 +293,7 @@ function buscar(){
   ));
 }
 
-// ===== EDITAR CORRIGIDO =====
+// ===== EDITAR =====
 async function editar(id){
 
   const { data } = await client.from(tela).select('*').eq('id',id).single();
