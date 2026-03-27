@@ -38,6 +38,31 @@ button {
 
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
+
+/* MODAL */
+#modalEdit {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  align-items:center;
+  justify-content:center;
+}
+
+#modalBox {
+  background:#111;
+  padding:20px;
+  border-radius:10px;
+  color:#fff;
+  width:350px;
+}
+
+#modalBox input {
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -77,6 +102,18 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- MODAL -->
+<div id="modalEdit">
+  <div id="modalBox">
+    <div id="modalLabel"></div>
+    <input id="modalInput">
+    <br><br>
+    <button onclick="modalCancelar()">Cancelar</button>
+    <button onclick="modalSalvar()">Salvar edição</button>
+    <button onclick="modalOk()">OK</button>
+  </div>
+</div>
+
 <script>
 
 const client = supabase.createClient(
@@ -86,15 +123,44 @@ const client = supabase.createClient(
 
 let tela='clientes';
 let dados=[];
+let modalResolve;
+let editandoId=null;
+let dadosEditados={};
+
+// ===== MODAL =====
+function abrirModal(label, valor){
+  return new Promise(resolve=>{
+    modalResolve=resolve;
+    modalLabel.innerText=label;
+    modalInput.value=valor||"";
+    modalEdit.style.display="flex";
+  });
+}
+
+function modalOk(){
+  modalEdit.style.display="none";
+  modalResolve({tipo:"ok",valor:modalInput.value});
+}
+
+function modalCancelar(){
+  modalEdit.style.display="none";
+  modalResolve({tipo:"cancelar"});
+}
+
+function modalSalvar(){
+  modalEdit.style.display="none";
+  modalResolve({tipo:"salvar",valor:modalInput.value});
+}
 
 // ===== STATUS =====
 function calcularStatus(c){
+  if(!c.vencimento || !c.hora_vencimento) return "inativo";
   let agora=new Date();
   let venc=new Date(`${c.vencimento}T${c.hora_vencimento}`);
   return venc<agora?"inativo":"ativo";
 }
 
-// ===== TROCAR TELA =====
+// ===== TELA =====
 function trocarTela(t){
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
@@ -170,18 +236,20 @@ async function deletarSelecionados(){
   let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
 
   if(ids.length===0)return alert("Nada selecionado");
-
   if(!confirm("Deseja excluir?"))return;
 
-  for(let id of ids){
-    await client.from(tela).delete().eq('id',id);
+  for(let i=0;i<ids.length;i++){
+    await client.from(tela).delete().eq('id',ids[i]);
+    let p=Math.floor(((i+1)/ids.length)*100);
+    progress.style.width=p+"%";
+    progress.innerText=p+"%";
   }
 
   alert("Excluído");
   carregar();
 }
 
-// ===== BUSCA =====
+// ===== BUSCA (NÃO ALTERADA) =====
 function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
@@ -194,37 +262,53 @@ function buscar(){
   ));
 }
 
-// ===== EDITAR =====
+// ===== EDITAR REAL =====
 async function editar(id){
 
-  let { data } = await client.from(tela).select('*').eq('id',id).single();
+  const { data } = await client.from(tela).select('*').eq('id',id).single();
 
-  let nome = prompt("Nome:", data.nome);
-  if(nome===null) return;
+  let campos=['nome','telefone','usuario'];
+  dadosEditados={};
 
-  let telefone = prompt("Telefone:", data.telefone);
-  if(telefone===null) return;
+  for(let campo of campos){
 
-  let usuario = prompt("Usuario:", data.usuario || "");
-  if(usuario===null) return;
+    let r=await abrirModal(campo,data[campo]);
 
-  await client.from(tela).update({
-    nome, telefone, usuario
-  }).eq('id',id);
+    if(r.tipo==="cancelar") return;
 
-  // 🔥 sincroniza nas duas tabelas
+    dadosEditados[campo]=r.valor;
+
+    if(r.tipo==="salvar"){
+      await salvar(id);
+      return;
+    }
+  }
+
+  await salvar(id);
+}
+
+async function salvar(id){
+
+  await client.from(tela).update(dadosEditados).eq('id',id);
+
   await client.from('contatos').upsert({
-    nome, telefone, usuario, cliente:true
+    telefone:dadosEditados.telefone,
+    usuario:dadosEditados.usuario,
+    nome:dadosEditados.nome,
+    cliente:true
   });
 
   carregar();
 }
 
-// ===== IMPORTAÇÃO FINAL =====
+// ===== IMPORTAÇÃO CORRIGIDA =====
 async function importarArquivo(){
 
   const file=inputArquivo.files[0];
   if(!file)return alert("Selecione arquivo");
+
+  logErro.innerHTML="";
+  progress.style.width="0%";
 
   const reader=new FileReader();
 
@@ -233,38 +317,57 @@ async function importarArquivo(){
     const wb=XLSX.read(e.target.result,{type:'binary'});
     const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
+    let erros=0;
+
     for(let i=0;i<json.length;i++){
 
       let linha=json[i];
 
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
-      if(!telefone.startsWith("55")) telefone="55"+telefone;
+      try{
 
-      let usuario = linha.usuario || ("user"+i);
+        if(!linha.vencimento || !(linha.hora_vencimento || linha.hora)){
+          throw new Error("Faltando vencimento ou hora");
+        }
 
-      await client.from('clientes').insert({
-        nome:linha.nome,
-        telefone,
-        usuario,
-        plano:linha.plano,
-        vencimento:linha.vencimento,
-        hora_vencimento:linha.hora_vencimento||linha.hora
-      });
+        let telefone=(linha.telefone||"").replace(/\D/g,"");
+        if(!telefone.startsWith("55")) telefone="55"+telefone;
 
-      // 🔥 CONTATOS COM CHAVE TELEFONE + USUARIO
-      await client.from('contatos').upsert({
-        telefone,
-        usuario,
-        nome:linha.nome,
-        cliente:true
-      }, { onConflict:'telefone,usuario' });
+        let usuario=linha.usuario || ("user"+i);
+
+        await client.from('clientes').insert({
+          nome:linha.nome,
+          telefone,
+          usuario,
+          plano:linha.plano,
+          vencimento:linha.vencimento,
+          hora_vencimento:linha.hora_vencimento||linha.hora
+        });
+
+        await client.from('contatos').upsert({
+          telefone,
+          usuario,
+          nome:linha.nome,
+          cliente:true
+        },{onConflict:'telefone,usuario'});
+
+      }catch(e){
+
+        erros++;
+
+        logErro.innerHTML+=`
+ERRO LINHA ${i+1}<br>
+Nome: ${linha.nome||''}<br>
+Telefone: ${linha.telefone||''}<br>
+Erro: ${e.message}<br>
+-------------------<br>`;
+      }
 
       let p=Math.floor(((i+1)/json.length)*100);
       progress.style.width=p+"%";
       progress.innerText=p+"%";
     }
 
-    alert("Importação completa 🚀");
+    alert("Importação concluída 🚀 Erros: "+erros);
     carregar();
   };
 
