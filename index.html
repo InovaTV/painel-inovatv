@@ -261,16 +261,20 @@ function buscar(){
 // ===== SALVAR CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
 
-  // tenta atualizar
   const { data, error } = await client
     .from('contatos')
-    .update(dados)
-    .eq('telefone', dados.telefone)
-    .eq('usuario', dados.usuario);
+    .insert({
+      telefone: dados.telefone,
+      usuario: dados.usuario,
+      nome: dados.nome,
+      cliente: true
+    });
 
-  // se não atualizou nada → insere
-  if(!data || data.length === 0){
-    await client.from('contatos').insert(dados);
+  if(error){
+    console.log("ERRO CONTATO:", error);
+    alert("ERRO CONTATO: " + error.message);
+  } else {
+    console.log("CONTATO SALVO:", data);
   }
 }
 // ===== EDITAR =====
