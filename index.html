@@ -259,23 +259,31 @@ function buscar(){
 }
 
 // ===== SALVAR CONTATO SEGURO =====
-async function salvarContatoSeguro(dados){
+try {
 
-  const { data, error } = await client
-    .from('contatos')
-    .insert({
-      telefone: dados.telefone,
-      usuario: dados.usuario,
-      nome: dados.nome,
-      cliente: true
-    });
+  const { error } = await client.from('contatos').insert({
+    telefone,
+    usuario,
+    nome: linha.nome,
+    cliente: true
+  });
 
-  if(error){
-    console.log("ERRO CONTATO:", error);
-    alert("ERRO CONTATO: " + error.message);
-  } else {
-    console.log("CONTATO SALVO:", data);
+  // 🔥 se for duplicado → IGNORA (não trava)
+  if(error && error.message.includes("duplicate key")){
+    console.log("Contato duplicado ignorado:", telefone, usuario);
+  } 
+  else if(error){
+    throw error;
   }
+
+} catch(e){
+  erros++;
+  logErro.innerHTML+=`
+ERRO CONTATO LINHA ${i+1}<br>
+Telefone: ${telefone}<br>
+Usuario: ${usuario}<br>
+Erro: ${e.message}<br>
+-------------------<br>`;
 }
 // ===== EDITAR =====
 async function editar(id){
