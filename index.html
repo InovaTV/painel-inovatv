@@ -124,7 +124,6 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 let modalResolve;
-let editandoId=null;
 let dadosEditados={};
 
 // ===== MODAL =====
@@ -137,20 +136,9 @@ function abrirModal(label, valor){
   });
 }
 
-function modalOk(){
-  modalEdit.style.display="none";
-  modalResolve({tipo:"ok",valor:modalInput.value});
-}
-
-function modalCancelar(){
-  modalEdit.style.display="none";
-  modalResolve({tipo:"cancelar"});
-}
-
-function modalSalvar(){
-  modalEdit.style.display="none";
-  modalResolve({tipo:"salvar",valor:modalInput.value});
-}
+function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valor:modalInput.value}); }
+function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
+function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
 
 // ===== STATUS =====
 function calcularStatus(c){
@@ -160,7 +148,7 @@ function calcularStatus(c){
   return venc<agora?"inativo":"ativo";
 }
 
-// ===== TELA =====
+// ===== TROCAR TELA =====
 function trocarTela(t){
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
@@ -175,7 +163,9 @@ async function carregar(){
   if(tela==='clientes'){
     thead.innerHTML=`<tr>
       <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-      <th>Plano</th><th>Vencimento</th><th>Status</th><th>Ações</th>
+      <th>Servidor</th><th>Plano</th><th>Valor</th>
+      <th>Vencimento</th><th>Hora</th><th>MAC</th>
+      <th>Status</th><th>Ações</th>
     </tr>`;
   } else {
     thead.innerHTML=`<tr>
@@ -196,8 +186,12 @@ function render(lista){
     <td>${c.usuario||''}</td>
 
     ${tela==='clientes'?`
+      <td>${c.servidor||''}</td>
       <td>${c.plano||''}</td>
+      <td>${c.valor||''}</td>
       <td>${c.vencimento||''}</td>
+      <td>${c.hora_vencimento||''}</td>
+      <td>${c.mac||''}</td>
       <td>${calcularStatus(c)}</td>
       <td><button onclick="editar('${c.id}')">Editar</button></td>
     `:`
@@ -209,7 +203,7 @@ function render(lista){
   contarSelecionados();
 }
 
-// ===== BOTÕES =====
+// ===== CONTADOR =====
 function contarSelecionados(){
   contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
@@ -232,6 +226,7 @@ function filtrarVencidos(){
   render(dados.filter(c=>calcularStatus(c)==="inativo"));
 }
 
+// ===== EXCLUIR =====
 async function deletarSelecionados(){
   let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
 
@@ -240,6 +235,7 @@ async function deletarSelecionados(){
 
   for(let i=0;i<ids.length;i++){
     await client.from(tela).delete().eq('id',ids[i]);
+
     let p=Math.floor(((i+1)/ids.length)*100);
     progress.style.width=p+"%";
     progress.innerText=p+"%";
@@ -249,7 +245,7 @@ async function deletarSelecionados(){
   carregar();
 }
 
-// ===== BUSCA (NÃO ALTERADA) =====
+// ===== BUSCA (INTACTA) =====
 function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
@@ -262,7 +258,24 @@ function buscar(){
   ));
 }
 
-// ===== EDITAR REAL =====
+// ===== SALVAR CONTATO SEGURO =====
+async function salvarContatoSeguro(dados){
+
+  const { data: existente } = await client
+    .from('contatos')
+    .select('*')
+    .eq('telefone', dados.telefone)
+    .eq('usuario', dados.usuario)
+    .maybeSingle();
+
+  if(existente){
+    await client.from('contatos').update(dados).eq('id', existente.id);
+  }else{
+    await client.from('contatos').insert(dados);
+  }
+}
+
+// ===== EDITAR =====
 async function editar(id){
 
   const { data } = await client.from(tela).select('*').eq('id',id).single();
@@ -291,7 +304,7 @@ async function salvar(id){
 
   await client.from(tela).update(dadosEditados).eq('id',id);
 
-  await client.from('contatos').upsert({
+  await salvarContatoSeguro({
     telefone:dadosEditados.telefone,
     usuario:dadosEditados.usuario,
     nome:dadosEditados.nome,
@@ -301,7 +314,7 @@ async function salvar(id){
   carregar();
 }
 
-// ===== IMPORTAÇÃO CORRIGIDA =====
+// ===== IMPORTAÇÃO =====
 async function importarArquivo(){
 
   const file=inputArquivo.files[0];
@@ -338,17 +351,20 @@ async function importarArquivo(){
           nome:linha.nome,
           telefone,
           usuario,
+          servidor:linha.servidor,
           plano:linha.plano,
+          valor:linha.valor,
           vencimento:linha.vencimento,
-          hora_vencimento:linha.hora_vencimento||linha.hora
+          hora_vencimento:linha.hora_vencimento||linha.hora,
+          mac:linha.mac
         });
 
-        await client.from('contatos').upsert({
+        await salvarContatoSeguro({
           telefone,
           usuario,
           nome:linha.nome,
           cliente:true
-        },{onConflict:'telefone,usuario'});
+        });
 
       }catch(e){
 
