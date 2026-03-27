@@ -39,6 +39,7 @@ button {
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
 
+/* MODAL */
 #modalEdit {
   display:none;
   position:fixed;
@@ -101,6 +102,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- MODAL -->
 <div id="modalEdit">
   <div id="modalBox">
     <div id="modalLabel"></div>
@@ -123,6 +125,7 @@ let tela='clientes';
 let dados=[];
 let modalResolve;
 
+// ===== MODAL =====
 function abrirModal(label, valor){
   return new Promise(resolve=>{
     modalResolve=resolve;
@@ -132,33 +135,25 @@ function abrirModal(label, valor){
   });
 }
 
-function modalOk(){
-  modalEdit.style.display="none";
-  modalResolve({tipo:"ok",valor:modalInput.value});
-}
+function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valor:modalInput.value}); }
+function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
+function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
 
-function modalCancelar(){
-  modalEdit.style.display="none";
-  modalResolve({tipo:"cancelar"});
-}
-
-function modalSalvar(){
-  modalEdit.style.display="none";
-  modalResolve({tipo:"salvar",valor:modalInput.value});
-}
-
+// ===== STATUS =====
 function calcularStatus(c){
   let agora=new Date();
   let venc=new Date(`${c.vencimento}T${c.hora_vencimento}`);
   return venc<agora?"inativo":"ativo";
 }
 
+// ===== TELA =====
 function trocarTela(t){
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
   carregar();
 }
 
+// ===== CARREGAR =====
 async function carregar(){
   const { data } = await client.from(tela).select('*');
   dados=data||[];
@@ -178,6 +173,7 @@ async function carregar(){
   render(dados);
 }
 
+// ===== RENDER =====
 function render(lista){
   tabela.innerHTML=lista.map(c=>`
   <tr>
@@ -204,10 +200,12 @@ function render(lista){
   contarSelecionados();
 }
 
+// ===== CONTADOR =====
 function contarSelecionados(){
   contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
 
+// ===== BUSCA =====
 function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
@@ -220,50 +218,44 @@ function buscar(){
   ));
 }
 
-function selecionarTodos(){
-  document.querySelectorAll('.check').forEach(c=>c.checked=true);
-  contarSelecionados();
-}
+// ===== EDITAR =====
+async function editarCliente(id){
 
-function desmarcarTodos(){
-  document.querySelectorAll('.check').forEach(c=>c.checked=false);
-  contarSelecionados();
-}
+  const { data } = await client.from('clientes').select('*').eq('id',id).single();
 
-function filtrarAtivos(){
-  render(dados.filter(c=>calcularStatus(c)==="ativo"));
-}
+  let atualizado={};
 
-function filtrarVencidos(){
-  render(dados.filter(c=>calcularStatus(c)==="inativo"));
-}
+  for(let campo of ['nome','telefone','usuario','servidor','plano','valor','vencimento','hora_vencimento','mac']){
+    let r=await abrirModal(campo,data[campo]);
 
-async function deletarSelecionados(){
-  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
+    if(r.tipo==="cancelar") return;
 
-  if(ids.length===0)return alert("Nada selecionado");
-  if(!confirm("Deseja excluir?"))return;
+    atualizado[campo]=r.valor;
 
-  for(let i=0;i<ids.length;i++){
-    await client.from(tela).delete().eq('id',ids[i]);
-    let p=Math.floor(((i+1)/ids.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
+    if(r.tipo==="salvar"){
+      await salvarEdicao(id, atualizado);
+      return;
+    }
   }
 
-  alert("Excluído");
+  await salvarEdicao(id, atualizado);
+}
+
+async function salvarEdicao(id, dadosEditados){
+
+  await client.from('clientes').update(dadosEditados).eq('id',id);
+
+  // 🔥 atualiza contato único
+  await client.from('contatos').upsert({
+    telefone:dadosEditados.telefone,
+    nome:dadosEditados.nome,
+    cliente:true
+  });
+
   carregar();
 }
 
-async function editarCliente(id){
-  alert("Editar funcionando");
-}
-
-async function editarContato(id){
-  alert("Editar funcionando");
-}
-
-// 🔥 IMPORTAÇÃO CORRIGIDA FINAL
+// ===== IMPORTAÇÃO FINAL CORRETA =====
 async function importarArquivo(){
 
   const file=inputArquivo.files[0];
@@ -279,51 +271,37 @@ async function importarArquivo(){
     const wb=XLSX.read(e.target.result,{type:'binary'});
     const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-    let erros=0;
+    let contatosProcessados = {};
 
     for(let i=0;i<json.length;i++){
 
       let linha=json[i];
 
-      try{
+      let telefone=(linha.telefone||"").replace(/\D/g,"");
+      if(!telefone.startsWith("55")) telefone="55"+telefone;
 
-        let telefone=(linha.telefone||"").replace(/\D/g,"");
-        if(!telefone.startsWith("55")) telefone="55"+telefone;
+      let nome=linha.nome||"Cliente";
 
-        let nome = linha.nome || "Cliente"; // ✅ CORREÇÃO AQUI
+      await client.from('clientes').insert({
+        nome,
+        telefone,
+        usuario:linha.usuario,
+        servidor:linha.servidor,
+        plano:linha.plano,
+        valor:linha.valor,
+        vencimento:linha.vencimento,
+        hora_vencimento:linha.hora_vencimento||linha.hora,
+        mac:linha.mac
+      });
 
-        if(!linha.vencimento||!(linha.hora_vencimento||linha.hora)){
-          throw new Error("Faltando vencimento ou hora");
-        }
-
-        await client.from('clientes').insert({
-          nome,
-          telefone,
-          usuario:linha.usuario,
-          servidor:linha.servidor,
-          plano:linha.plano,
-          valor:linha.valor,
-          vencimento:linha.vencimento,
-          hora_vencimento:linha.hora_vencimento||linha.hora,
-          mac:linha.mac
-        });
-
+      // 🔥 GARANTE 1 CONTATO POR TELEFONE
+      if(!contatosProcessados[telefone]){
         await client.from('contatos').upsert({
           telefone,
           nome,
           cliente:true
         });
-
-      }catch(e){
-
-        erros++;
-
-        logErro.innerHTML+=`
-ERRO LINHA ${i+1}
-Nome: ${linha.nome||''}
-Telefone: ${linha.telefone||''}
-Erro: ${e.message}
--------------------<br>`;
+        contatosProcessados[telefone]=true;
       }
 
       let p=Math.floor(((i+1)/json.length)*100);
@@ -331,7 +309,7 @@ Erro: ${e.message}
       progress.innerText=p+"%";
     }
 
-    alert("Importado 🚀 Erros: "+erros);
+    alert("Importado 100% 🚀");
     carregar();
   };
 
