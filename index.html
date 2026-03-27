@@ -298,38 +298,44 @@ async function editar(id){
 
   const { data } = await client.from(tela).select('*').eq('id',id).single();
 
-  let campos=['nome','telefone','usuario'];
+  let campos;
+
+  // 🔥 DEFINE CAMPOS POR TELA (SEM QUEBRAR CONTATOS)
+  if(tela === 'clientes'){
+    campos = [
+      'nome',
+      'telefone',
+      'usuario',
+      'servidor',
+      'plano',
+      'valor',
+      'vencimento',
+      'hora_vencimento',
+      'mac'
+    ];
+  } else {
+    campos = ['nome','telefone','usuario'];
+  }
+
   dadosEditados={};
 
   for(let campo of campos){
 
-    let r=await abrirModal(campo,data[campo]);
+    let r = await abrirModal(campo, data[campo]);
 
-    if(r.tipo==="cancelar") return;
+    if(r.tipo === "cancelar") return;
 
-    dadosEditados[campo]=r.valor;
+    dadosEditados[campo] = r.valor;
 
-    if(r.tipo==="salvar"){
+    // 🔥 SALVAR PARCIAL (SEM QUEBRAR SUA LÓGICA)
+    if(r.tipo === "salvar"){
       await salvar(id);
       return;
     }
   }
 
+  // 🔥 SALVAR FINAL
   await salvar(id);
-}
-
-async function salvar(id){
-
-  await client.from(tela).update(dadosEditados).eq('id',id);
-
-  await salvarContatoSeguro({
-    telefone: dadosEditados.telefone,
-    usuario: dadosEditados.usuario,
-    nome: dadosEditados.nome,
-    cliente: true
-  });
-
-  carregar();
 }
 
 // ===== IMPORTAÇÃO =====
