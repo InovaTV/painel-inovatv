@@ -63,7 +63,6 @@ th,td { padding:6px; border:1px solid #ccc; }
   margin-top:10px;
 }
 
-/* NOVO */
 #contadorStatus {
   margin:10px 0;
   font-weight:bold;
@@ -95,8 +94,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 <hr>
 
 <div id="contadorSelecionados">Selecionados: 0</div>
-
-<!-- NOVO -->
 <div id="contadorStatus">Ativos: 0 | Vencidos: 0</div>
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
@@ -133,18 +130,6 @@ let dados=[];
 let modalResolve;
 let dadosEditados={};
 
-// ===== CONTATO SEGURO =====
-async function salvarContatoSeguro(dados){
-  const { error } = await client.from('contatos').insert(dados);
-  if(error){
-    if(error.message.includes("duplicate key")){
-      console.log("Contato duplicado ignorado");
-    } else {
-      console.error("Erro contato:", error.message);
-    }
-  }
-}
-
 // ===== MODAL =====
 function abrirModal(label, valor){
   return new Promise(resolve=>{
@@ -161,36 +146,15 @@ function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salv
 
 // ===== STATUS =====
 function calcularStatus(c){
-
-  if(!c.vencimento || !c.hora_vencimento){
-    return "erro";
-  }
-
+  if(!c.vencimento || !c.hora_vencimento) return "erro";
   let hoje = new Date();
   hoje.setHours(0,0,0,0);
-
   let data = c.vencimento.split("-");
   let venc = new Date(data[0], data[1]-1, data[2]);
-
   return venc < hoje ? "inativo" : "ativo";
 }
 
-// ===== CONTADOR =====
-function atualizarContadorStatus(lista){
-
-  let ativos = 0;
-  let vencidos = 0;
-
-  lista.forEach(c=>{
-    let status = calcularStatus(c);
-    if(status === "ativo") ativos++;
-    if(status === "inativo") vencidos++;
-  });
-
-  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
-}
-
-// ===== TROCAR TELA =====
+// ===== TROCAR =====
 function trocarTela(t){
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
@@ -200,25 +164,7 @@ function trocarTela(t){
 // ===== CARREGAR =====
 async function carregar(){
   const { data } = await client.from(tela).select('*');
-
-  // 🔥 ORDENAÇÃO ALFABÉTICA
-  dados = (data || []).sort((a,b)=>{
-    return (a.nome || "").localeCompare(b.nome || "");
-  });
-
-  if(tela==='clientes'){
-    thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-      <th>Servidor</th><th>Plano</th><th>Valor</th>
-      <th>Vencimento</th><th>Hora</th><th>MAC</th>
-      <th>Status</th><th>Ações</th>
-    </tr>`;
-  } else {
-    thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
-    </tr>`;
-  }
-
+  dados = (data||[]).sort((a,b)=> (a.nome||"").localeCompare(b.nome||""));
   render(dados);
 }
 
@@ -226,98 +172,24 @@ async function carregar(){
 function render(lista){
   tabela.innerHTML=lista.map(c=>`
   <tr>
-    <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
     <td>${c.nome||''}</td>
     <td>${c.telefone||''}</td>
     <td>${c.usuario||''}</td>
-
-    ${tela==='clientes'?`
-      <td>${c.servidor||''}</td>
-      <td>${c.plano||''}</td>
-      <td>${c.valor||''}</td>
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.mac||''}</td>
-      <td>${calcularStatus(c)}</td>
-      <td><button onclick="editar('${c.id}')">Editar</button></td>
-    `:`
-      <td><button onclick="editar('${c.id}')">Editar</button></td>
-    `}
+    <td><button onclick="editar('${c.id}')">Editar</button></td>
   </tr>
   `).join('');
-
-  contarSelecionados();
-  atualizarContadorStatus(lista);
 }
 
-// ===== CRON AUTOMÁTICO =====
-setInterval(()=>{
-  console.log("Sincronizando...");
-  carregar();
-}, 60000);
-
-// ===== RESTO DO CÓDIGO (INTACTO) =====
-function contarSelecionados(){
-  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
-}
-function selecionarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=true); contarSelecionados(); }
-function desmarcarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=false); contarSelecionados(); }
-function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
-function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
-
-async function deletarSelecionados(){
-  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
-  if(ids.length===0)return alert("Nada selecionado");
-  if(!confirm("Deseja excluir?"))return;
-
-  for(let i=0;i<ids.length;i++){
-    await client.from(tela).delete().eq('id',ids[i]);
-    let p=Math.floor(((i+1)/ids.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
-  }
-
-  alert("Excluído");
-  carregar();
-}
-
-function normalizar(t){
-  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-}
-
-function buscar(){
-  let termo=normalizar(busca.value);
-  render(dados.filter(c =>
-    normalizar(c.nome).includes(termo) ||
-    (c.telefone||"").includes(termo)
-  ));
-}
-
-// ===== EDITAR =====
+// ===== EDITAR COMPLETO =====
 async function editar(id){
 
   const { data } = await client.from(tela).select('*').eq('id',id).single();
 
-  let campos;
+  let campos = tela==='clientes'
+    ? ['nome','telefone','usuario','servidor','plano','valor','vencimento','hora_vencimento','mac']
+    : ['nome','telefone','usuario'];
 
-  // 🔥 DEFINE CAMPOS POR TELA (SEM QUEBRAR CONTATOS)
-  if(tela === 'clientes'){
-    campos = [
-      'nome',
-      'telefone',
-      'usuario',
-      'servidor',
-      'plano',
-      'valor',
-      'vencimento',
-      'hora_vencimento',
-      'mac'
-    ];
-  } else {
-    campos = ['nome','telefone','usuario'];
-  }
-
-  dadosEditados={};
+  dadosEditados = {};
 
   for(let campo of campos){
 
@@ -327,92 +199,47 @@ async function editar(id){
 
     dadosEditados[campo] = r.valor;
 
-    // 🔥 SALVAR PARCIAL (SEM QUEBRAR SUA LÓGICA)
     if(r.tipo === "salvar"){
       await salvar(id);
       return;
     }
   }
 
-  // 🔥 SALVAR FINAL
   await salvar(id);
 }
 
-// ===== IMPORTAÇÃO =====
-async function importarArquivo(){
+// ===== SALVAR COMPLETO =====
+async function salvar(id){
 
-  const file=inputArquivo.files[0];
-  if(!file)return alert("Selecione arquivo");
+  let dadosSalvar = { ...dadosEditados };
 
-  logErro.innerHTML="";
-  progress.style.width="0%";
+  if(tela === 'clientes'){
 
-  const reader=new FileReader();
-
-  reader.onload=async(e)=>{
-
-    const wb=XLSX.read(e.target.result,{type:'binary'});
-    const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-    let erros=0;
-
-    for(let i=0;i<json.length;i++){
-
-      let linha=json[i];
-
-      try{
-
-        if(!linha.vencimento || !(linha.hora_vencimento || linha.hora)){
-          throw new Error("Faltando vencimento ou hora");
-        }
-
-        let telefone=(linha.telefone||"").replace(/\D/g,"");
-        if(!telefone.startsWith("55")) telefone="55"+telefone;
-
-        let usuario=linha.usuario || ("user"+i);
-
-        await client.from('clientes').insert({
-          nome:linha.nome,
-          telefone,
-          usuario,
-          servidor:linha.servidor,
-          plano:linha.plano,
-          valor:linha.valor,
-          vencimento:linha.vencimento,
-          hora_vencimento:linha.hora_vencimento||linha.hora,
-          mac:linha.mac
-        });
-
-        await salvarContatoSeguro({
-          telefone,
-          usuario,
-          nome:linha.nome,
-          cliente:true
-        });
-
-      }catch(e){
-
-        erros++;
-
-        logErro.innerHTML+=`
-ERRO LINHA ${i+1}<br>
-Nome: ${linha.nome||''}<br>
-Telefone: ${linha.telefone||''}<br>
-Erro: ${e.message}<br>
--------------------<br>`;
-      }
-
-      let p=Math.floor(((i+1)/json.length)*100);
-      progress.style.width=p+"%";
-      progress.innerText=p+"%";
+    if(dadosSalvar.vencimento && dadosSalvar.vencimento.includes('/')){
+      let p = dadosSalvar.vencimento.split('/');
+      dadosSalvar.vencimento = `${p[2]}-${p[1]}-${p[0]}`;
     }
 
-    alert("Importação concluída 🚀 Erros: "+erros);
-    inputArquivo.value="";
-    carregar();
-  };
+    if(dadosSalvar.valor){
+      dadosSalvar.valor = Number(dadosSalvar.valor);
+    }
+  }
 
-  reader.readAsBinaryString(file);
+  console.log("SALVANDO:", dadosSalvar);
+
+  const { error } = await client
+    .from(tela)
+    .update(dadosSalvar)
+    .eq('id', id);
+
+  if(error){
+    alert("Erro ao salvar");
+    console.log(error);
+    return;
+  }
+
+  alert("Salvo com sucesso");
+  carregar();
 }
 
 carregar();
