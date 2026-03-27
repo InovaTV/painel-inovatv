@@ -26,8 +26,43 @@ button {
 #progressBar { width:100%; background:#ccc; height:20px; }
 #progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
 
+#logErro {
+  background:#000;
+  color:#0f0;
+  padding:10px;
+  margin-top:10px;
+  font-size:12px;
+  max-height:200px;
+  overflow:auto;
+}
+
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
+
+/* MODAL */
+#modalEdit {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  align-items:center;
+  justify-content:center;
+}
+
+#modalBox {
+  background:#111;
+  padding:20px;
+  border-radius:10px;
+  color:#fff;
+  width:350px;
+}
+
+#modalBox input {
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -41,7 +76,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <br><br>
 
-<input id="busca" placeholder="Telefone ou Nome">
+<input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') window.buscar()">
 <button onclick="window.buscar()">Buscar</button>
 
 <hr>
@@ -50,6 +85,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 <button class="btn-verde" onclick="window.importarArquivo()">IMPORTAR EXCEL</button>
 
 <div id="progressBar"><div id="progress">0%</div></div>
+<div id="logErro"></div>
 
 <hr>
 
@@ -66,6 +102,18 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- MODAL -->
+<div id="modalEdit">
+  <div id="modalBox">
+    <div id="modalLabel"></div>
+    <input id="modalInput">
+    <br><br>
+    <button onclick="modalCancelar()">Cancelar</button>
+    <button onclick="modalSalvar()">Salvar edição</button>
+    <button onclick="modalOk()">OK</button>
+  </div>
+</div>
+
 <script>
 
 const client = supabase.createClient(
@@ -75,134 +123,139 @@ const client = supabase.createClient(
 
 let tela='clientes';
 let dados=[];
+let modalResolve;
+let campoAtual;
+let dadosEdicao={};
+let idEditando=null;
 
-// 🔥 GARANTE QUE FUNÇÕES FUNCIONEM NO HTML
-window.trocarTela = trocarTela;
-window.buscar = buscar;
-window.selecionarTodos = selecionarTodos;
-window.desmarcarTodos = desmarcarTodos;
-window.filtrarAtivos = filtrarAtivos;
-window.filtrarVencidos = filtrarVencidos;
-window.deletarSelecionados = deletarSelecionados;
-window.importarArquivo = importarArquivo;
+// ===== MODAL =====
+function abrirModal(label, valor){
+  return new Promise(resolve=>{
+    modalResolve=resolve;
+    modalLabel.innerText=label;
+    modalInput.value=valor||"";
+    modalEdit.style.display="flex";
+  });
+}
 
-// STATUS
+function modalOk(){
+  modalEdit.style.display="none";
+  modalResolve({tipo:"ok", valor:modalInput.value});
+}
+
+function modalCancelar(){
+  modalEdit.style.display="none";
+  modalResolve({tipo:"cancelar"});
+}
+
+function modalSalvar(){
+  modalEdit.style.display="none";
+  modalResolve({tipo:"salvar", valor:modalInput.value});
+}
+
+// ===== STATUS =====
 function calcularStatus(c){
   let agora=new Date();
   let venc=new Date(`${c.vencimento}T${c.hora_vencimento}`);
   return venc<agora?"inativo":"ativo";
 }
 
-// TROCAR TELA
-function trocarTela(tipo){
-  tela=tipo;
-  statusTela.innerText="Você está em: "+tipo.toUpperCase();
+// ===== TELA =====
+window.trocarTela = function(t){
+  tela=t;
+  statusTela.innerText="Você está em: "+t.toUpperCase();
   carregar();
 }
 
-// CARREGAR
+// ===== CARREGAR =====
 async function carregar(){
   const { data } = await client.from(tela).select('*');
   dados=data||[];
 
   if(tela==='clientes'){
     thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-      <th>Servidor</th><th>Plano</th><th>Valor</th>
-      <th>Vencimento</th><th>Hora</th><th>MAC</th>
-      <th>Status</th><th>Ações</th>
-    </tr>`;
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Servidor</th>
+    <th>Plano</th><th>Valor</th><th>Vencimento</th><th>Hora</th>
+    <th>MAC</th><th>Status</th><th>Ações</th></tr>`;
   } else {
     thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Ações</th>
-    </tr>`;
+    <th></th><th>Nome</th><th>Telefone</th><th>Ações</th></tr>`;
   }
 
   render(dados);
 }
 
-// RENDER
+// ===== RENDER =====
 function render(lista){
   tabela.innerHTML = lista.map(c=>`
-    <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}" onchange="window.contarSelecionados()"></td>
-      <td>${c.nome||''}</td>
-      <td>${c.telefone||''}</td>
+  <tr>
+    <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
+    <td>${c.nome||''}</td>
+    <td>${c.telefone||''}</td>
 
-      ${tela==='clientes'?`
-        <td>${c.usuario||''}</td>
-        <td>${c.servidor||''}</td>
-        <td>${c.plano||''}</td>
-        <td>${c.valor||''}</td>
-        <td>${c.vencimento||''}</td>
-        <td>${c.hora_vencimento||''}</td>
-        <td>${c.mac||''}</td>
-        <td>${calcularStatus(c)}</td>
-        <td><button onclick="window.editarCliente('${c.id}')">Editar</button></td>
-      `:`
-        <td><button onclick="window.editarContato('${c.id}')">Editar</button></td>
-      `}
-    </tr>
+    ${tela==='clientes'?`
+      <td>${c.usuario||''}</td>
+      <td>${c.servidor||''}</td>
+      <td>${c.plano||''}</td>
+      <td>${c.valor||''}</td>
+      <td>${c.vencimento||''}</td>
+      <td>${c.hora_vencimento||''}</td>
+      <td>${c.mac||''}</td>
+      <td>${calcularStatus(c)}</td>
+      <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
+    `:`
+      <td><button onclick="editarContato('${c.id}')">Editar</button></td>
+    `}
+  </tr>
   `).join('');
 
   contarSelecionados();
 }
 
-// CONTADOR
-window.contarSelecionados = function(){
-  contadorSelecionados.innerText =
-    "Selecionados: " + document.querySelectorAll('.check:checked').length;
+// ===== CONTADOR =====
+function contarSelecionados(){
+  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
 
-// BOTÕES
-function selecionarTodos(){
+// ===== BUSCA =====
+function normalizar(t){
+  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+
+window.buscar = function(){
+  let termo=normalizar(busca.value);
+  render(dados.filter(c =>
+    normalizar(c.nome).includes(termo) ||
+    (c.telefone||"").includes(termo)
+  ));
+}
+
+// ===== BOTÕES =====
+window.selecionarTodos = function(){
   document.querySelectorAll('.check').forEach(c=>c.checked=true);
   contarSelecionados();
 }
 
-function desmarcarTodos(){
+window.desmarcarTodos = function(){
   document.querySelectorAll('.check').forEach(c=>c.checked=false);
   contarSelecionados();
 }
 
-function filtrarAtivos(){
+window.filtrarAtivos = function(){
   render(dados.filter(c=>calcularStatus(c)==="ativo"));
 }
 
-function filtrarVencidos(){
+window.filtrarVencidos = function(){
   render(dados.filter(c=>calcularStatus(c)==="inativo"));
 }
 
-// 🔍 BUSCA CORRIGIDA
-function normalizar(t){
-  return (t||"").toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g,"");
-}
+// ===== EXCLUIR =====
+window.deletarSelecionados = async function(){
 
-function buscar(){
-  let termo = normalizar(document.getElementById("busca").value);
+  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
 
-  let filtrado = dados.filter(c =>
-    normalizar(c.nome).includes(termo) ||
-    (c.telefone||"").includes(termo)
-  );
-
-  render(filtrado);
-}
-
-// EXCLUIR
-async function deletarSelecionados(){
-
-  let ids=[...document.querySelectorAll('.check:checked')]
-    .map(c=>c.dataset.id);
-
-  if(ids.length===0){
-    alert("Nada selecionado");
-    return;
-  }
-
-  if(!confirm("Deseja excluir?")) return;
+  if(ids.length===0)return alert("Nada selecionado");
+  if(!confirm("Deseja excluir?"))return;
 
   for(let i=0;i<ids.length;i++){
     await client.from(tela).delete().eq('id',ids[i]);
@@ -212,15 +265,65 @@ async function deletarSelecionados(){
     progress.innerText=p+"%";
   }
 
-  alert("Excluído com sucesso");
+  alert("Excluído");
   carregar();
 }
 
-// IMPORTAÇÃO (mantida)
-async function importarArquivo(){
+// ===== EDITAR CLIENTE =====
+window.editarCliente = async function(id){
+
+  const { data } = await client.from('clientes').select('*').eq('id',id).single();
+
+  let campos=[
+    'nome','telefone','usuario','servidor','plano','valor',
+    'vencimento','hora_vencimento','mac'
+  ];
+
+  let atualizado={};
+
+  for(let campo of campos){
+
+    let r=await abrirModal(campo,data[campo]);
+
+    if(r.tipo==="cancelar") return;
+
+    atualizado[campo]=r.valor;
+
+    if(r.tipo==="salvar"){
+      await client.from('clientes').update(atualizado).eq('id',id);
+      carregar();
+      return;
+    }
+  }
+
+  await client.from('clientes').update(atualizado).eq('id',id);
+  carregar();
+}
+
+// ===== EDITAR CONTATO =====
+window.editarContato = async function(id){
+
+  const { data } = await client.from('contatos').select('*').eq('id',id).single();
+
+  let nome=await abrirModal("Nome",data.nome);
+  if(nome.tipo==="cancelar") return;
+
+  let telefone=await abrirModal("Telefone",data.telefone);
+  if(telefone.tipo==="cancelar") return;
+
+  await client.from('contatos').update({
+    nome:nome.valor,
+    telefone:telefone.valor
+  }).eq('id',id);
+
+  carregar();
+}
+
+// ===== IMPORTAR =====
+window.importarArquivo = async function(){
 
   const file=inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
+  if(!file)return alert("Selecione arquivo");
 
   const reader=new FileReader();
 
@@ -248,24 +351,22 @@ async function importarArquivo(){
         mac:linha.mac
       });
 
+      await client.from('contatos').upsert({
+        telefone,
+        nome,
+        cliente:true
+      });
+
       let p=Math.floor(((i+1)/json.length)*100);
       progress.style.width=p+"%";
       progress.innerText=p+"%";
     }
 
-    alert("Importado com sucesso");
+    alert("Importado");
     carregar();
   };
 
   reader.readAsBinaryString(file);
-}
-
-// EDITAR (mantido)
-window.editarCliente = function(id){
-  alert("Editar funcionando");
-}
-window.editarContato = function(id){
-  alert("Editar funcionando");
 }
 
 carregar();
