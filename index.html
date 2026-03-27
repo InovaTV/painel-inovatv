@@ -38,6 +38,31 @@ button {
 
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
+
+/* MODAL */
+#modalEdit {
+  display:none;
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.6);
+  align-items:center;
+  justify-content:center;
+}
+
+#modalBox {
+  background:#111;
+  padding:20px;
+  border-radius:10px;
+  color:#fff;
+  width:350px;
+}
+
+#modalBox input {
+  width:100%;
+  padding:8px;
+  margin-top:10px;
+}
 </style>
 </head>
 
@@ -77,6 +102,18 @@ th,td { padding:6px; border:1px solid #ccc; }
 <tbody id="tabela"></tbody>
 </table>
 
+<!-- MODAL -->
+<div id="modalEdit">
+  <div id="modalBox">
+    <div id="modalLabel"></div>
+    <input id="modalInput">
+    <br><br>
+    <button onclick="modalCancelar()">Cancelar</button>
+    <button onclick="modalSalvar()">Salvar edição</button>
+    <button onclick="modalOk()">OK</button>
+  </div>
+</div>
+
 <script>
 
 const client = supabase.createClient(
@@ -86,49 +123,49 @@ const client = supabase.createClient(
 
 let tela='clientes';
 let dados=[];
+let modalResolve;
 
-// TROCAR TELA
-function trocarTela(tipo){
-  tela=tipo;
-  statusTela.innerText="Você está em: "+tipo.toUpperCase();
-  carregar();
+// MODAL
+function abrirModal(label, valor){
+  return new Promise(resolve=>{
+    modalResolve=resolve;
+    modalEdit.style.display="flex";
+    modalLabel.innerText=label;
+    modalInput.value=valor||"";
+  });
 }
+
+function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valor:modalInput.value}); }
+function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
+function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
 
 // STATUS
 function calcularStatus(c){
-  if(!c.vencimento) return "ativo";
   let agora=new Date();
   let venc=new Date(`${c.vencimento}T${c.hora_vencimento}`);
   return venc<agora?"inativo":"ativo";
 }
 
+// TELA
+function trocarTela(t){
+  tela=t;
+  statusTela.innerText="Você está em: "+t.toUpperCase();
+  carregar();
+}
+
 // CARREGAR
 async function carregar(){
-  const { data } = await client.from(tela).select('*');
+  const { data }=await client.from(tela).select('*');
   dados=data||[];
 
   if(tela==='clientes'){
     thead.innerHTML=`<tr>
-      <th></th>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Usuário</th>
-      <th>Servidor</th>
-      <th>Plano</th>
-      <th>Valor</th>
-      <th>Vencimento</th>
-      <th>Hora</th>
-      <th>MAC</th>
-      <th>Status</th>
-      <th>Ações</th>
-    </tr>`;
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Servidor</th>
+    <th>Plano</th><th>Valor</th><th>Vencimento</th><th>Hora</th><th>MAC</th>
+    <th>Status</th><th>Ações</th></tr>`;
   } else {
     thead.innerHTML=`<tr>
-      <th></th>
-      <th>Nome</th>
-      <th>Telefone</th>
-      <th>Ações</th>
-    </tr>`;
+    <th></th><th>Nome</th><th>Telefone</th><th>Ações</th></tr>`;
   }
 
   render(dados);
@@ -137,25 +174,25 @@ async function carregar(){
 // RENDER
 function render(lista){
   tabela.innerHTML=lista.map(c=>`
-    <tr>
-      <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
-      <td>${c.nome||''}</td>
-      <td>${c.telefone||''}</td>
+  <tr>
+    <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
+    <td>${c.nome||''}</td>
+    <td>${c.telefone||''}</td>
 
-      ${tela==='clientes'?`
-        <td>${c.usuario||''}</td>
-        <td>${c.servidor||''}</td>
-        <td>${c.plano||''}</td>
-        <td>${c.valor||''}</td>
-        <td>${c.vencimento||''}</td>
-        <td>${c.hora_vencimento||''}</td>
-        <td>${c.mac||''}</td>
-        <td>${calcularStatus(c)}</td>
-        <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
-      `:`
-        <td><button onclick="editarContato('${c.id}')">Editar</button></td>
-      `}
-    </tr>
+    ${tela==='clientes'?`
+      <td>${c.usuario||''}</td>
+      <td>${c.servidor||''}</td>
+      <td>${c.plano||''}</td>
+      <td>${c.valor||''}</td>
+      <td>${c.vencimento||''}</td>
+      <td>${c.hora_vencimento||''}</td>
+      <td>${c.mac||''}</td>
+      <td>${calcularStatus(c)}</td>
+      <td><button onclick="editarCliente('${c.id}')">Editar</button></td>
+    `:`
+      <td><button onclick="editarContato('${c.id}')">Editar</button></td>
+    `}
+  </tr>
   `).join('');
 
   contarSelecionados();
@@ -166,57 +203,48 @@ function contarSelecionados(){
   contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
 }
 
-// BOTÕES
-function selecionarTodos(){
-  document.querySelectorAll('.check').forEach(c=>c.checked=true);
-  contarSelecionados();
-}
+// EDITAR CLIENTE
+async function editarCliente(id){
+  const { data }=await client.from('clientes').select('*').eq('id',id).single();
 
-function desmarcarTodos(){
-  document.querySelectorAll('.check').forEach(c=>c.checked=false);
-  contarSelecionados();
-}
+  let atualizado={};
 
-function filtrarAtivos(){
-  render(dados.filter(c=>calcularStatus(c)==="ativo"));
-}
+  for(let campo of ['nome','telefone','usuario','servidor','plano','valor','vencimento','hora_vencimento','mac']){
+    let r=await abrirModal(campo,data[campo]);
+    if(r.tipo==="cancelar") return;
 
-function filtrarVencidos(){
-  render(dados.filter(c=>calcularStatus(c)==="inativo"));
-}
+    atualizado[campo]=r.valor;
 
-// BUSCA
-function normalizar(t){
-  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-}
-
-function buscar(){
-  let termo=normalizar(busca.value);
-  render(dados.filter(c =>
-    normalizar(c.nome).includes(termo) ||
-    (c.telefone||"").includes(termo)
-  ));
-}
-
-// EXCLUIR
-async function deletarSelecionados(){
-  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
-
-  if(ids.length===0)return alert("Nada selecionado");
-  if(!confirm("Deseja excluir?"))return;
-
-  for(let i=0;i<ids.length;i++){
-    await client.from(tela).delete().eq('id',ids[i]);
-    let p=Math.floor(((i+1)/ids.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
+    if(r.tipo==="salvar"){
+      await client.from('clientes').update(atualizado).eq('id',id);
+      carregar();
+      return;
+    }
   }
 
-  alert("Excluído");
+  await client.from('clientes').update(atualizado).eq('id',id);
   carregar();
 }
 
-// 🔥 IMPORTAÇÃO COMPLETA (TODOS CAMPOS)
+// EDITAR CONTATO
+async function editarContato(id){
+  const { data }=await client.from('contatos').select('*').eq('id',id).single();
+
+  let nome=await abrirModal("Nome",data.nome);
+  if(nome.tipo==="cancelar") return;
+
+  let telefone=await abrirModal("Telefone",data.telefone);
+  if(telefone.tipo==="cancelar") return;
+
+  await client.from('contatos').update({
+    nome:nome.valor,
+    telefone:telefone.valor
+  }).eq('id',id);
+
+  carregar();
+}
+
+// IMPORTAÇÃO CORRIGIDA (NÃO PERDE CONTATOS)
 async function importarArquivo(){
 
   const file=inputArquivo.files[0];
@@ -245,35 +273,33 @@ async function importarArquivo(){
 
         let nome=linha.nome||"Cliente";
 
-        let registro={
-          nome,
-          telefone,
-          usuario:linha.usuario||null,
-          senha:linha.senha||null,
-          servidor:linha.servidor||"UNITV",
-          plano:linha.plano||null,
-          valor:linha.valor||null,
-          vencimento:linha.vencimento||null,
-          hora_vencimento:linha.hora_vencimento||linha.hora||null,
-          mac:linha.mac||null,
-          aplicativo:linha.aplicativo||null,
-          dispositivo:linha.dispositivo||null
-        };
-
-        if(!registro.vencimento || !registro.hora_vencimento){
+        if(!linha.vencimento||!linha.hora_vencimento){
           throw new Error("Faltando vencimento ou hora");
         }
 
-        await client.from('clientes').insert(registro);
+        await client.from('clientes').insert({
+          nome,
+          telefone,
+          usuario:linha.usuario||null,
+          servidor:linha.servidor||null,
+          plano:linha.plano||null,
+          valor:linha.valor||null,
+          vencimento:linha.vencimento,
+          hora_vencimento:linha.hora_vencimento,
+          mac:linha.mac||null
+        });
 
-        await client.from('contatos').insert({
+        // 🔥 AQUI ESTÁ A CORREÇÃO
+        await client.from('contatos').upsert({
           telefone,
           nome,
-          cliente:true
+          cliente:true,
+          usuario:linha.usuario||null
+        }, {
+          onConflict: 'telefone,usuario'
         });
 
       }catch(e){
-
         erros++;
 
         logErro.innerHTML+=`
@@ -294,14 +320,6 @@ Erro: ${e.message}
   };
 
   reader.readAsBinaryString(file);
-}
-
-function editarCliente(id){
-  alert("Editar funcionando");
-}
-
-function editarContato(id){
-  alert("Editar contato funcionando");
 }
 
 carregar();
