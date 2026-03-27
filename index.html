@@ -338,6 +338,47 @@ async function editar(id){
   await salvar(id);
 }
 
+// ===== SALVAR (CORRETO SEM QUEBRAR NADA) =====
+async function salvar(id){
+
+  let dados = { ...dadosEditados };
+
+  // 🔥 TRATAMENTO SOMENTE PARA CLIENTES
+  if(tela === 'clientes'){
+
+    // DATA (se vier dd/mm/yyyy → converte)
+    if(dados.vencimento && typeof dados.vencimento === 'string'){
+      if(dados.vencimento.includes('/')){
+        let p = dados.vencimento.split('/');
+        if(p.length === 3){
+          dados.vencimento = `${p[2]}-${p[1]}-${p[0]}`;
+        }
+      }
+    }
+
+    // VALOR → número
+    if(dados.valor){
+      dados.valor = Number(dados.valor);
+    }
+  }
+
+  console.log("SALVANDO:", dados);
+
+  const { error } = await client
+    .from(tela)
+    .update(dados)
+    .eq('id', id);
+
+  if(error){
+    console.log("ERRO AO SALVAR:", error);
+    alert("Erro ao salvar");
+    return;
+  }
+
+  // 🔥 IMPORTANTE: NÃO ALTEREI SUA LÓGICA
+  carregar();
+}
+  
 // ===== IMPORTAÇÃO =====
 async function importarArquivo(){
 
