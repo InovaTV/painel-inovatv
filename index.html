@@ -71,18 +71,18 @@ th,td { padding:6px; border:1px solid #ccc; }
 <h2>Painel InovaTV</h2>
 <h3 id="statusTela">Você está em: CLIENTES</h3>
 
-<button class="btn-topo" onclick="window.trocarTela('clientes')">Clientes</button>
-<button class="btn-topo" onclick="window.trocarTela('contatos')">Contatos</button>
+<button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
+<button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
 
 <br><br>
 
-<input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') window.buscar()">
-<button onclick="window.buscar()">Buscar</button>
+<input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') buscar()">
+<button onclick="buscar()">Buscar</button>
 
 <hr>
 
 <input type="file" id="inputArquivo">
-<button class="btn-verde" onclick="window.importarArquivo()">IMPORTAR EXCEL</button>
+<button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
 <div id="progressBar"><div id="progress">0%</div></div>
 <div id="logErro"></div>
@@ -91,11 +91,11 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <div id="contadorSelecionados">Selecionados: 0</div>
 
-<button onclick="window.selecionarTodos()">Selecionar todos</button>
-<button onclick="window.desmarcarTodos()">Desmarcar</button>
-<button onclick="window.filtrarAtivos()">Ativos</button>
-<button onclick="window.filtrarVencidos()">Vencidos</button>
-<button class="btn-vermelho" onclick="window.deletarSelecionados()">Excluir</button>
+<button onclick="selecionarTodos()">Selecionar todos</button>
+<button onclick="desmarcarTodos()">Desmarcar</button>
+<button onclick="filtrarAtivos()">Ativos</button>
+<button onclick="filtrarVencidos()">Vencidos</button>
+<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <table>
 <thead id="thead"></thead>
@@ -124,9 +124,6 @@ const client = supabase.createClient(
 let tela='clientes';
 let dados=[];
 let modalResolve;
-let campoAtual;
-let dadosEdicao={};
-let idEditando=null;
 
 // ===== MODAL =====
 function abrirModal(label, valor){
@@ -140,7 +137,7 @@ function abrirModal(label, valor){
 
 function modalOk(){
   modalEdit.style.display="none";
-  modalResolve({tipo:"ok", valor:modalInput.value});
+  modalResolve({tipo:"ok",valor:modalInput.value});
 }
 
 function modalCancelar(){
@@ -150,7 +147,7 @@ function modalCancelar(){
 
 function modalSalvar(){
   modalEdit.style.display="none";
-  modalResolve({tipo:"salvar", valor:modalInput.value});
+  modalResolve({tipo:"salvar",valor:modalInput.value});
 }
 
 // ===== STATUS =====
@@ -160,8 +157,8 @@ function calcularStatus(c){
   return venc<agora?"inativo":"ativo";
 }
 
-// ===== TELA =====
-window.trocarTela = function(t){
+// ===== TROCAR TELA =====
+function trocarTela(t){
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
   carregar();
@@ -174,12 +171,14 @@ async function carregar(){
 
   if(tela==='clientes'){
     thead.innerHTML=`<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Servidor</th>
-    <th>Plano</th><th>Valor</th><th>Vencimento</th><th>Hora</th>
-    <th>MAC</th><th>Status</th><th>Ações</th></tr>`;
+      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Servidor</th>
+      <th>Plano</th><th>Valor</th><th>Vencimento</th><th>Hora</th>
+      <th>MAC</th><th>Status</th><th>Ações</th>
+    </tr>`;
   } else {
     thead.innerHTML=`<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Ações</th></tr>`;
+      <th></th><th>Nome</th><th>Telefone</th><th>Ações</th>
+    </tr>`;
   }
 
   render(dados);
@@ -187,7 +186,7 @@ async function carregar(){
 
 // ===== RENDER =====
 function render(lista){
-  tabela.innerHTML = lista.map(c=>`
+  tabela.innerHTML=lista.map(c=>`
   <tr>
     <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
     <td>${c.nome||''}</td>
@@ -222,7 +221,7 @@ function normalizar(t){
   return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
 }
 
-window.buscar = function(){
+function buscar(){
   let termo=normalizar(busca.value);
   render(dados.filter(c =>
     normalizar(c.nome).includes(termo) ||
@@ -231,27 +230,26 @@ window.buscar = function(){
 }
 
 // ===== BOTÕES =====
-window.selecionarTodos = function(){
+function selecionarTodos(){
   document.querySelectorAll('.check').forEach(c=>c.checked=true);
   contarSelecionados();
 }
 
-window.desmarcarTodos = function(){
+function desmarcarTodos(){
   document.querySelectorAll('.check').forEach(c=>c.checked=false);
   contarSelecionados();
 }
 
-window.filtrarAtivos = function(){
+function filtrarAtivos(){
   render(dados.filter(c=>calcularStatus(c)==="ativo"));
 }
 
-window.filtrarVencidos = function(){
+function filtrarVencidos(){
   render(dados.filter(c=>calcularStatus(c)==="inativo"));
 }
 
 // ===== EXCLUIR =====
-window.deletarSelecionados = async function(){
-
+async function deletarSelecionados(){
   let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
 
   if(ids.length===0)return alert("Nada selecionado");
@@ -259,7 +257,6 @@ window.deletarSelecionados = async function(){
 
   for(let i=0;i<ids.length;i++){
     await client.from(tela).delete().eq('id',ids[i]);
-
     let p=Math.floor(((i+1)/ids.length)*100);
     progress.style.width=p+"%";
     progress.innerText=p+"%";
@@ -270,19 +267,12 @@ window.deletarSelecionados = async function(){
 }
 
 // ===== EDITAR CLIENTE =====
-window.editarCliente = async function(id){
-
+async function editarCliente(id){
   const { data } = await client.from('clientes').select('*').eq('id',id).single();
-
-  let campos=[
-    'nome','telefone','usuario','servidor','plano','valor',
-    'vencimento','hora_vencimento','mac'
-  ];
 
   let atualizado={};
 
-  for(let campo of campos){
-
+  for(let campo of ['nome','telefone','usuario','servidor','plano','valor','vencimento','hora_vencimento','mac']){
     let r=await abrirModal(campo,data[campo]);
 
     if(r.tipo==="cancelar") return;
@@ -301,8 +291,7 @@ window.editarCliente = async function(id){
 }
 
 // ===== EDITAR CONTATO =====
-window.editarContato = async function(id){
-
+async function editarContato(id){
   const { data } = await client.from('contatos').select('*').eq('id',id).single();
 
   let nome=await abrirModal("Nome",data.nome);
@@ -319,11 +308,14 @@ window.editarContato = async function(id){
   carregar();
 }
 
-// ===== IMPORTAR =====
-window.importarArquivo = async function(){
+// ===== IMPORTAÇÃO CORRIGIDA =====
+async function importarArquivo(){
 
   const file=inputArquivo.files[0];
   if(!file)return alert("Selecione arquivo");
+
+  logErro.innerHTML="";
+  progress.style.width="0%";
 
   const reader=new FileReader();
 
@@ -332,37 +324,57 @@ window.importarArquivo = async function(){
     const wb=XLSX.read(e.target.result,{type:'binary'});
     const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
+    let erros=0;
+
     for(let i=0;i<json.length;i++){
 
       let linha=json[i];
 
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
-      if(!telefone.startsWith("55")) telefone="55"+telefone;
+      try{
 
-      await client.from('clientes').insert({
-        nome:linha.nome,
-        telefone,
-        usuario:linha.usuario,
-        servidor:linha.servidor,
-        plano:linha.plano,
-        valor:linha.valor,
-        vencimento:linha.vencimento,
-        hora_vencimento:linha.hora_vencimento,
-        mac:linha.mac
-      });
+        let telefone=(linha.telefone||"").replace(/\D/g,"");
+        if(!telefone.startsWith("55")) telefone="55"+telefone;
 
-      await client.from('contatos').upsert({
-        telefone,
-        nome,
-        cliente:true
-      });
+        if(!linha.vencimento||!(linha.hora_vencimento||linha.hora)){
+          throw new Error("Faltando vencimento ou hora");
+        }
+
+        await client.from('clientes').insert({
+          nome:linha.nome,
+          telefone,
+          usuario:linha.usuario,
+          servidor:linha.servidor,
+          plano:linha.plano,
+          valor:linha.valor,
+          vencimento:linha.vencimento,
+          hora_vencimento:linha.hora_vencimento||linha.hora,
+          mac:linha.mac
+        });
+
+        await client.from('contatos').upsert({
+          telefone,
+          nome,
+          cliente:true
+        });
+
+      }catch(e){
+
+        erros++;
+
+        logErro.innerHTML+=`
+ERRO LINHA ${i+1}
+Nome: ${linha.nome||''}
+Telefone: ${linha.telefone||''}
+Erro: ${e.message}
+-------------------<br>`;
+      }
 
       let p=Math.floor(((i+1)/json.length)*100);
       progress.style.width=p+"%";
       progress.innerText=p+"%";
     }
 
-    alert("Importado");
+    alert("Importado 🚀 Erros: "+erros);
     carregar();
   };
 
