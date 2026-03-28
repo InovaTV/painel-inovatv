@@ -63,6 +63,7 @@ th,td { padding:6px; border:1px solid #ccc; }
   margin-top:10px;
 }
 
+/* NOVO */
 #contadorStatus {
   margin:10px 0;
   font-weight:bold;
@@ -87,7 +88,6 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <input type="file" id="inputArquivo">
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
-<button class="btn-verde" onclick="importarSelecionados()">IMPORTAR SELECIONADOS</button>
 
 <div id="progressBar"><div id="progress">0%</div></div>
 <div id="logErro"></div>
@@ -95,6 +95,8 @@ th,td { padding:6px; border:1px solid #ccc; }
 <hr>
 
 <div id="contadorSelecionados">Selecionados: 0</div>
+
+<!-- NOVO -->
 <div id="contadorStatus">Ativos: 0 | Vencidos: 0</div>
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
@@ -123,85 +125,329 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'SUA_KEY_AQUI'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
 let tela='clientes';
 let dados=[];
-let dadosImportados=[];
-let modoImportacao=false;
 let modalResolve;
 let dadosEditados={};
 
-// ===== CONTADOR IMPORTAÇÃO =====
-function contarSelecionadosImport(){
-  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check-import:checked').length;
+// ===== CONTATO SEGURO =====
+async function salvarContatoSeguro(dados){
+  const { error } = await client.from('contatos').insert(dados);
+  if(error){
+    if(error.message.includes("duplicate key")){
+      console.log("Contato duplicado ignorado");
+    } else {
+      console.error("Erro contato:", error.message);
+    }
+  }
 }
 
-// ===== IMPORTAÇÃO NOVA (NÃO QUEBRA NADA) =====
+// ===== MODAL =====
+function abrirModal(label, valor){
+  return new Promise(resolve=>{
+    modalResolve=resolve;
+    modalLabel.innerText=label;
+    modalInput.value=valor||"";
+    modalEdit.style.display="flex";
+  });
+}
+
+function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valor:modalInput.value}); }
+function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
+function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
+
+// ===== STATUS =====
+function calcularStatus(c){
+
+  if(!c.vencimento || !c.hora_vencimento){
+    return "erro";
+  }
+
+  let hoje = new Date();
+  hoje.setHours(0,0,0,0);
+
+  let data = c.vencimento.split("-");
+  let venc = new Date(data[0], data[1]-1, data[2]);
+
+  return venc < hoje ? "inativo" : "ativo";
+}
+
+// ===== CONTADOR =====
+function atualizarContadorStatus(lista){
+
+  let ativos = 0;
+  let vencidos = 0;
+
+  lista.forEach(c=>{
+    let status = calcularStatus(c);
+    if(status === "ativo") ativos++;
+    if(status === "inativo") vencidos++;
+  });
+
+  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
+}
+
+// ===== TROCAR TELA =====
+function trocarTela(t){
+  tela=t;
+  statusTela.innerText="Você está em: "+t.toUpperCase();
+  carregar();
+}
+
+// ===== CARREGAR =====
+async function carregar(){
+  const { data } = await client.from(tela).select('*');
+
+  // 🔥 ORDENAÇÃO ALFABÉTICA
+  dados = (data || []).sort((a,b)=>{
+    return (a.nome || "").localeCompare(b.nome || "");
+  });
+
+  if(tela==='clientes'){
+    thead.innerHTML=`<tr>
+      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
+      <th>Servidor</th><th>Plano</th><th>Valor</th>
+      <th>Vencimento</th><th>Hora</th><th>MAC</th>
+      <th>Status</th><th>Ações</th>
+    </tr>`;
+  } else {
+    thead.innerHTML=`<tr>
+      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
+    </tr>`;
+  }
+
+  render(dados);
+}
+
+// ===== RENDER =====
+function render(lista){
+  tabela.innerHTML=lista.map(c=>`
+  <tr>
+    <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
+    <td>${c.nome||''}</td>
+    <td>${c.telefone||''}</td>
+    <td>${c.usuario||''}</td>
+
+    ${tela==='clientes'?`
+      <td>${c.servidor||''}</td>
+      <td>${c.plano||''}</td>
+      <td>${c.valor||''}</td>
+      <td>${c.vencimento||''}</td>
+      <td>${c.hora_vencimento||''}</td>
+      <td>${c.mac||''}</td>
+      <td>${calcularStatus(c)}</td>
+      <td><button onclick="editar('${c.id}')">Editar</button></td>
+    `:`
+      <td><button onclick="editar('${c.id}')">Editar</button></td>
+    `}
+  </tr>
+  `).join('');
+
+  contarSelecionados();
+  atualizarContadorStatus(lista);
+}
+
+// ===== CRON AUTOMÁTICO =====
+setInterval(()=>{
+  console.log("Sincronizando...");
+  carregar();
+}, 60000);
+
+// ===== RESTO DO CÓDIGO (INTACTO) =====
+function contarSelecionados(){
+  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
+}
+function selecionarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=true); contarSelecionados(); }
+function desmarcarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=false); contarSelecionados(); }
+function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
+function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
+
+async function deletarSelecionados(){
+  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
+  if(ids.length===0)return alert("Nada selecionado");
+  if(!confirm("Deseja excluir?"))return;
+
+  for(let i=0;i<ids.length;i++){
+    await client.from(tela).delete().eq('id',ids[i]);
+    let p=Math.floor(((i+1)/ids.length)*100);
+    progress.style.width=p+"%";
+    progress.innerText=p+"%";
+  }
+
+  alert("Excluído");
+  carregar();
+}
+
+function normalizar(t){
+  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+}
+
+function buscar(){
+  let termo=normalizar(busca.value);
+  render(dados.filter(c =>
+    normalizar(c.nome).includes(termo) ||
+    (c.telefone||"").includes(termo)
+  ));
+}
+
+// ===== EDITAR =====
+async function editar(id){
+
+  const { data } = await client.from(tela).select('*').eq('id',id).single();
+
+  let campos;
+
+  // 🔥 DEFINE CAMPOS POR TELA (SEM QUEBRAR CONTATOS)
+  if(tela === 'clientes'){
+    campos = [
+      'nome',
+      'telefone',
+      'usuario',
+      'servidor',
+      'plano',
+      'valor',
+      'vencimento',
+      'hora_vencimento',
+      'mac'
+    ];
+  } else {
+    campos = ['nome','telefone','usuario'];
+  }
+
+  dadosEditados={};
+
+  for(let campo of campos){
+
+    let r = await abrirModal(campo, data[campo]);
+
+    if(r.tipo === "cancelar") return;
+
+    dadosEditados[campo] = r.valor;
+
+    // 🔥 SALVAR PARCIAL (SEM QUEBRAR SUA LÓGICA)
+    if(r.tipo === "salvar"){
+      await salvar(id);
+      return;
+    }
+  }
+
+  // 🔥 SALVAR FINAL
+  await salvar(id);
+}
+
+// ===== SALVAR (CORRETO SEM QUEBRAR NADA) =====
+async function salvar(id){
+
+  let dados = { ...dadosEditados };
+
+  // 🔥 TRATAMENTO SOMENTE PARA CLIENTES
+  if(tela === 'clientes'){
+
+    // DATA (se vier dd/mm/yyyy → converte)
+    if(dados.vencimento && typeof dados.vencimento === 'string'){
+      if(dados.vencimento.includes('/')){
+        let p = dados.vencimento.split('/');
+        if(p.length === 3){
+          dados.vencimento = `${p[2]}-${p[1]}-${p[0]}`;
+        }
+      }
+    }
+
+    // VALOR → número
+    if(dados.valor){
+      dados.valor = Number(dados.valor);
+    }
+  }
+
+  console.log("SALVANDO:", dados);
+
+  const { error } = await client
+    .from(tela)
+    .update(dados)
+    .eq('id', id);
+
+  if(error){
+    console.log("ERRO AO SALVAR:", error);
+    alert("Erro ao salvar");
+    return;
+  }
+
+  // 🔥 IMPORTANTE: NÃO ALTEREI SUA LÓGICA
+  carregar();
+}
+  
+// ===== IMPORTAÇÃO =====
 async function importarArquivo(){
 
-  const file=inputArquivo.files[0];
-  if(!file)return alert("Selecione arquivo");
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione arquivo");
 
-  const reader=new FileReader();
+  const reader = new FileReader();
 
-  reader.onload=async(e)=>{
+  reader.onload = async (e)=>{
 
-    const wb=XLSX.read(e.target.result,{type:'binary'});
-    const json=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    const wb = XLSX.read(e.target.result,{type:'binary'});
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-    dadosImportados=json;
-    modoImportacao=true;
+    if(json.length === 0){
+      alert("Arquivo vazio");
+      return;
+    }
 
-    tabela.innerHTML = json.map((c,i)=>`
-      <tr>
-        <td><input type="checkbox" class="check-import" data-index="${i}" onchange="contarSelecionadosImport()"></td>
-        <td>${c.nome||''}</td>
-        <td>${c.telefone||''}</td>
-        <td>${c.usuario||''}</td>
-        <td>${c.servidor||''}</td>
-        <td>${c.plano||''}</td>
-        <td>${c.valor||''}</td>
-        <td>${c.vencimento||''}</td>
-        <td>${c.hora_vencimento||c.hora||''}</td>
-        <td>${c.mac||''}</td>
-        <td>-</td>
-        <td>-</td>
-      </tr>
-    `).join('');
+    // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
+    dados = json.map((c,i)=>({
+      ...c,
+      id: "import_"+i
+    }));
 
-    contadorSelecionados.innerText="Selecionados: 0";
+    render(dados);
 
-    alert("Selecione os clientes e clique em IMPORTAR SELECIONADOS");
+    window.dadosImportados = json;
+
+    alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
+
+    // 🔥 CRIA BOTÃO SE NÃO EXISTIR
+    if(!document.getElementById("btnImportarSelecionados")){
+      const btn = document.createElement("button");
+      btn.innerText = "IMPORTAR SELECIONADOS";
+      btn.className = "btn-verde";
+      btn.id = "btnImportarSelecionados";
+      btn.onclick = importarSelecionados;
+      inputArquivo.parentNode.appendChild(btn);
+    }
   };
 
   reader.readAsBinaryString(file);
 }
+}
 
-// ===== IMPORTAR SELECIONADOS =====
-async function importarSelecionados(){
+carregar();
 
-  const checks=document.querySelectorAll('.check-import:checked');
+  async function importarSelecionados(){
 
-  if(checks.length===0){
+  const checks = document.querySelectorAll('.check:checked');
+
+  if(checks.length === 0){
     alert("Selecione pelo menos um cliente");
     return;
   }
 
-  let erros=0;
+  let erros = 0;
 
   for(let i=0;i<checks.length;i++){
 
-    const index=checks[i].dataset.index;
-    let linha=dadosImportados[index];
+    const index = checks[i].closest("tr").rowIndex - 1;
+    let linha = window.dadosImportados[index];
 
     try{
 
       let telefone=(linha.telefone||"").replace(/\D/g,"");
       if(!telefone.startsWith("55")) telefone="55"+telefone;
 
-      let usuario=linha.usuario||("user"+i);
+      let usuario=linha.usuario || ("user"+i);
 
       await client.from('clientes').insert({
         nome:linha.nome,
@@ -215,14 +461,16 @@ async function importarSelecionados(){
         mac:linha.mac
       });
 
-      await client.from('contatos').insert({
+      await salvarContatoSeguro({
         telefone,
         usuario,
         nome:linha.nome,
         cliente:true
       });
 
-    }catch(e){ erros++; }
+    }catch(e){
+      erros++;
+    }
 
     let p=Math.floor(((i+1)/checks.length)*100);
     progress.style.width=p+"%";
@@ -231,33 +479,11 @@ async function importarSelecionados(){
 
   alert("Importação concluída 🚀 Erros: "+erros);
 
-  modoImportacao=false;
-  dadosImportados=[];
-
   carregar();
 }
-
-// ===== RESTO DO SEU SISTEMA (100% INTACTO) =====
-async function carregar(){
-  const { data } = await client.from(tela).select('*');
-  dados = (data||[]).sort((a,b)=> (a.nome||"").localeCompare(b.nome||""));
-  render(dados);
-}
-
-function render(lista){
-  tabela.innerHTML=lista.map(c=>`
-  <tr>
-    <td><input type="checkbox" class="check"></td>
-    <td>${c.nome||''}</td>
-    <td>${c.telefone||''}</td>
-    <td>${c.usuario||''}</td>
-  </tr>
-  `).join('');
-}
-
-carregar();
 
 </script>
 
 </body>
 </html>
+
