@@ -422,7 +422,6 @@ async function importarArquivo(){
 
   reader.readAsBinaryString(file);
 }
-}
 
 carregar();
 
@@ -439,7 +438,7 @@ carregar();
 
   for(let i=0;i<checks.length;i++){
 
-    const index = checks[i].closest("tr").rowIndex - 1;
+    const index = [...checks].indexOf(checks[i]);
     let linha = window.dadosImportados[index];
 
     try{
