@@ -398,10 +398,10 @@ async function importarArquivo(){
     }
 
     // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
-    dados = json.map((c,i)=>({
-      ...c,
-      id: "import_"+i
-    }));
+  dados = json.map((c,i)=>({
+  ...c,
+  id: i // 👈 AQUI É O SEGREDO
+}));
 
     render(dados);
 
@@ -438,8 +438,8 @@ carregar();
 
   for(let i=0;i<checks.length;i++){
 
-    const index = [...checks].indexOf(checks[i]);
-    let linha = window.dadosImportados[index];
+    const index = checks[i].dataset.id;
+let linha = window.dadosImportados[index];
 
     try{
 
