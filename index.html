@@ -89,6 +89,10 @@ th,td { padding:6px; border:1px solid #ccc; }
 <input type="file" id="inputArquivo">
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
+  <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
+  IMPORTAR SELECIONADOS
+</button>
+
 <div id="progressBar"><div id="progress">0%</div></div>
 <div id="logErro"></div>
 
@@ -409,15 +413,10 @@ async function importarArquivo(){
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
+    document.getElementById("btnImportarSelecionados").style.display = "inline-block";
+
     // 🔥 CRIA BOTÃO SE NÃO EXISTIR
-    if(!document.getElementById("btnImportarSelecionados")){
-      const btn = document.createElement("button");
-      btn.innerText = "IMPORTAR SELECIONADOS";
-      btn.className = "btn-verde";
-      btn.id = "btnImportarSelecionados";
-      btn.onclick = importarSelecionados;
-      inputArquivo.parentNode.appendChild(btn);
-    }
+    
   };
 
   reader.readAsBinaryString(file);
@@ -477,6 +476,8 @@ let linha = window.dadosImportados[index];
   }
 
   alert("Importação concluída 🚀 Erros: "+erros);
+
+    document.getElementById("btnImportarSelecionados").style.display = "none";
 
   carregar();
 }
