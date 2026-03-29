@@ -554,13 +554,13 @@ let txt = "";
 
 try {
   txt = await res.text();
-  log("Resposta HUMANO: " + txt);
+  log("Resposta BOT: " + txt);
 } catch(e) {
   log("ERRO AO LER RESPOSTA: " + e.message);
 }
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-  if(c.telefone === telefone){
+  if(String(c.telefone).trim() === String(telefone).trim()){
     return { ...c, atendimento_humano: false };
   }
   return c;
