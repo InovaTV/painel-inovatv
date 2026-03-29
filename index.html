@@ -561,19 +561,20 @@ async function desativarSelecionados(){
   }
 
   for(const check of checks){
-    const telefone = check.closest("tr").children[2].innerText;
+
+    const telefone = check.dataset.telefone;
 
     await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
-        telefone,
+        telefone: telefone,
         status: false
       })
     });
+
   }
 
-  alert("Bot ativado 🤖");
   carregar();
 }
   
