@@ -570,7 +570,12 @@ async function ativarSelecionados(){
   }
 
   for(const check of checks){
-    const telefone = check.closest("tr").children[2].innerText;
+
+    const tr = check.closest("tr");
+    const telefone = tr.children[2].innerText;
+
+    // 🔥 muda visual NA HORA
+    tr.style.background = "#e6ffe6";
 
     await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
@@ -582,7 +587,6 @@ async function ativarSelecionados(){
     });
   }
 
-  alert("Humano ativado 👍");
   carregar();
 }
 
@@ -596,7 +600,12 @@ async function desativarSelecionados(){
   }
 
   for(const check of checks){
-    const telefone = check.closest("tr").children[2].innerText;
+
+    const tr = check.closest("tr");
+    const telefone = tr.children[2].innerText;
+
+    // 🔥 muda visual NA HORA
+    tr.style.background = "#ffe6e6";
 
     await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
@@ -608,7 +617,6 @@ async function desativarSelecionados(){
     });
   }
 
-  alert("Bot ativado 🤖");
   carregar();
 }
   
