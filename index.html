@@ -548,7 +548,7 @@ async function ativarSelecionados(){
   const checks = document.querySelectorAll(".check:checked");
 
   if(checks.length === 0){
-    alert("Selecione pelo menos um contato");
+    alert(`Selecione pelo menos um ${tela.slice(0,-1)}`);
     return;
   }
 
@@ -574,7 +574,7 @@ async function desativarSelecionados(){
   const checks = document.querySelectorAll(".check:checked");
 
   if(checks.length === 0){
-    alert("Selecione pelo menos um contato");
+    alert(`Selecione pelo menos um ${tela.slice(0,-1)}`);
     return;
   }
 
