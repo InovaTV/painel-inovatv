@@ -2,32 +2,50 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Painel InovaTV</title>
+<title>Painel InovaTV PRO</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { font-family: Arial; padding:20px; }
 
-button {
-  margin:4px;
-  padding:6px 12px;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-  font-weight:bold;
-}
+button { margin:3px; padding:6px 10px; cursor:pointer; }
 
-.btn-topo { background:#2196F3; color:#fff; }
-.btn-verde { background:#4CAF50; color:#fff; }
-.btn-vermelho { background:#f44336; color:#fff; }
-
-table { width:100%; border-collapse: collapse; font-size:13px; }
-th,td { padding:6px; border:1px solid #ccc; }
+.btn-verde { background:green; color:#fff; }
+.btn-vermelho { background:red; color:#fff; }
 
 .linha-humano { background:#e6ffe6; }
 .linha-bot { background:#ffe6e6; }
 
+table { width:100%; border-collapse: collapse; table-layout: fixed; }
+th,td { border:1px solid #ccc; padding:6px; overflow:hidden; }
+
+th {
+  position:relative;
+}
+
+.resizer {
+  position:absolute;
+  right:0;
+  top:0;
+  width:5px;
+  height:100%;
+  cursor:col-resize;
+}
+
+.progress { width:100%; background:#ddd; height:20px; }
+.progress-bar { height:100%; width:0%; background:green; color:#fff; text-align:center; }
+
+#log {
+  margin-top:10px;
+  background:#000;
+  color:#0f0;
+  padding:10px;
+  height:120px;
+  overflow:auto;
+  font-size:12px;
+}
 </style>
 </head>
 
@@ -36,8 +54,8 @@ th,td { padding:6px; border:1px solid #ccc; }
 <h2>Painel InovaTV</h2>
 <h3 id="statusTela">Você está em: CLIENTES</h3>
 
-<button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
-<button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
+<button onclick="trocarTela('clientes')">Clientes</button>
+<button onclick="trocarTela('contatos')">Contatos</button>
 
 <button onclick="ativarSelecionados()" class="btn-verde">👤 Ativar Humano</button>
 <button onclick="desativarSelecionados()" class="btn-vermelho">🤖 Ativar Bot</button>
@@ -49,6 +67,13 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <hr>
 
+<input type="file" id="inputArquivo">
+<button onclick="importarArquivo()" class="btn-verde">IMPORTAR EXCEL</button>
+
+<div class="progress">
+  <div id="progressBar" class="progress-bar">0%</div>
+</div>
+
 <div id="contadorSelecionados">Selecionados: 0</div>
 <div id="contadorStatus">Ativos: 0 | Vencidos: 0</div>
 
@@ -56,22 +81,29 @@ th,td { padding:6px; border:1px solid #ccc; }
 <button onclick="desmarcarTodos()">Desmarcar</button>
 <button onclick="filtrarAtivos()">Ativos</button>
 <button onclick="filtrarVencidos()">Vencidos</button>
+<button onclick="excluirSelecionados()" class="btn-vermelho">Excluir</button>
 
 <table>
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
 
+<div id="log"></div>
+
 <script>
 
-// ===== CONFIG =====
-const client = supabase.createClient(
-  'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
+const supabase = window.supabase.createClient(
+  "https://tiupgtbzikwmseecxbvo.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c"
 );
 
-let tela = 'clientes';
+let tela = "clientes";
 let dados = [];
+
+// ===== LOG =====
+function log(msg){
+  document.getElementById("log").innerHTML += msg+"<br>";
+}
 
 // ===== TROCAR TELA =====
 function trocarTela(t){
@@ -80,178 +112,208 @@ function trocarTela(t){
   carregar();
 }
 
-// ===== CARREGAR DADOS =====
+// ===== CARREGAR =====
 async function carregar(){
-  const { data } = await client.from(tela).select('*');
-
+  log("🔄 carregando "+tela);
+  const { data } = await supabase.from(tela).select("*");
   dados = data || [];
-
   montarCabecalho();
   render(dados);
 }
 
 // ===== CABEÇALHO =====
 function montarCabecalho(){
-  if(tela === 'clientes'){
-    thead.innerHTML = `
-      <tr>
-        <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-        <th>Vencimento</th><th>Status</th><th>Ações</th>
-      </tr>
-    `;
-  } else {
-    thead.innerHTML = `
-      <tr>
-        <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-        <th>Status</th><th>Ações</th>
-      </tr>
-    `;
+  if(tela==="clientes"){
+    thead.innerHTML = `<tr>
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
+    <th>Vencimento</th><th>Status</th><th>Ações</th></tr>`;
+  }else{
+    thead.innerHTML = `<tr>
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
+    <th>Status</th><th>Ações</th></tr>`;
   }
+
+  setTimeout(addResizers,100);
 }
 
-// ===== CALCULAR STATUS =====
+// ===== STATUS =====
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
-
   let hoje = new Date();
   hoje.setHours(0,0,0,0);
-
-  let data = c.vencimento.split("-");
-  let venc = new Date(data[0], data[1]-1, data[2]);
-
-  return venc < hoje ? "inativo" : "ativo";
+  let d = c.vencimento.split("-");
+  let v = new Date(d[0],d[1]-1,d[2]);
+  return v < hoje ? "inativo":"ativo";
 }
 
 // ===== RENDER =====
 function render(lista){
-
-  tabela.innerHTML = lista.map(c => {
+  tabela.innerHTML = lista.map(c=>{
 
     let status = calcularStatus(c);
 
-    return `
-    <tr class="${c.atendimento_humano ? 'linha-humano' : 'linha-bot'}">
+    return `<tr class="${c.atendimento_humano?'linha-humano':'linha-bot'}">
 
-      <td>
-        <input type="checkbox" class="check"
-          data-telefone="${c.telefone}">
-      </td>
+<td><input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()"></td>
 
-      <td>${c.nome || ''}</td>
-      <td>${c.telefone || ''}</td>
-      <td>${c.usuario || ''}</td>
+<td>${c.nome||""}</td>
+<td>${c.telefone||""}</td>
+<td>${c.usuario||""}</td>
 
-      ${tela === 'clientes' ? `<td>${c.vencimento || ''}</td>` : ''}
+${tela==="clientes"?`<td>${c.vencimento||""}</td>`:""}
 
-      <td>${status}</td>
+<td>${status}</td>
 
-      <td>
-        <button onclick="ativarHumano('${c.telefone}')">👤</button>
-        <button onclick="desativarHumano('${c.telefone}')">🤖</button>
-      </td>
+<td>
+<button onclick="ativarHumano('${c.telefone}')">👤</button>
+<button onclick="desativarHumano('${c.telefone}')">🤖</button>
+</td>
 
-    </tr>
-    `;
-  }).join('');
+</tr>`;
+
+  }).join("");
 
   atualizarContadores(lista);
 }
 
 // ===== CONTADORES =====
 function atualizarContadores(lista){
-
-  let ativos = 0;
-  let vencidos = 0;
-
+  let a=0,v=0;
   lista.forEach(c=>{
     let s = calcularStatus(c);
-    if(s === "ativo") ativos++;
-    if(s === "inativo") vencidos++;
+    if(s==="ativo") a++;
+    if(s==="inativo") v++;
   });
-
-  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
+  contadorStatus.innerText=`Ativos: ${a} | Vencidos: ${v}`;
   contarSelecionados();
 }
 
-// ===== SELEÇÃO =====
 function contarSelecionados(){
-  contadorSelecionados.innerText =
-    "Selecionados: " + document.querySelectorAll('.check:checked').length;
+  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll(".check:checked").length;
 }
 
+// ===== SELEÇÃO =====
 function selecionarTodos(){
-  document.querySelectorAll('.check').forEach(c=>c.checked=true);
+  document.querySelectorAll(".check").forEach(c=>c.checked=true);
   contarSelecionados();
 }
 
 function desmarcarTodos(){
-  document.querySelectorAll('.check').forEach(c=>c.checked=false);
+  document.querySelectorAll(".check").forEach(c=>c.checked=false);
   contarSelecionados();
 }
 
-// ===== ATIVAR / DESATIVAR INDIVIDUAL =====
-async function ativarHumano(telefone){
-  await toggleHumano(telefone, true);
+// ===== TOGGLE =====
+async function toggleHumano(tel,status){
+  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ telefone:tel, status })
+  });
 }
 
-async function desativarHumano(telefone){
-  await toggleHumano(telefone, false);
-}
+// ===== INDIVIDUAL =====
+async function ativarHumano(t){ await toggleHumano(t,true); carregar(); }
+async function desativarHumano(t){ await toggleHumano(t,false); carregar(); }
 
-// ===== ATIVAR / DESATIVAR MULTIPLOS =====
+// ===== MULTIPLO =====
 async function ativarSelecionados(){
-  const checks = document.querySelectorAll(".check:checked");
-
-  if(!checks.length) return alert("Selecione pelo menos um");
-
-  for(const c of checks){
-    await toggleHumano(c.dataset.telefone, true);
-  }
-
+  const c = document.querySelectorAll(".check:checked");
+  if(!c.length) return alert("Selecione pelo menos um");
+  for(const i of c) await toggleHumano(i.dataset.telefone,true);
   carregar();
 }
 
 async function desativarSelecionados(){
-  const checks = document.querySelectorAll(".check:checked");
-
-  if(!checks.length) return alert("Selecione pelo menos um");
-
-  for(const c of checks){
-    await toggleHumano(c.dataset.telefone, false);
-  }
-
+  const c = document.querySelectorAll(".check:checked");
+  if(!c.length) return alert("Selecione pelo menos um");
+  for(const i of c) await toggleHumano(i.dataset.telefone,false);
   carregar();
 }
 
-// ===== FUNÇÃO CENTRAL (SUPABASE) =====
-async function toggleHumano(telefone, status){
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ telefone, status })
-  });
-}
-
 // ===== FILTROS =====
-function filtrarAtivos(){
-  render(dados.filter(c=>calcularStatus(c)==="ativo"));
-}
-
-function filtrarVencidos(){
-  render(dados.filter(c=>calcularStatus(c)==="inativo"));
-}
+function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
+function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
 
 // ===== BUSCA =====
 function buscar(){
-  let termo = busca.value.toLowerCase();
-
-  render(dados.filter(c =>
-    (c.nome||"").toLowerCase().includes(termo) ||
-    (c.telefone||"").includes(termo)
-  ));
+  let t = busca.value.toLowerCase();
+  render(dados.filter(c=> (c.nome||"").toLowerCase().includes(t) || (c.telefone||"").includes(t)));
 }
 
-// ===== START =====
+// ===== EXCLUIR =====
+async function excluirSelecionados(){
+  const c = document.querySelectorAll(".check:checked");
+  if(!c.length) return alert("Selecione pelo menos um");
+  for(const i of c) await supabase.from(tela).delete().eq("id", i.dataset.id);
+  carregar();
+}
+
+// ===== IMPORTAR EXCEL =====
+async function importarArquivo(){
+
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Escolha um arquivo");
+
+  const reader = new FileReader();
+
+  reader.onload = async (e)=>{
+    const data = new Uint8Array(e.target.result);
+    const workbook = XLSX.read(data,{type:"array"});
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const json = XLSX.utils.sheet_to_json(sheet);
+
+    let erros=0;
+
+    for(let i=0;i<json.length;i++){
+
+      try{
+        await supabase.from(tela).insert(json[i]);
+      }catch{
+        erros++;
+      }
+
+      let p = Math.floor((i/json.length)*100);
+      progressBar.style.width=p+"%";
+      progressBar.innerText=p+"%";
+    }
+
+    alert("Importação concluída. Erros: "+erros);
+    carregar();
+  };
+
+  reader.readAsArrayBuffer(file);
+}
+
+// ===== RESIZE COLUNA =====
+function addResizers(){
+  document.querySelectorAll("th").forEach(th=>{
+    const div = document.createElement("div");
+    div.classList.add("resizer");
+    th.appendChild(div);
+
+    let startX, startWidth;
+
+    div.addEventListener("mousedown",(e)=>{
+      startX=e.pageX;
+      startWidth=th.offsetWidth;
+
+      document.onmousemove=(e)=>{
+        th.style.width=(startWidth + e.pageX - startX)+"px";
+      };
+
+      document.onmouseup=()=>document.onmousemove=null;
+    });
+  });
+}
+
+// ===== REALTIME =====
+supabase.channel("realtime")
+.on("postgres_changes",{event:"*",schema:"public"},()=>{
+  log("🔄 realtime update");
+  carregar();
+}).subscribe();
+
 carregar();
 
 </script>
