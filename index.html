@@ -608,41 +608,35 @@ async function ativarSelecionados(){
 
 
 
-async function desativarSelecionados(){
+async function desativarHumano(telefone){
 
-  const checks = document.querySelectorAll(".check:checked");
+  log("Enviando BOT: " + telefone);
 
-  if(checks.length === 0){
-    alert("Selecione pelo menos um contato");
-    return;
+  const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      telefone: telefone,
+      status: false
+    })
+  });
+
+  let txt = "";
+
+  try {
+    txt = await res.text();
+    log("Resposta BOT: " + txt);
+  } catch(e) {
+    log("ERRO AO LER RESPOSTA: " + e.message);
   }
 
-  for(const check of checks){
-
-    const telefone = check.dataset.telefone;
-
-    log("MASSA BOT: " + telefone);
-
-    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: false
-      })
-    });
-
-    log("STATUS MASSA: " + res.status);
-
-    dados = dados.map(c=>{
-      if(String(c.telefone).trim() === String(telefone).trim()){
-        return { ...c, atendimento_humano: false };
-      }
-      return c;
-    });
-
-  }
+  // 🔥 ATUALIZA LOCALMENTE
+  dados = dados.map(c=>{
+    if(String(c.telefone).trim() === String(telefone).trim()){
+      return { ...c, atendimento_humano: false };
+    }
+    return c;
+  });
 
   render(dados);
 }
-
