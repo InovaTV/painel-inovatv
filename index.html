@@ -217,10 +217,30 @@ function trocarTela(t){
 
 // ===== CARREGAR =====
 async function carregar(){
-  const { data } = await client.from(tela).select('*');
 
-  // 🔥 ORDENAÇÃO ALFABÉTICA
-  dados = (data || []).sort((a,b)=>{
+  log("🔄 CARREGANDO TELA: " + tela);
+
+  const { data, error } = await client.from(tela).select('*');
+
+  if(error){
+    log("❌ ERRO SUPABASE: " + error.message);
+    return;
+  }
+
+  if(!data){
+    log("⚠️ DATA VEIO NULL");
+    dados = [];
+    render(dados);
+    return;
+  }
+
+  log("📦 TOTAL REGISTROS: " + data.length);
+
+  if(data.length > 0){
+    log("🔎 PRIMEIRO ITEM: " + JSON.stringify(data[0]));
+  }
+
+  dados = data.sort((a,b)=>{
     return (a.nome || "").localeCompare(b.nome || "");
   });
 
@@ -232,10 +252,11 @@ async function carregar(){
       <th>Status</th><th>Ações</th>
     </tr>`;
   } else {
-  thead.innerHTML=`<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
-  </tr>`;
-}
+    thead.innerHTML=`<tr>
+      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
+    </tr>`;
+  }
+
   render(dados);
 }
 
