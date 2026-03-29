@@ -181,7 +181,7 @@ function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salv
 function calcularStatus(c){
 
   if(!c.vencimento || !c.hora_vencimento){
-    return "erro";
+    return "-";
   }
 
   let hoje = new Date();
@@ -289,7 +289,7 @@ ${tela === 'clientes' ? `
     <td>${c.vencimento||''}</td>
     <td>${c.hora_vencimento||''}</td>
     <td>${c.mac||''}</td>
-    <td>${calcularStatus(c)}</td>
+    <td>${tela === 'clientes' ? calcularStatus(c) : ''}</td>
 ` : ``}
 
 <td>
