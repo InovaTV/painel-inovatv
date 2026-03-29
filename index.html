@@ -243,11 +243,13 @@ function render(lista){
     <td>${c.telefone||''}</td>
     <td>${c.usuario||''}</td>
 
-<td onclick="toggleHumano('${c.telefone}', ${c.atendimento_humano})" style="cursor:pointer;">
-  ${c.atendimento_humano 
-    ? '<span style="color:green;font-weight:bold;">🟢 HUMANO</span>' 
-    : '<span style="color:red;font-weight:bold;">🤖 BOT</span>'}
-</td>
+${tela === 'clientes' 
+  ? `<td>${calcularStatus(c)}</td>` 
+  : `<td>${c.atendimento_humano 
+      ? '<span style="color:green;font-weight:bold;">🟢 HUMANO</span>' 
+      : '<span style="color:red;font-weight:bold;">🤖 BOT</span>'}
+    </td>`
+}
 
     ${tela==='clientes'?`
       <td>${c.servidor||''}</td>
@@ -256,7 +258,6 @@ function render(lista){
       <td>${c.vencimento||''}</td>
       <td>${c.hora_vencimento||''}</td>
       <td>${c.mac||''}</td>
-      <td>${calcularStatus(c)}</td>
       <td>
   <button onclick="editar('${c.id}')">Editar</button>
 
