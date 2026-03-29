@@ -541,31 +541,40 @@ async function ativarHumano(telefone){
 
   log("Enviando HUMANO: " + telefone);
 
-  const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: true
-    })
-  });
+  let res;
+
+  try {
+    res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        telefone: telefone,
+        status: true
+      })
+    });
+  } catch(e){
+    log("ERRO FETCH HUMANO: " + e.message);
+    return;
+  }
+
+  log("STATUS HTTP HUMANO: " + res.status);
 
   let txt = "";
 
-try {
-  txt = await res.text();
-  log("Resposta HUMANO: " + txt);
-} catch(e) {
-  log("ERRO AO LER RESPOSTA: " + e.message);
-}
+  try {
+    txt = await res.text();
+    log("RESPOSTA HUMANO: " + txt);
+  } catch(e) {
+    log("ERRO AO LER RESPOSTA HUMANO: " + e.message);
+  }
 
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return { ...c, atendimento_humano: true };
-  }
-  return c;
-});
+    if(String(c.telefone).trim() === String(telefone).trim()){
+      return { ...c, atendimento_humano: true };
+    }
+    return c;
+  });
 
   render(dados);
 }
@@ -574,30 +583,41 @@ async function desativarHumano(telefone){
 
   log("Enviando BOT: " + telefone);
 
-const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({
-    telefone: telefone,
-    status: false
-  })
-});
+  let res;
 
-let txt = "";
+  try {
+    res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        telefone: telefone,
+        status: false
+      })
+    });
+  } catch(e){
+    log("ERRO FETCH BOT: " + e.message);
+    return;
+  }
 
-try {
-  txt = await res.text();
-  log("Resposta BOT: " + txt);
-} catch(e) {
-  log("ERRO AO LER RESPOSTA: " + e.message);
-}
+  log("STATUS HTTP BOT: " + res.status);
+
+  let txt = "";
+
+  try {
+    txt = await res.text();
+    log("RESPOSTA BOT: " + txt);
+  } catch(e) {
+    log("ERRO AO LER RESPOSTA BOT: " + e.message);
+  }
+
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return { ...c, atendimento_humano: false };
-  }
-  return c;
-});
+    if(String(c.telefone).trim() === String(telefone).trim()){
+      return { ...c, atendimento_humano: false };
+    }
+    return c;
+  });
+
   render(dados);
 }
 
