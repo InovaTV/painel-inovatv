@@ -514,7 +514,7 @@ let linha = window.dadosImportados[index];
     document.getElementById("btnImportarSelecionados").style.display = "none";
 
   carregar();
-
+}
 async function ativarHumano(telefone){
   await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
     method:"POST",
