@@ -499,6 +499,7 @@ let linha = window.dadosImportados[index];
   carregar();
 }
 async function ativarHumano(telefone){
+
   await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -508,11 +509,19 @@ async function ativarHumano(telefone){
     })
   });
 
-  alert("Humano ativado 👍");
-  carregar();
+  // 🔥 ATUALIZA LOCALMENTE (SEM ESPERAR BANCO)
+  dados = dados.map(c=>{
+    if(c.telefone === telefone){
+      return { ...c, atendimento_humano: true };
+    }
+    return c;
+  });
+
+  render(dados);
 }
 
 async function desativarHumano(telefone){
+
   await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -522,8 +531,15 @@ async function desativarHumano(telefone){
     })
   });
 
-  alert("Bot reativado 🤖");
-  carregar();
+  // 🔥 ATUALIZA LOCALMENTE
+  dados = dados.map(c=>{
+    if(c.telefone === telefone){
+      return { ...c, atendimento_humano: false };
+    }
+    return c;
+  });
+
+  render(dados);
 }
 
 async function ativarSelecionados(){
