@@ -243,23 +243,19 @@ function render(lista){
     <td>${c.telefone||''}</td>
     <td>${c.usuario||''}</td>
 
-${tela === 'clientes' 
-  ? `<td>${calcularStatus(c)}</td>` 
-  : `<td>${c.atendimento_humano 
-      ? '<span style="color:green;font-weight:bold;">🟢 HUMANO</span>' 
-      : '<span style="color:red;font-weight:bold;">🤖 BOT</span>'}
-    </td>`
-}
-
-    ${tela==='clientes'?`
+${tela === 'clientes' ? `
   <td>${c.servidor||''}</td>
   <td>${c.plano||''}</td>
   <td>${c.valor||''}</td>
   <td>${c.vencimento||''}</td>
   <td>${c.hora_vencimento||''}</td>
   <td>${c.mac||''}</td>
+  <td>${calcularStatus(c)}</td>
 ` : `
-  
+  <td>${c.atendimento_humano 
+    ? '<span style="color:green;font-weight:bold;">🟢 HUMANO</span>' 
+    : '<span style="color:red;font-weight:bold;">🤖 BOT</span>'}
+  </td>
 `}
 
 <td>
