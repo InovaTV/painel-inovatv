@@ -2,15 +2,12 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Painel InovaTV PRO</title>
+<title>Painel InovaTV</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { font-family: Arial; padding:20px; }
-
-button { margin:3px; padding:6px 10px; cursor:pointer; }
 
 .btn-verde { background:green; color:#fff; }
 .btn-vermelho { background:red; color:#fff; }
@@ -18,34 +15,13 @@ button { margin:3px; padding:6px 10px; cursor:pointer; }
 .linha-humano { background:#e6ffe6; }
 .linha-bot { background:#ffe6e6; }
 
-table { width:100%; border-collapse: collapse; table-layout: fixed; }
-th,td { border:1px solid #ccc; padding:6px; overflow:hidden; }
-
-th {
-  position:relative;
-}
-
-.resizer {
-  position:absolute;
-  right:0;
-  top:0;
-  width:5px;
-  height:100%;
-  cursor:col-resize;
-}
+table { width:100%; border-collapse: collapse; }
+th,td { border:1px solid #ccc; padding:6px; }
 
 .progress { width:100%; background:#ddd; height:20px; }
 .progress-bar { height:100%; width:0%; background:green; color:#fff; text-align:center; }
 
-#log {
-  margin-top:10px;
-  background:#000;
-  color:#0f0;
-  padding:10px;
-  height:120px;
-  overflow:auto;
-  font-size:12px;
-}
+#log { background:#000; color:#0f0; padding:10px; height:100px; overflow:auto; font-size:12px; }
 </style>
 </head>
 
@@ -92,10 +68,14 @@ th {
 
 <script>
 
-const supabase = window.supabase.createClient(
-  "https://tiupgtbzikwmseecxbvo.supabase.co",
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c"
-);
+// ===== CONFIG =====
+const CONFIG = {
+  SUPABASE_URL: "https://tiupgtbzikwmseecxbvo.supabase.co",
+  SUPABASE_KEY: "COLE_SUA_ANON_KEY_AQUI",
+  EDGE_HUMANO: "https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle"
+};
+
+const supabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
 
 let tela = "clientes";
 let dados = [];
@@ -114,8 +94,13 @@ function trocarTela(t){
 
 // ===== CARREGAR =====
 async function carregar(){
-  log("🔄 carregando "+tela);
-  const { data } = await supabase.from(tela).select("*");
+  const { data, error } = await supabase.from(tela).select("*");
+
+  if(error){
+    log("ERRO: " + error.message);
+    return;
+  }
+
   dados = data || [];
   montarCabecalho();
   render(dados);
@@ -123,44 +108,78 @@ async function carregar(){
 
 // ===== CABEÇALHO =====
 function montarCabecalho(){
-  if(tela==="clientes"){
-    thead.innerHTML = `<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-    <th>Vencimento</th><th>Status</th><th>Ações</th></tr>`;
-  }else{
-    thead.innerHTML = `<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-    <th>Status</th><th>Ações</th></tr>`;
-  }
 
-  setTimeout(addResizers,100);
+  if(tela === "clientes"){
+    thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Usuário</th>
+      <th>Servidor</th>
+      <th>Plano</th>
+      <th>Valor</th>
+      <th>Vencimento</th>
+      <th>Hora</th>
+      <th>MAC</th>
+      <th>Status</th>
+      <th>Ações</th>
+    </tr>`;
+  } else {
+    thead.innerHTML = `
+    <tr>
+      <th></th>
+      <th>Nome</th>
+      <th>Telefone</th>
+      <th>Usuário</th>
+      <th>Status</th>
+      <th>Ações</th>
+    </tr>`;
+  }
 }
 
 // ===== STATUS =====
 function calcularStatus(c){
   if(!c.vencimento) return "ativo";
+
   let hoje = new Date();
   hoje.setHours(0,0,0,0);
+
   let d = c.vencimento.split("-");
-  let v = new Date(d[0],d[1]-1,d[2]);
-  return v < hoje ? "inativo":"ativo";
+  let v = new Date(d[0], d[1]-1, d[2]);
+
+  return v < hoje ? "inativo" : "ativo";
 }
 
 // ===== RENDER =====
 function render(lista){
+
   tabela.innerHTML = lista.map(c=>{
 
     let status = calcularStatus(c);
 
-    return `<tr class="${c.atendimento_humano?'linha-humano':'linha-bot'}">
+    return `
+<tr class="${c.atendimento_humano ? 'linha-humano' : 'linha-bot'}">
 
-<td><input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()"></td>
+<td>
+<input type="checkbox" class="check"
+data-id="${c.id}"
+data-telefone="${c.telefone}"
+onchange="contarSelecionados()">
+</td>
 
-<td>${c.nome||""}</td>
-<td>${c.telefone||""}</td>
-<td>${c.usuario||""}</td>
+<td>${c.nome || ""}</td>
+<td>${c.telefone || ""}</td>
+<td>${c.usuario || ""}</td>
 
-${tela==="clientes"?`<td>${c.vencimento||""}</td>`:""}
+${tela === "clientes" ? `
+<td>${c.servidor || ""}</td>
+<td>${c.plano || ""}</td>
+<td>${c.valor || ""}</td>
+<td>${c.vencimento || ""}</td>
+<td>${c.hora_vencimento || ""}</td>
+<td>${c.mac || ""}</td>
+` : ""}
 
 <td>${status}</td>
 
@@ -169,7 +188,8 @@ ${tela==="clientes"?`<td>${c.vencimento||""}</td>`:""}
 <button onclick="desativarHumano('${c.telefone}')">🤖</button>
 </td>
 
-</tr>`;
+</tr>
+`;
 
   }).join("");
 
@@ -179,17 +199,20 @@ ${tela==="clientes"?`<td>${c.vencimento||""}</td>`:""}
 // ===== CONTADORES =====
 function atualizarContadores(lista){
   let a=0,v=0;
+
   lista.forEach(c=>{
     let s = calcularStatus(c);
     if(s==="ativo") a++;
     if(s==="inativo") v++;
   });
-  contadorStatus.innerText=`Ativos: ${a} | Vencidos: ${v}`;
+
+  contadorStatus.innerText = `Ativos: ${a} | Vencidos: ${v}`;
   contarSelecionados();
 }
 
 function contarSelecionados(){
-  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll(".check:checked").length;
+  contadorSelecionados.innerText =
+    "Selecionados: " + document.querySelectorAll(".check:checked").length;
 }
 
 // ===== SELEÇÃO =====
@@ -204,11 +227,11 @@ function desmarcarTodos(){
 }
 
 // ===== TOGGLE =====
-async function toggleHumano(tel,status){
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+async function toggleHumano(telefone, status){
+  await fetch(CONFIG.EDGE_HUMANO,{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ telefone:tel, status })
+    body: JSON.stringify({ telefone, status })
   });
 }
 
@@ -218,102 +241,59 @@ async function desativarHumano(t){ await toggleHumano(t,false); carregar(); }
 
 // ===== MULTIPLO =====
 async function ativarSelecionados(){
-  const c = document.querySelectorAll(".check:checked");
-  if(!c.length) return alert("Selecione pelo menos um");
-  for(const i of c) await toggleHumano(i.dataset.telefone,true);
+  const checks = document.querySelectorAll(".check:checked");
+  if(!checks.length) return alert("Selecione pelo menos um");
+
+  for(const c of checks){
+    await toggleHumano(c.dataset.telefone,true);
+  }
+
   carregar();
 }
 
 async function desativarSelecionados(){
-  const c = document.querySelectorAll(".check:checked");
-  if(!c.length) return alert("Selecione pelo menos um");
-  for(const i of c) await toggleHumano(i.dataset.telefone,false);
+  const checks = document.querySelectorAll(".check:checked");
+  if(!checks.length) return alert("Selecione pelo menos um");
+
+  for(const c of checks){
+    await toggleHumano(c.dataset.telefone,false);
+  }
+
   carregar();
 }
 
 // ===== FILTROS =====
-function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
-function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
+function filtrarAtivos(){
+  render(dados.filter(c=>calcularStatus(c)==="ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c=>calcularStatus(c)==="inativo"));
+}
 
 // ===== BUSCA =====
 function buscar(){
   let t = busca.value.toLowerCase();
-  render(dados.filter(c=> (c.nome||"").toLowerCase().includes(t) || (c.telefone||"").includes(t)));
+  render(dados.filter(c =>
+    (c.nome||"").toLowerCase().includes(t) ||
+    (c.telefone||"").includes(t)
+  ));
 }
 
 // ===== EXCLUIR =====
 async function excluirSelecionados(){
-  const c = document.querySelectorAll(".check:checked");
-  if(!c.length) return alert("Selecione pelo menos um");
-  for(const i of c) await supabase.from(tela).delete().eq("id", i.dataset.id);
+  const checks = document.querySelectorAll(".check:checked");
+
+  if(!checks.length) return alert("Selecione pelo menos um");
+
+  for(const c of checks){
+    await supabase.from(tela).delete().eq("id", c.dataset.id);
+  }
+
   carregar();
 }
 
-// ===== IMPORTAR EXCEL =====
-async function importarArquivo(){
-
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Escolha um arquivo");
-
-  const reader = new FileReader();
-
-  reader.onload = async (e)=>{
-    const data = new Uint8Array(e.target.result);
-    const workbook = XLSX.read(data,{type:"array"});
-    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-    const json = XLSX.utils.sheet_to_json(sheet);
-
-    let erros=0;
-
-    for(let i=0;i<json.length;i++){
-
-      try{
-        await supabase.from(tela).insert(json[i]);
-      }catch{
-        erros++;
-      }
-
-      let p = Math.floor((i/json.length)*100);
-      progressBar.style.width=p+"%";
-      progressBar.innerText=p+"%";
-    }
-
-    alert("Importação concluída. Erros: "+erros);
-    carregar();
-  };
-
-  reader.readAsArrayBuffer(file);
-}
-
-// ===== RESIZE COLUNA =====
-function addResizers(){
-  document.querySelectorAll("th").forEach(th=>{
-    const div = document.createElement("div");
-    div.classList.add("resizer");
-    th.appendChild(div);
-
-    let startX, startWidth;
-
-    div.addEventListener("mousedown",(e)=>{
-      startX=e.pageX;
-      startWidth=th.offsetWidth;
-
-      document.onmousemove=(e)=>{
-        th.style.width=(startWidth + e.pageX - startX)+"px";
-      };
-
-      document.onmouseup=()=>document.onmousemove=null;
-    });
-  });
-}
-
-// ===== REALTIME =====
-supabase.channel("realtime")
-.on("postgres_changes",{event:"*",schema:"public"},()=>{
-  log("🔄 realtime update");
-  carregar();
-}).subscribe();
-
+// ===== START =====
 carregar();
 
 </script>
