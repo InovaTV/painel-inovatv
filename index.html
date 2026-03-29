@@ -571,8 +571,8 @@ async function ativarSelecionados() {
     });
 
     // 🔥 ATUALIZA LOCAL
-    const id = check.dataset.id;
-    const item = dados.find(d => d.id == id);
+    const telefone = check.dataset.telefone;
+const item = dados.find(d => d.telefone == telefone);
 
     if (item) {
       item.atendimento_humano = true;
@@ -602,8 +602,8 @@ async function desativarSelecionados() {
     });
 
     // 🔥 ATUALIZA LOCAL
-    const id = check.dataset.id;
-    const item = dados.find(d => d.id == id);
+    const telefone = check.dataset.telefone;
+const item = dados.find(d => d.telefone == telefone);
 
     if (item) {
       item.atendimento_humano = false;
