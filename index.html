@@ -610,26 +610,35 @@ async function ativarSelecionados(){
     return;
   }
 
+  log("🚀 INICIO MASSA HUMANO | total: " + checks.length);
+
   for(const check of checks){
 
     const telefone = check.dataset.telefone;
 
-   log("🚀 INICIO MASSA HUMANO | total: " + checks.length);
+    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        telefone: telefone,
+        status: true
+      })
+    });
 
-const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({
-    telefone: telefone,
-    status: true
-  })
-});
+    log("STATUS MASSA: " + res.status);
 
-log("STATUS MASSA: " + res.status);
+    // 🔥 ATUALIZA LOCAL (ESSENCIAL)
+    dados = dados.map(c=>{
+      if(String(c.telefone).trim() === String(telefone).trim()){
+        return { ...c, atendimento_humano: true };
+      }
+      return c;
+    });
 
   }
 
-  carregar();
+  render(dados); // 🔥 NÃO USAR carregar()
+
 }
 
 async function desativarSelecionados(){
@@ -641,26 +650,34 @@ async function desativarSelecionados(){
     return;
   }
 
+  log("🚀 INICIO MASSA BOT | total: " + checks.length);
+
   for(const check of checks){
 
     const telefone = check.dataset.telefone;
 
-   log("🚀 INICIO MASSA BOT | total: " + checks.length);
+    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        telefone: telefone,
+        status: false
+      })
+    });
 
-const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({
-    telefone: telefone,
-    status: false
-  })
-});
+    log("STATUS MASSA: " + res.status);
 
-log("STATUS MASSA: " + res.status);
+    // 🔥 ATUALIZA LOCAL (ESSENCIAL)
+    dados = dados.map(c=>{
+      if(String(c.telefone).trim() === String(telefone).trim()){
+        return { ...c, atendimento_humano: false };
+      }
+      return c;
+    });
 
   }
 
-  carregar();
+  render(dados); // 🔥 NÃO USAR carregar()
 }
   
 </script>
