@@ -516,6 +516,16 @@ let linha = window.dadosImportados[index];
   carregar();
 }
 async function ativarHumano(telefone){
+
+  // 🔥 muda visual NA HORA
+  const linhas = document.querySelectorAll("tr");
+
+  linhas.forEach(tr => {
+    if(tr.innerText.includes(telefone)){
+      tr.style.background = "#e6ffe6";
+    }
+  });
+
   await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -525,11 +535,20 @@ async function ativarHumano(telefone){
     })
   });
 
-  alert("Humano ativado 👍");
   carregar();
 }
 
 async function desativarHumano(telefone){
+
+  // 🔥 muda visual NA HORA
+  const linhas = document.querySelectorAll("tr");
+
+  linhas.forEach(tr => {
+    if(tr.innerText.includes(telefone)){
+      tr.style.background = "#ffe6e6"; // vermelho
+    }
+  });
+
   await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
     method:"POST",
     headers:{ "Content-Type":"application/json" },
@@ -539,10 +558,8 @@ async function desativarHumano(telefone){
     })
   });
 
-  alert("Bot reativado 🤖");
   carregar();
 }
-
 async function ativarSelecionados(){
 
   const checks = document.querySelectorAll(".check:checked");
