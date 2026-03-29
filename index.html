@@ -562,19 +562,14 @@ async function ativarSelecionados() {
   for (const check of checks) {
     const telefone = check.dataset.telefone;
 
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        telefone,
-        status: true
-      })
-    });
+ await fetch(...)
 
-    // feedback visual imediato
-    const tr = check.closest("tr");
-    tr.style.background = "#e6ffe6";
-  }
+// atualiza o objeto local também
+const id = check.dataset.id;
+const item = dados.find(d => d.id == id);
+if(item){
+  item.atendimento_humano = true;
+}
 
   carregar();
 }
@@ -598,15 +593,15 @@ async function desativarSelecionados() {
         status: false
       })
     });
+const id = check.dataset.id;
+const item = dados.find(d => d.id == id);
 
-    // feedback visual imediato
-    const tr = check.closest("tr");
-    tr.style.background = "#ffe6e6";
-  }
-
-  carregar();
+if(item){
+  item.atendimento_humano = false;
 }
-  
+
+}
+  render(dados);
 </script>
 
 </body>
