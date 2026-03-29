@@ -212,7 +212,7 @@ function trocarTela(t){
 // ===== CARREGAR =====
 async function carregar(){
   const { data } = await client.from(tela).select('*');
-
+console.log("DADOS:", data);
   // 🔥 ORDENAÇÃO ALFABÉTICA
   dados = (data || []).sort((a,b)=>{
     return (a.nome || "").localeCompare(b.nome || "");
