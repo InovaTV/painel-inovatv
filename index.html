@@ -650,7 +650,10 @@ async function ativarSelecionados(){
 
     const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
+      headers:{ 
+  "Content-Type":"application/json",
+  "Authorization":"Bearer " + SUPABASE_KEY
+},
       body: JSON.stringify({
         telefone: telefone,
         status: true
@@ -690,7 +693,10 @@ async function desativarSelecionados(){
 
     const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
+      headers:{ 
+  "Content-Type":"application/json",
+  "Authorization":"Bearer " + SUPABASE_KEY
+},
       body: JSON.stringify({
         telefone: telefone,
         status: false
