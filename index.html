@@ -563,19 +563,23 @@ async function ativarSelecionados(){
     return;
   }
 
-  for(const check of checks){
-    const telefone = check.closest("tr").children[2].innerText.trim();
+ for(const check of checks){
 
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: true
-      })
-    });
-  }
+  const tr = check.closest("tr");
+  const telefone = tr.children[2].innerText.trim();
 
+  // 🔥 MUDA COR NA HORA
+  tr.style.background = "#e6ffe6";
+
+  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      telefone: telefone,
+      status: true
+    })
+  });
+}
   carregar();
 }
 
