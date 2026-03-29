@@ -210,6 +210,7 @@ function atualizarContadorStatus(lista){
 
 // ===== TROCAR TELA =====
 function trocarTela(t){
+  log("🔁 TROCA DE TELA: " + t);
   tela=t;
   statusTela.innerText="Você está em: "+t.toUpperCase();
   carregar();
@@ -262,6 +263,17 @@ async function carregar(){
 
 // ===== RENDER =====
 function render(lista){
+    log("🧠 RENDER CHAMADO | itens: " + (lista ? lista.length : "null"));
+
+  if(!lista){
+    log("❌ LISTA NULL NO RENDER");
+    tabela.innerHTML = "";
+    return;
+  }
+
+  if(lista.length === 0){
+    log("⚠️ LISTA VAZIA");
+  }
   tabela.innerHTML=lista.map(c=>`
   <tr style="${c.atendimento_humano ? 'background:#e3f2fd;' : ''}">
     <td>
@@ -602,7 +614,7 @@ async function ativarSelecionados(){
 
     const telefone = check.dataset.telefone;
 
-   log("MASSA HUMANO: " + telefone);
+   log("🚀 INICIO MASSA HUMANO | total: " + checks.length);
 
 const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
   method:"POST",
@@ -633,7 +645,7 @@ async function desativarSelecionados(){
 
     const telefone = check.dataset.telefone;
 
-   log("MASSA BOT: " + telefone);
+   log("🚀 INICIO MASSA BOT | total: " + checks.length);
 
 const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
   method:"POST",
