@@ -275,7 +275,11 @@ function render(lista){
     log("⚠️ LISTA VAZIA");
   }
   tabela.innerHTML=lista.map(c=>`
-  <tr style="${c.atendimento_humano ? 'background:#e3f2fd;' : ''}">
+  <tr style="${
+  c.atendimento_humano === true 
+    ? 'background:#2196f3;color:#fff;' 
+    : 'background:#e53935;color:#fff;'
+}">
     <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
