@@ -519,54 +519,60 @@ async function ativarHumano(telefone){
 
   let txt = "";
 
-try {
-  txt = await res.text();
-  log("Resposta HUMANO: " + txt);
-} catch(e) {
-  log("ERRO AO LER RESPOSTA: " + e.message);
-}
+  try {
+    txt = await res.text();
+    log("Resposta HUMANO: " + txt);
+  } catch(e) {
+    log("ERRO AO LER RESPOSTA: " + e.message);
+  }
 
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return { ...c, atendimento_humano: true };
-  }
-  return c;
-});
+    if(String(c.telefone).trim() === String(telefone).trim()){
+      return { ...c, atendimento_humano: true };
+    }
+    return c;
+  });
 
   render(dados);
 }
+
+
 
 async function desativarHumano(telefone){
 
   log("Enviando BOT: " + telefone);
 
-const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-  method:"POST",
-  headers:{ "Content-Type":"application/json" },
-  body: JSON.stringify({
-    telefone: telefone,
-    status: false
-  })
-});
+  const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      telefone: telefone,
+      status: false
+    })
+  });
 
-let txt = "";
+  let txt = "";
 
-try {
-  txt = await res.text();
-  log("Resposta BOT: " + txt);
-} catch(e) {
-  log("ERRO AO LER RESPOSTA: " + e.message);
-}
+  try {
+    txt = await res.text();
+    log("Resposta BOT: " + txt);
+  } catch(e) {
+    log("ERRO AO LER RESPOSTA: " + e.message);
+  }
+
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return { ...c, atendimento_humano: false };
-  }
-  return c;
+    if(String(c.telefone).trim() === String(telefone).trim()){
+      return { ...c, atendimento_humano: false };
+    }
+    return c;
+  });
 
   render(dados);
 }
+
+
 
 async function ativarSelecionados(){
 
@@ -608,35 +614,40 @@ async function ativarSelecionados(){
 
 
 
-async function desativarHumano(telefone){
+async function desativarSelecionados(){
 
-  log("Enviando BOT: " + telefone);
+  const checks = document.querySelectorAll(".check:checked");
 
-  const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: false
-    })
-  });
-
-  let txt = "";
-
-  try {
-    txt = await res.text();
-    log("Resposta BOT: " + txt);
-  } catch(e) {
-    log("ERRO AO LER RESPOSTA: " + e.message);
+  if(checks.length === 0){
+    alert("Selecione pelo menos um contato");
+    return;
   }
 
-  // 🔥 ATUALIZA LOCALMENTE
-  dados = dados.map(c=>{
-    if(String(c.telefone).trim() === String(telefone).trim()){
-      return { ...c, atendimento_humano: false };
-    }
-    return c;
-  });
+  for(const check of checks){
+
+    const telefone = check.dataset.telefone;
+
+    log("MASSA BOT: " + telefone);
+
+    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({
+        telefone: telefone,
+        status: false
+      })
+    });
+
+    log("STATUS MASSA: " + res.status);
+
+    dados = dados.map(c=>{
+      if(String(c.telefone).trim() === String(telefone).trim()){
+        return { ...c, atendimento_humano: false };
+      }
+      return c;
+    });
+
+  }
 
   render(dados);
 }
