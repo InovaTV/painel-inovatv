@@ -252,13 +252,22 @@ ${tela === 'clientes'
 }
 
     ${tela==='clientes'?`
-      <td>${c.servidor||''}</td>
-      <td>${c.plano||''}</td>
-      <td>${c.valor||''}</td>
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.mac||''}</td>
-      <td>
+  <td>${c.servidor||''}</td>
+  <td>${c.plano||''}</td>
+  <td>${c.valor||''}</td>
+  <td>${c.vencimento||''}</td>
+  <td>${c.hora_vencimento||''}</td>
+  <td>${c.mac||''}</td>
+` : `
+  <td>-</td>
+  <td>-</td>
+  <td>-</td>
+  <td>-</td>
+  <td>-</td>
+  <td>-</td>
+`}
+
+<td>
   <button onclick="editar('${c.id}')">Editar</button>
 
   <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
@@ -269,19 +278,6 @@ ${tela === 'clientes'
     🤖
   </button>
 </td>
-    `:`
-      <td>
-  <button onclick="editar('${c.id}')">Editar</button>
-
-  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
-    👤
-  </button>
-
-  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">
-    🤖
-  </button>
-</td>
-    `}
   </tr>
   `).join('');
 
