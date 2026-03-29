@@ -555,59 +555,58 @@ async function desativarHumano(telefone){
 
   carregar();
 }
-async function ativarSelecionados(){
-  const checks = document.querySelectorAll('.check:checked');
+async function ativarSelecionados() {
+  const checks = document.querySelectorAll(".check:checked");
 
-  if(checks.length === 0){
-    alert("Selecione pelo menos um cliente");
+  if (checks.length === 0) {
+    alert(`Selecione pelo menos um ${tela === "clientes" ? "cliente" : "contato"}`);
     return;
   }
 
- for(const check of checks){
+  for (const check of checks) {
+    const telefone = check.dataset.telefone;
 
-  const tr = check.closest("tr");
-const telefone = check.dataset.telefone;
+    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        telefone,
+        status: true
+      })
+    });
 
-  // 🔥 MUDA COR NA HORA
-  tr.style.background = "#e6ffe6";
+    // feedback visual imediato
+    const tr = check.closest("tr");
+    tr.style.background = "#e6ffe6";
+  }
 
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: true
-    })
-  });
-}
   carregar();
 }
 
-async function desativarSelecionados(){
-  const checks = document.querySelectorAll('.check:checked');
+async function desativarSelecionados() {
+  const checks = document.querySelectorAll(".check:checked");
 
-  if(checks.length === 0){
-    alert("Selecione pelo menos um cliente");
+  if (checks.length === 0) {
+    alert(`Selecione pelo menos um ${tela === "clientes" ? "cliente" : "contato"}`);
     return;
   }
 
-  for(const check of checks){
+  for (const check of checks) {
+    const telefone = check.dataset.telefone;
 
-  const tr = check.closest("tr");
-  const telefone = check.dataset.telefone;
+    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        telefone,
+        status: false
+      })
+    });
 
-  // 🔥 MUDA COR NA HORA
-  tr.style.background = "#ffe6e6";
-
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: false
-    })
-  });
-}
+    // feedback visual imediato
+    const tr = check.closest("tr");
+    tr.style.background = "#ffe6e6";
+  }
 
   carregar();
 }
