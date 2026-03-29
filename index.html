@@ -546,7 +546,10 @@ async function ativarHumano(telefone){
   try {
     res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
+      headers:{ 
+        "Content-Type":"application/json",
+        "Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c"
+      },
       body: JSON.stringify({
         telefone: telefone,
         status: true
@@ -579,6 +582,8 @@ async function ativarHumano(telefone){
   render(dados);
 }
 
+
+
 async function desativarHumano(telefone){
 
   log("Enviando BOT: " + telefone);
@@ -588,7 +593,10 @@ async function desativarHumano(telefone){
   try {
     res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
-      headers:{ "Content-Type":"application/json" },
+      headers:{ 
+        "Content-Type":"application/json",
+        "Authorization":"Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c"
+      },
       body: JSON.stringify({
         telefone: telefone,
         status: false
