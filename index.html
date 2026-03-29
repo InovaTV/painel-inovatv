@@ -217,13 +217,7 @@ function trocarTela(t){
 
 // ===== CARREGAR =====
 async function carregar(){
-  const { data, error } = await client.from(tela).select('*');
-
-if(error){
-  log("ERRO SUPABASE: " + error.message);
-}
-
-log("DADOS RECEBIDOS: " + JSON.stringify(data));
+  const { data } = await client.from(tela).select('*');
 
   // 🔥 ORDENAÇÃO ALFABÉTICA
   dados = (data || []).sort((a,b)=>{
@@ -525,60 +519,54 @@ async function ativarHumano(telefone){
 
   let txt = "";
 
-  try {
-    txt = await res.text();
-    log("Resposta HUMANO: " + txt);
-  } catch(e) {
-    log("ERRO AO LER RESPOSTA: " + e.message);
-  }
+try {
+  txt = await res.text();
+  log("Resposta HUMANO: " + txt);
+} catch(e) {
+  log("ERRO AO LER RESPOSTA: " + e.message);
+}
 
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-    if(String(c.telefone).trim() === String(telefone).trim()){
-      return { ...c, atendimento_humano: true };
-    }
-    return c;
-  });
+  if(String(c.telefone).trim() === String(telefone).trim()){
+    return { ...c, atendimento_humano: true };
+  }
+  return c;
+});
 
   render(dados);
 }
-
-
 
 async function desativarHumano(telefone){
 
   log("Enviando BOT: " + telefone);
 
-  const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: false
-    })
-  });
+const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    telefone: telefone,
+    status: false
+  })
+});
 
-  let txt = "";
+let txt = "";
 
-  try {
-    txt = await res.text();
-    log("Resposta BOT: " + txt);
-  } catch(e) {
-    log("ERRO AO LER RESPOSTA: " + e.message);
-  }
-
+try {
+  txt = await res.text();
+  log("Resposta BOT: " + txt);
+} catch(e) {
+  log("ERRO AO LER RESPOSTA: " + e.message);
+}
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-    if(String(c.telefone).trim() === String(telefone).trim()){
-      return { ...c, atendimento_humano: false };
-    }
-    return c;
-  });
-
+  if(String(c.telefone).trim() === String(telefone).trim()){
+    return { ...c, atendimento_humano: false };
+  }
+  return c;
+});
   render(dados);
 }
-
-
 
 async function ativarSelecionados(){
 
@@ -593,32 +581,23 @@ async function ativarSelecionados(){
 
     const telefone = check.dataset.telefone;
 
-    log("MASSA HUMANO: " + telefone);
+   log("MASSA HUMANO: " + telefone);
 
-    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: true
-      })
-    });
+const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    telefone: telefone,
+    status: true
+  })
+});
 
-    log("STATUS MASSA: " + res.status);
-
-    dados = dados.map(c=>{
-      if(String(c.telefone).trim() === String(telefone).trim()){
-        return { ...c, atendimento_humano: true };
-      }
-      return c;
-    });
+log("STATUS MASSA: " + res.status);
 
   }
 
-  render(dados);
+  carregar();
 }
-
-
 
 async function desativarSelecionados(){
 
@@ -633,27 +612,26 @@ async function desativarSelecionados(){
 
     const telefone = check.dataset.telefone;
 
-    log("MASSA BOT: " + telefone);
+   log("MASSA BOT: " + telefone);
 
-    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: false
-      })
-    });
+const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    telefone: telefone,
+    status: false
+  })
+});
 
-    log("STATUS MASSA: " + res.status);
-
-    dados = dados.map(c=>{
-      if(String(c.telefone).trim() === String(telefone).trim()){
-        return { ...c, atendimento_humano: false };
-      }
-      return c;
-    });
+log("STATUS MASSA: " + res.status);
 
   }
 
-  render(dados);
+  carregar();
 }
+  
+</script>
+
+</body>
+</html>
+
