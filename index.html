@@ -584,24 +584,21 @@ async function ativarSelecionados(){
 }
 
 async function desativarSelecionados(){
-
-  const checks = document.querySelectorAll(".check:checked");
+  const checks = document.querySelectorAll('.check:checked');
 
   if(checks.length === 0){
-    alert(`Selecione pelo menos um ${tela.slice(0,-1)}`);
+    alert("Selecione pelo menos um cliente");
     return;
   }
 
   for(const check of checks){
+    const telefone = check.closest("tr").children[2].innerText.trim();
 
-    const tr = check.closest("tr");
-    const telefone = tr.querySelector("td:nth-child(3)").innerText.trim();
-
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
+    await fetch("https://SEU-PROJETO.supabase.co/functions/v1/humano-toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        telefone,
+        telefone: telefone,
         status: false
       })
     });
