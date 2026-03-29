@@ -574,9 +574,6 @@ async function ativarSelecionados(){
     const tr = check.closest("tr");
     const telefone = tr.querySelector("td:nth-child(3)").innerText.trim();
 
-    // 🔥 muda visual NA HORA
-    tr.style.background = "#e6ffe6";
-
     await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
@@ -590,7 +587,7 @@ async function ativarSelecionados(){
   carregar();
 }
 
-async function desativarSelecionados(){
+async function ativarSelecionados(){
 
   const checks = document.querySelectorAll(".check:checked");
 
@@ -604,15 +601,12 @@ async function desativarSelecionados(){
     const tr = check.closest("tr");
     const telefone = tr.querySelector("td:nth-child(3)").innerText.trim();
 
-    // 🔥 muda visual NA HORA
-    tr.style.background = "#ffe6e6";
-
     await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
         telefone,
-        status: false
+        status: true
       })
     });
   }
