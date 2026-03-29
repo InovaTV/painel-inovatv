@@ -500,6 +500,35 @@ let linha = window.dadosImportados[index];
     document.getElementById("btnImportarSelecionados").style.display = "none";
 
   carregar();
+
+async function ativarHumano(telefone){
+  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      telefone: telefone,
+      status: true
+    })
+  });
+
+  alert("Humano ativado 👍");
+  carregar();
+}
+
+async function desativarHumano(telefone){
+  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      telefone: telefone,
+      status: false
+    })
+  });
+
+  alert("Bot reativado 🤖");
+  carregar();
+}
+    
 }
 
 </script>
