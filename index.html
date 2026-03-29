@@ -517,8 +517,14 @@ async function ativarHumano(telefone){
     })
   });
 
-  const txt = await res.text();
+  let txt = "";
+
+try {
+  txt = await res.text();
   log("Resposta HUMANO: " + txt);
+} catch(e) {
+  log("ERRO AO LER RESPOSTA: " + e.message);
+}
 
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
@@ -544,8 +550,14 @@ const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/h
   })
 });
 
-const txt = await res.text();
-log("Resposta BOT: " + txt);
+let txt = "";
+
+try {
+  txt = await res.text();
+  log("Resposta HUMANO: " + txt);
+} catch(e) {
+  log("ERRO AO LER RESPOSTA: " + e.message);
+}
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
   if(c.telefone === telefone){
