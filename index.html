@@ -5,7 +5,6 @@
 <title>Painel InovaTV</title>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
 <style>
 body { font-family: Arial; padding:20px; }
@@ -23,51 +22,12 @@ button {
 .btn-verde { background:#4CAF50; color:#fff; }
 .btn-vermelho { background:#f44336; color:#fff; }
 
-#progressBar { width:100%; background:#ccc; height:20px; }
-#progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
-
-#logErro {
-  background:#000;
-  color:#0f0;
-  padding:10px;
-  margin-top:10px;
-  font-size:12px;
-  max-height:200px;
-  overflow:auto;
-}
-
 table { width:100%; border-collapse: collapse; font-size:13px; }
 th,td { padding:6px; border:1px solid #ccc; }
 
-#modalEdit {
-  display:none;
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  align-items:center;
-  justify-content:center;
-}
+.linha-humano { background:#e6ffe6; }
+.linha-bot { background:#ffe6e6; }
 
-#modalBox {
-  background:#111;
-  padding:20px;
-  border-radius:10px;
-  color:#fff;
-  width:350px;
-}
-
-#modalBox input {
-  width:100%;
-  padding:8px;
-  margin-top:10px;
-}
-
-/* NOVO */
-#contadorStatus {
-  margin:10px 0;
-  font-weight:bold;
-}
 </style>
 </head>
 
@@ -79,104 +39,79 @@ th,td { padding:6px; border:1px solid #ccc; }
 <button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
 <button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
 
-  <button onclick="ativarSelecionados()" style="background:green;color:white;margin-left:10px;">
-  👤 Ativar Humano
-</button>
-
-<button onclick="desativarSelecionados()" style="background:red;color:white;">
-  🤖 Ativar Bot
-</button>
+<button onclick="ativarSelecionados()" class="btn-verde">👤 Ativar Humano</button>
+<button onclick="desativarSelecionados()" class="btn-vermelho">🤖 Ativar Bot</button>
 
 <br><br>
 
-<input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') buscar()">
+<input id="busca" placeholder="Telefone ou Nome">
 <button onclick="buscar()">Buscar</button>
 
 <hr>
 
-<input type="file" id="inputArquivo">
-<button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
-
-  <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
-  IMPORTAR SELECIONADOS
-</button>
-
-<div id="progressBar"><div id="progress">0%</div></div>
-<div id="logErro"></div>
-
-<hr>
-
 <div id="contadorSelecionados">Selecionados: 0</div>
-
-<!-- NOVO -->
 <div id="contadorStatus">Ativos: 0 | Vencidos: 0</div>
 
 <button onclick="selecionarTodos()">Selecionar todos</button>
 <button onclick="desmarcarTodos()">Desmarcar</button>
 <button onclick="filtrarAtivos()">Ativos</button>
 <button onclick="filtrarVencidos()">Vencidos</button>
-<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
 
 <table>
 <thead id="thead"></thead>
 <tbody id="tabela"></tbody>
 </table>
 
-<div id="modalEdit">
-  <div id="modalBox">
-    <div id="modalLabel"></div>
-    <input id="modalInput">
-    <br><br>
-    <button onclick="modalCancelar()">Cancelar</button>
-    <button onclick="modalSalvar()">Salvar edição</button>
-    <button onclick="modalOk()">OK</button>
-  </div>
-</div>
-
 <script>
 
+// ===== CONFIG =====
 const client = supabase.createClient(
   'https://tiupgtbzikwmseecxbvo.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 
-let tela='clientes';
-let dados=[];
-let modalResolve;
-let dadosEditados={};
+let tela = 'clientes';
+let dados = [];
 
-// ===== CONTATO SEGURO =====
-async function salvarContatoSeguro(dados){
-  const { error } = await client.from('contatos').insert(dados);
-  if(error){
-    if(error.message.includes("duplicate key")){
-      console.log("Contato duplicado ignorado");
-    } else {
-      console.error("Erro contato:", error.message);
-    }
+// ===== TROCAR TELA =====
+function trocarTela(t){
+  tela = t;
+  statusTela.innerText = "Você está em: " + t.toUpperCase();
+  carregar();
+}
+
+// ===== CARREGAR DADOS =====
+async function carregar(){
+  const { data } = await client.from(tela).select('*');
+
+  dados = data || [];
+
+  montarCabecalho();
+  render(dados);
+}
+
+// ===== CABEÇALHO =====
+function montarCabecalho(){
+  if(tela === 'clientes'){
+    thead.innerHTML = `
+      <tr>
+        <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
+        <th>Vencimento</th><th>Status</th><th>Ações</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
+        <th>Status</th><th>Ações</th>
+      </tr>
+    `;
   }
 }
 
-// ===== MODAL =====
-function abrirModal(label, valor){
-  return new Promise(resolve=>{
-    modalResolve=resolve;
-    modalLabel.innerText=label;
-    modalInput.value=valor||"";
-    modalEdit.style.display="flex";
-  });
-}
-
-function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valor:modalInput.value}); }
-function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
-function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
-
-// ===== STATUS =====
+// ===== CALCULAR STATUS =====
 function calcularStatus(c){
-
-  if(!c.vencimento || !c.hora_vencimento){
-    return "erro";
-  }
+  if(!c.vencimento) return "ativo";
 
   let hoje = new Date();
   hoje.setHours(0,0,0,0);
@@ -187,433 +122,139 @@ function calcularStatus(c){
   return venc < hoje ? "inativo" : "ativo";
 }
 
-// ===== CONTADOR =====
-function atualizarContadorStatus(lista){
-
-  let ativos = 0;
-  let vencidos = 0;
-
-  lista.forEach(c=>{
-    let status = calcularStatus(c);
-    if(status === "ativo") ativos++;
-    if(status === "inativo") vencidos++;
-  });
-
-  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
-}
-
-// ===== TROCAR TELA =====
-function trocarTela(t){
-  tela=t;
-  statusTela.innerText="Você está em: "+t.toUpperCase();
-  carregar();
-}
-
-// ===== CARREGAR =====
-async function carregar(){
-  const { data } = await client.from(tela).select('*');
-console.log("DADOS:", data);
-  // 🔥 ORDENAÇÃO ALFABÉTICA
-  dados = (data || []).sort((a,b)=>{
-    return (a.nome || "").localeCompare(b.nome || "");
-  });
-
-  if(tela==='clientes'){
-    thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-      <th>Servidor</th><th>Plano</th><th>Valor</th>
-      <th>Vencimento</th><th>Hora</th><th>MAC</th>
-      <th>Status</th><th>Ações</th>
-    </tr>`;
-  } else {
-    thead.innerHTML=`<tr>
-  <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Status</th><th>Ações</th>
-</tr>`;
-  }
-
-  render(dados);
-}
-
 // ===== RENDER =====
 function render(lista){
 
-  tabela.innerHTML = lista.map(c => `
-    <tr style="${c.atendimento_humano ? 'background:#e6ffe6;' : 'background:#ffe6e6;'}">
+  tabela.innerHTML = lista.map(c => {
+
+    let status = calcularStatus(c);
+
+    return `
+    <tr class="${c.atendimento_humano ? 'linha-humano' : 'linha-bot'}">
 
       <td>
-        <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
+        <input type="checkbox" class="check"
+          data-telefone="${c.telefone}">
       </td>
 
       <td>${c.nome || ''}</td>
       <td>${c.telefone || ''}</td>
       <td>${c.usuario || ''}</td>
 
-      ${tela === 'clientes' ? `
-        <td>${c.servidor || ''}</td>
-        <td>${c.plano || ''}</td>
-        <td>${c.valor || ''}</td>
-        <td>${c.vencimento || ''}</td>
-        <td>${c.hora_vencimento || ''}</td>
-        <td>${c.mac || ''}</td>
-      ` : ''}
+      ${tela === 'clientes' ? `<td>${c.vencimento || ''}</td>` : ''}
 
-      <td>${c.status || ''}</td>
+      <td>${status}</td>
 
       <td>
-        <button onclick="editar('${c.id}')">Editar</button>
-
-        <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
-          👤
-        </button>
-
-        <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">
-          🤖
-        </button>
+        <button onclick="ativarHumano('${c.telefone}')">👤</button>
+        <button onclick="desativarHumano('${c.telefone}')">🤖</button>
       </td>
 
     </tr>
-  `).join('');
+    `;
+  }).join('');
 
+  atualizarContadores(lista);
+}
+
+// ===== CONTADORES =====
+function atualizarContadores(lista){
+
+  let ativos = 0;
+  let vencidos = 0;
+
+  lista.forEach(c=>{
+    let s = calcularStatus(c);
+    if(s === "ativo") ativos++;
+    if(s === "inativo") vencidos++;
+  });
+
+  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
   contarSelecionados();
-  atualizarContadorStatus(lista);
 }
 
-// ===== CRON AUTOMÁTICO =====
-setInterval(()=>{
-  console.log("Sincronizando...");
-  carregar();
-}, 60000);
-
-// ===== RESTO DO CÓDIGO (INTACTO) =====
+// ===== SELEÇÃO =====
 function contarSelecionados(){
-  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
+  contadorSelecionados.innerText =
+    "Selecionados: " + document.querySelectorAll('.check:checked').length;
 }
-function selecionarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=true); contarSelecionados(); }
-function desmarcarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=false); contarSelecionados(); }
-function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
-function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
 
-async function deletarSelecionados(){
-  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
-  if(ids.length===0)return alert("Nada selecionado");
-  if(!confirm("Deseja excluir?"))return;
+function selecionarTodos(){
+  document.querySelectorAll('.check').forEach(c=>c.checked=true);
+  contarSelecionados();
+}
 
-  for(let i=0;i<ids.length;i++){
-    await client.from(tela).delete().eq('id',ids[i]);
-    let p=Math.floor(((i+1)/ids.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
+function desmarcarTodos(){
+  document.querySelectorAll('.check').forEach(c=>c.checked=false);
+  contarSelecionados();
+}
+
+// ===== ATIVAR / DESATIVAR INDIVIDUAL =====
+async function ativarHumano(telefone){
+  await toggleHumano(telefone, true);
+}
+
+async function desativarHumano(telefone){
+  await toggleHumano(telefone, false);
+}
+
+// ===== ATIVAR / DESATIVAR MULTIPLOS =====
+async function ativarSelecionados(){
+  const checks = document.querySelectorAll(".check:checked");
+
+  if(!checks.length) return alert("Selecione pelo menos um");
+
+  for(const c of checks){
+    await toggleHumano(c.dataset.telefone, true);
   }
 
-  alert("Excluído");
   carregar();
 }
 
-function normalizar(t){
-  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+async function desativarSelecionados(){
+  const checks = document.querySelectorAll(".check:checked");
+
+  if(!checks.length) return alert("Selecione pelo menos um");
+
+  for(const c of checks){
+    await toggleHumano(c.dataset.telefone, false);
+  }
+
+  carregar();
 }
 
+// ===== FUNÇÃO CENTRAL (SUPABASE) =====
+async function toggleHumano(telefone, status){
+  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ telefone, status })
+  });
+}
+
+// ===== FILTROS =====
+function filtrarAtivos(){
+  render(dados.filter(c=>calcularStatus(c)==="ativo"));
+}
+
+function filtrarVencidos(){
+  render(dados.filter(c=>calcularStatus(c)==="inativo"));
+}
+
+// ===== BUSCA =====
 function buscar(){
-  let termo=normalizar(busca.value);
+  let termo = busca.value.toLowerCase();
+
   render(dados.filter(c =>
-    normalizar(c.nome).includes(termo) ||
+    (c.nome||"").toLowerCase().includes(termo) ||
     (c.telefone||"").includes(termo)
   ));
 }
 
-// ===== EDITAR =====
-async function editar(id){
-
-  const { data } = await client.from(tela).select('*').eq('id',id).single();
-
-  let campos;
-
-  // 🔥 DEFINE CAMPOS POR TELA (SEM QUEBRAR CONTATOS)
-  if(tela === 'clientes'){
-    campos = [
-      'nome',
-      'telefone',
-      'usuario',
-      'servidor',
-      'plano',
-      'valor',
-      'vencimento',
-      'hora_vencimento',
-      'mac'
-    ];
-  } else {
-    campos = ['nome','telefone','usuario'];
-  }
-
-  dadosEditados={};
-
-  for(let campo of campos){
-
-    let r = await abrirModal(campo, data[campo]);
-
-    if(r.tipo === "cancelar") return;
-
-    dadosEditados[campo] = r.valor;
-
-    // 🔥 SALVAR PARCIAL (SEM QUEBRAR SUA LÓGICA)
-    if(r.tipo === "salvar"){
-      await salvar(id);
-      return;
-    }
-  }
-
-  // 🔥 SALVAR FINAL
-  await salvar(id);
-}
-
-// ===== SALVAR (CORRETO SEM QUEBRAR NADA) =====
-async function salvar(id){
-
-  let dados = { ...dadosEditados };
-
-  // 🔥 TRATAMENTO SOMENTE PARA CLIENTES
-  if(tela === 'clientes'){
-
-    // DATA (se vier dd/mm/yyyy → converte)
-    if(dados.vencimento && typeof dados.vencimento === 'string'){
-      if(dados.vencimento.includes('/')){
-        let p = dados.vencimento.split('/');
-        if(p.length === 3){
-          dados.vencimento = `${p[2]}-${p[1]}-${p[0]}`;
-        }
-      }
-    }
-
-    // VALOR → número
-    if(dados.valor){
-      dados.valor = Number(dados.valor);
-    }
-  }
-
-  console.log("SALVANDO:", dados);
-
-  const { error } = await client
-    .from(tela)
-    .update(dados)
-    .eq('id', id);
-
-  if(error){
-    console.log("ERRO AO SALVAR:", error);
-    alert("Erro ao salvar");
-    return;
-  }
-
-  // 🔥 IMPORTANTE: NÃO ALTEREI SUA LÓGICA
-  carregar();
-}
-  
-// ===== IMPORTAÇÃO =====
-async function importarArquivo(){
-
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  const reader = new FileReader();
-
-  reader.onload = async (e)=>{
-
-    const wb = XLSX.read(e.target.result,{type:'binary'});
-    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-    if(json.length === 0){
-      alert("Arquivo vazio");
-      return;
-    }
-
-    // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
-  dados = json.map((c,i)=>({
-  ...c,
-  id: i // 👈 AQUI É O SEGREDO
-}));
-
-    render(dados);
-
-    window.dadosImportados = json;
-
-    alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
-
-    document.getElementById("btnImportarSelecionados").style.display = "inline-block";
-
-    // 🔥 CRIA BOTÃO SE NÃO EXISTIR
-    
-  };
-
-  reader.readAsBinaryString(file);
-}
-
+// ===== START =====
 carregar();
 
-  async function importarSelecionados(){
-
-  const checks = document.querySelectorAll('.check:checked');
-
-  if(checks.length === 0){
-    alert("Selecione pelo menos um cliente");
-    return;
-  }
-
-  let erros = 0;
-
-  for(let i=0;i<checks.length;i++){
-
-    const index = checks[i].dataset.id;
-let linha = window.dadosImportados[index];
-
-    try{
-
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
-      if(!telefone.startsWith("55")) telefone="55"+telefone;
-
-      let usuario=linha.usuario || ("user"+i);
-
-      await client.from('clientes').insert({
-        nome:linha.nome,
-        telefone,
-        usuario,
-        servidor:linha.servidor,
-        plano:linha.plano,
-        valor:linha.valor,
-        vencimento:linha.vencimento,
-        hora_vencimento:linha.hora_vencimento||linha.hora,
-        mac:linha.mac
-      });
-
-      await salvarContatoSeguro({
-        telefone,
-        usuario,
-        nome:linha.nome,
-        cliente:true
-      });
-
-    }catch(e){
-      erros++;
-    }
-
-    let p=Math.floor(((i+1)/checks.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
-  }
-
-  alert("Importação concluída 🚀 Erros: "+erros);
-
-    document.getElementById("btnImportarSelecionados").style.display = "none";
-
-  carregar();
-}
-async function ativarHumano(telefone){
-
-  // 🔥 muda visual NA HORA
-  const linhas = document.querySelectorAll("tr");
-
-  linhas.forEach(tr => {
-    if(tr.innerText.includes(telefone)){
-      tr.style.background = "#e6ffe6";
-    }
-  });
-
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: true
-    })
-  });
-
-  carregar();
-}
-
-async function desativarHumano(telefone){
-
-  // 🔥 muda visual NA HORA
-  const linhas = document.querySelectorAll("tr");
-
-  linhas.forEach(tr => {
-    if(tr.innerText.includes(telefone)){
-      tr.style.background = "#ffe6e6"; // vermelho
-    }
-  });
-
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: false
-    })
-  });
-
-  carregar();
-}
-async function ativarSelecionados() {
-  const checks = document.querySelectorAll(".check:checked");
-
-  if (checks.length === 0) {
-    alert(`Selecione pelo menos um ${tela === "clientes" ? "cliente" : "contato"}`);
-    return;
-  }
-
-  for (const check of checks) {
-    const telefone = check.dataset.telefone;
-
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        telefone,
-        status: true
-      })
-    });
-
-    // 🔥 ATUALIZA LOCAL
-    const telefone = check.dataset.telefone;
-const item = dados.find(d => d.telefone == telefone);
-
-    if (item) {
-      item.atendimento_humano = true;
-    }
-  }
-
-  render(dados);
-}
-async function desativarSelecionados() {
-  const checks = document.querySelectorAll(".check:checked");
-
-  if (checks.length === 0) {
-    alert(`Selecione pelo menos um ${tela === "clientes" ? "cliente" : "contato"}`);
-    return;
-  }
-
-  for (const check of checks) {
-    const telefone = check.dataset.telefone;
-
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        telefone,
-        status: false
-      })
-    });
-
-    // 🔥 ATUALIZA LOCAL
-    const telefone = check.dataset.telefone;
-const item = dados.find(d => d.telefone == telefone);
-
-    if (item) {
-      item.atendimento_humano = false;
-    }
-  }
-
-  render(dados);
-}
 </script>
 
 </body>
 </html>
-
