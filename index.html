@@ -252,7 +252,7 @@ function render(lista){
       <td>${c.hora_vencimento||''}</td>
       <td>${c.mac||''}</td>
       <td>${c.status || ''}</td>
-      <td>
+<td>
   <button onclick="editar('${c.id}')">Editar</button>
 
   <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
@@ -263,22 +263,6 @@ function render(lista){
     🤖
   </button>
 </td>
-    `:`
-      <td>
-  <button onclick="editar('${c.id}')">Editar</button>
-
-  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
-    👤
-  </button>
-
-  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">
-    🤖
-  </button>
-</td>
-    `}
-  </tr>
-  `).join('');
-
   contarSelecionados();
   atualizarContadorStatus(lista);
 }
