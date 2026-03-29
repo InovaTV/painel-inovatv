@@ -510,7 +510,7 @@ async function ativarHumano(telefone){
   });
 
   // 🔥 ATUALIZA LOCALMENTE (SEM ESPERAR BANCO)
-  });dados = dados.map(c=>{
+  dados = dados.map(c=>{
   if(String(c.telefone).trim() === String(telefone).trim()){
     return { ...c, atendimento_humano: true };
   }
