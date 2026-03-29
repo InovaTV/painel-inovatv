@@ -217,7 +217,13 @@ function trocarTela(t){
 
 // ===== CARREGAR =====
 async function carregar(){
-  const { data } = await client.from(tela).select('*');
+  const { data, error } = await client.from(tela).select('*');
+
+if(error){
+  log("ERRO SUPABASE: " + error.message);
+}
+
+log("DADOS RECEBIDOS: " + JSON.stringify(data));
 
   // 🔥 ORDENAÇÃO ALFABÉTICA
   dados = (data || []).sort((a,b)=>{
