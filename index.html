@@ -562,18 +562,25 @@ async function ativarSelecionados() {
   for (const check of checks) {
     const telefone = check.dataset.telefone;
 
- await fetch(...)
+    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        telefone,
+        status: true
+      })
+    });
 
-// atualiza o objeto local também
-const id = check.dataset.id;
-const item = dados.find(d => d.id == id);
-if(item){
-  item.atendimento_humano = true;
+    const id = check.dataset.id;
+    const item = dados.find(d => d.id == id);
+
+    if(item){
+      item.atendimento_humano = true;
+    }
+  }
+
+  render(dados);
 }
-
-  carregar();
-}
-
 async function desativarSelecionados() {
   const checks = document.querySelectorAll(".check:checked");
 
