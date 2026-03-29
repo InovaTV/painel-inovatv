@@ -237,7 +237,7 @@ async function carregar(){
 function render(lista){
   tabela.innerHTML=lista.map(c=>`
   <tr style="${c.atendimento_humano ? 'background:#e6ffe6;' : ''}">
-    <td><input type="checkbox" class="check" data-id="${c.id}" onchange="contarSelecionados()"></td>
+    <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
     <td>${c.nome||''}</td>
     <td>${c.telefone||''}</td>
     <td>${c.usuario||''}</td>
@@ -534,19 +534,20 @@ async function ativarSelecionados(){
   }
 
   for(const check of checks){
-    const telefone = check.closest("tr").children[2].innerText;
+
+    const telefone = check.dataset.telefone;
 
     await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
       method:"POST",
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
-        telefone,
+        telefone: telefone,
         status: true
       })
     });
+
   }
 
-  alert("Humano ativado 👍");
   carregar();
 }
 
