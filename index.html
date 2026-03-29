@@ -251,11 +251,7 @@ function render(lista){
       <td>${c.vencimento||''}</td>
       <td>${c.hora_vencimento||''}</td>
       <td>${c.mac||''}</td>
-      <td onclick="toggleHumano('${c.telefone}', ${c.atendimento_humano})" style="cursor:pointer;">
-  ${c.atendimento_humano 
-    ? '<span style="color:green;font-weight:bold;">🟢 HUMANO</span>' 
-    : '<span style="color:red;font-weight:bold;">🤖 BOT</span>'}
-</td>
+      <td>${c.status || ''}</td>
       <td>
   <button onclick="editar('${c.id}')">Editar</button>
 
