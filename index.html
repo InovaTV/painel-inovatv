@@ -236,33 +236,45 @@ async function carregar(){
 
 // ===== RENDER =====
 function render(lista){
-  tabela.innerHTML=lista.map(c=>`
-  <tr style="${c.atendimento_humano ? 'background:#e6ffe6;' : 'background:#ffe6e6;'}">
-    <td><input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()"></td>
-    <td>${c.nome||''}</td>
-    <td>${c.telefone||''}</td>
-    <td>${c.usuario||''}</td>
 
+  tabela.innerHTML = lista.map(c => `
+    <tr style="${c.atendimento_humano ? 'background:#e6ffe6;' : 'background:#ffe6e6;'}">
 
-    ${tela==='clientes'?`
-      <td>${c.servidor||''}</td>
-      <td>${c.plano||''}</td>
-      <td>${c.valor||''}</td>
-      <td>${c.vencimento||''}</td>
-      <td>${c.hora_vencimento||''}</td>
-      <td>${c.mac||''}</td>
+      <td>
+        <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
+      </td>
+
+      <td>${c.nome || ''}</td>
+      <td>${c.telefone || ''}</td>
+      <td>${c.usuario || ''}</td>
+
+      ${tela === 'clientes' ? `
+        <td>${c.servidor || ''}</td>
+        <td>${c.plano || ''}</td>
+        <td>${c.valor || ''}</td>
+        <td>${c.vencimento || ''}</td>
+        <td>${c.hora_vencimento || ''}</td>
+        <td>${c.mac || ''}</td>
+      ` : ''}
+
       <td>${c.status || ''}</td>
-<td>
-  <button onclick="editar('${c.id}')">Editar</button>
 
-  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
-    👤
-  </button>
+      <td>
+        <button onclick="editar('${c.id}')">Editar</button>
 
-  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">
-    🤖
-  </button>
-</td>
+        <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
+          👤
+        </button>
+
+        <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">
+          🤖
+        </button>
+      </td>
+
+    </tr>
+  `).join('');
+
+  // 🔥 FORA DO HTML (CORRETO)
   contarSelecionados();
   atualizarContadorStatus(lista);
 }
