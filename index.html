@@ -533,15 +533,19 @@ async function ativarHumano(telefone){
 
 async function desativarHumano(telefone){
 
-  await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({
-      telefone: telefone,
-      status: false
-    })
-  });
+  log("Enviando BOT: " + telefone);
 
+const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    telefone: telefone,
+    status: false
+  })
+});
+
+const txt = await res.text();
+log("Resposta BOT: " + txt);
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
   if(c.telefone === telefone){
