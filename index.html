@@ -581,14 +581,18 @@ async function ativarSelecionados(){
 
     const telefone = check.dataset.telefone;
 
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: true
-      })
-    });
+   log("MASSA HUMANO: " + telefone);
+
+const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    telefone: telefone,
+    status: true
+  })
+});
+
+log("STATUS MASSA: " + res.status);
 
   }
 
@@ -608,14 +612,18 @@ async function desativarSelecionados(){
 
     const telefone = check.dataset.telefone;
 
-    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: false
-      })
-    });
+   log("MASSA BOT: " + telefone);
+
+const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
+  method:"POST",
+  headers:{ "Content-Type":"application/json" },
+  body: JSON.stringify({
+    telefone: telefone,
+    status: false
+  })
+});
+
+log("STATUS MASSA: " + res.status);
 
   }
 
