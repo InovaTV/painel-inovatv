@@ -587,7 +587,7 @@ async function ativarSelecionados(){
   carregar();
 }
 
-async function ativarSelecionados(){
+async function desativarSelecionados(){
 
   const checks = document.querySelectorAll(".check:checked");
 
@@ -606,7 +606,7 @@ async function ativarSelecionados(){
       headers:{ "Content-Type":"application/json" },
       body: JSON.stringify({
         telefone,
-        status: true
+        status: false
       })
     });
   }
