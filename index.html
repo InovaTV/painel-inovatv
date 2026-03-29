@@ -566,7 +566,7 @@ async function ativarSelecionados(){
   for(const check of checks){
     const telefone = check.closest("tr").children[2].innerText.trim();
 
-    await fetch("https://SEU-PROJETO.supabase.co/functions/v1/humano-toggle", {
+    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -590,7 +590,7 @@ async function desativarSelecionados(){
   for(const check of checks){
     const telefone = check.closest("tr").children[2].innerText.trim();
 
-    await fetch("https://SEU-PROJETO.supabase.co/functions/v1/humano-toggle", {
+    await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
