@@ -570,10 +570,11 @@ async function ativarSelecionados() {
       })
     });
 
+    // 🔥 ATUALIZA LOCAL
     const id = check.dataset.id;
     const item = dados.find(d => d.id == id);
 
-    if(item){
+    if (item) {
       item.atendimento_humano = true;
     }
   }
@@ -599,14 +600,16 @@ async function desativarSelecionados() {
         status: false
       })
     });
-const id = check.dataset.id;
-const item = dados.find(d => d.id == id);
 
-if(item){
-  item.atendimento_humano = false;
-}
+    // 🔥 ATUALIZA LOCAL
+    const id = check.dataset.id;
+    const item = dados.find(d => d.id == id);
 
-}
+    if (item) {
+      item.atendimento_humano = false;
+    }
+  }
+
   render(dados);
 }
 </script>
