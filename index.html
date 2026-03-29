@@ -144,6 +144,12 @@ let tela='clientes';
 let dados=[];
 let modalResolve;
 let dadosEditados={};
+  
+  function log(msg){
+  const agora = new Date().toLocaleTimeString();
+  logErro.innerHTML += `[${agora}] ${msg}<br>`;
+  logErro.scrollTop = logErro.scrollHeight;
+}
 
 // ===== CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
