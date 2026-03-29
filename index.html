@@ -227,8 +227,8 @@ async function carregar(){
     </tr>`;
   } else {
     thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
-    </tr>`;
+  <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Status</th><th>Ações</th>
+</tr>`;
   }
 
   render(dados);
@@ -243,7 +243,7 @@ function render(lista){
     <td>${c.telefone||''}</td>
     <td>${c.usuario||''}</td>
 
-<td>
+<td onclick="toggleHumano('${c.telefone}', ${c.atendimento_humano})" style="cursor:pointer;">
   ${c.atendimento_humano 
     ? '<span style="color:green;font-weight:bold;">🟢 HUMANO</span>' 
     : '<span style="color:red;font-weight:bold;">🤖 BOT</span>'}
