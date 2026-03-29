@@ -242,17 +242,15 @@ function render(lista){
     <td>${c.nome||''}</td>
     <td>${c.telefone||''}</td>
     <td>${c.usuario||''}</td>
-
 ${tela === 'clientes' ? `
-  <td>${c.servidor||''}</td>
-  <td>${c.plano||''}</td>
-  <td>${c.valor||''}</td>
-  <td>${c.vencimento||''}</td>
-  <td>${c.hora_vencimento||''}</td>
-  <td>${c.mac||''}</td>
-  <td>${calcularStatus(c)}</td>
-` : `
- <td></td>
+    <td>${c.servidor||''}</td>
+    <td>${c.plano||''}</td>
+    <td>${c.valor||''}</td>
+    <td>${c.vencimento||''}</td>
+    <td>${c.hora_vencimento||''}</td>
+    <td>${c.mac||''}</td>
+    <td>${calcularStatus(c)}</td>
+` : ``}
 `}
 
 <td>
