@@ -236,7 +236,7 @@ async function carregar(){
 // ===== RENDER =====
 function render(lista){
   tabela.innerHTML=lista.map(c=>`
-  <tr style="${c.atendimento_humano ? 'background:#e6ffe6;' : ''}">
+  <tr style="${c.atendimento_humano ? 'background:#d4edda;' : 'background:#f8d7da;'}">
     <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
