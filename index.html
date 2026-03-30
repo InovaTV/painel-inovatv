@@ -280,17 +280,22 @@ function render(lista){
     log("⚠️ LISTA VAZIA");
   }
 
-  // 🔴 HUMANO NO TOPO (100% FUNCIONAL)
-lista = lista.sort((a, b) => {
+// 🔴 HUMANO NO TOPO (GARANTIDO)
+const listaHumano = [];
+const listaNormal = [];
 
-  const aHumano = a.atendimento_humano === true || a.atendimento_humano === "true";
-  const bHumano = b.atendimento_humano === true || b.atendimento_humano === "true";
+lista.forEach(c => {
+  const isHumano = c.atendimento_humano === true || c.atendimento_humano === "true";
 
-  if (aHumano && !bHumano) return -1;
-  if (!aHumano && bHumano) return 1;
-
-  return 0;
+  if (isHumano) {
+    listaHumano.push(c);
+  } else {
+    listaNormal.push(c);
+  }
 });
+
+// junta: humano primeiro
+lista = [...listaHumano, ...listaNormal];
 
   tabela.innerHTML = lista.map(c => {
 
