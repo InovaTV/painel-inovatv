@@ -277,7 +277,7 @@ function render(lista){
   }
   tabela.innerHTML=lista.map(c=>`
   <tr style="${
-  c.atendimento_humano === true 
+  Boolean(c.atendimento_humano) 
     ? 'background:#2196f3;color:#fff;' 
     : 'background:#e53935;color:#fff;'
 }">
