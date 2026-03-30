@@ -301,7 +301,9 @@ const cor = isHumano
     // =========================
     if(tela === 'clientes'){
       return `
-<tr style="${cor}">
+else {
+  return `
+<tr style="background:#1976d2;color:#fff;">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
