@@ -591,8 +591,8 @@ async function ativarHumano(telefone){
   return c;
 });
 
- await new Promise(r => setTimeout(r, 800));
-await carregar();
+await new Promise(r => setTimeout(r, 800));
+render(dados);
 }
 
 
@@ -642,8 +642,8 @@ async function desativarHumano(telefone){
   }
   return c;
 });
-  await new Promise(r => setTimeout(r, 800));
-await carregar();
+ await new Promise(r => setTimeout(r, 800));
+render(dados);
 }
 
 async function ativarSelecionados(){
@@ -690,7 +690,7 @@ async function ativarSelecionados(){
   }
 
   await new Promise(r => setTimeout(r, 800));
-await carregar();
+render(dados);
 
 }
 
@@ -737,8 +737,8 @@ async function desativarSelecionados(){
 
   }
 
-  await new Promise(r => setTimeout(r, 800));
-await carregar();
+ await new Promise(r => setTimeout(r, 800));
+render(dados);
 }
   
 </script>
