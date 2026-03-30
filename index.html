@@ -281,9 +281,13 @@ function render(lista){
 
   return `
 <tr style="${
-  Boolean(c.atendimento_humano)
-    ? 'background:#1976d2;color:#fff;'
-    : 'background:#d32f2f;color:#fff;'
+  c.alterado === true
+    ? (
+        c.atendimento_humano === true
+          ? 'background:#1976d2;color:#fff;'
+          : 'background:#d32f2f;color:#fff;'
+      )
+    : ''
 }">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
@@ -577,11 +581,15 @@ async function ativarHumano(telefone){
 
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-    if(String(c.telefone).trim() === String(telefone).trim()){
-      return { ...c, atendimento_humano: true };
-    }
-    return c;
-  });
+  if(String(c.telefone).trim() === String(telefone).trim()){
+    return { 
+      ...c, 
+      atendimento_humano: true,
+      alterado: true // 👈 NOVO CAMPO
+    };
+  }
+  return c;
+});
 
  await new Promise(r => setTimeout(r, 800));
 await carregar();
@@ -625,12 +633,15 @@ async function desativarHumano(telefone){
 
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
-    if(String(c.telefone).trim() === String(telefone).trim()){
-      return { ...c, atendimento_humano: false };
-    }
-    return c;
-  });
-
+  if(String(c.telefone).trim() === String(telefone).trim()){
+    return { 
+      ...c, 
+      atendimento_humano: false,
+      alterado: true // 👈 NOVO CAMPO
+    };
+  }
+  return c;
+});
   await new Promise(r => setTimeout(r, 800));
 await carregar();
 }
@@ -667,7 +678,11 @@ async function ativarSelecionados(){
     // 🔥 ATUALIZA LOCAL (ESSENCIAL)
     dados = dados.map(c=>{
       if(String(c.telefone).trim() === String(telefone).trim()){
-        return { ...c, atendimento_humano: true };
+        return { 
+  ...c, 
+  atendimento_humano: true,
+  alterado: true
+};
       }
       return c;
     });
@@ -711,7 +726,11 @@ async function desativarSelecionados(){
     // 🔥 ATUALIZA LOCAL (ESSENCIAL)
     dados = dados.map(c=>{
       if(String(c.telefone).trim() === String(telefone).trim()){
-        return { ...c, atendimento_humano: false };
+        return { 
+  ...c, 
+  atendimento_humano: false,
+  alterado: true
+};
       }
       return c;
     });
