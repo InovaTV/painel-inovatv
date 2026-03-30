@@ -579,10 +579,9 @@ async function ativarHumano(telefone){
   dados = dados.map(c=>{
   if(String(c.telefone).trim() === String(telefone).trim()){
     return { 
-      ...c, 
-      atendimento_humano: true,
-      alterado: true // 👈 NOVO CAMPO
-    };
+  ...c, 
+  atendimento_humano: true
+};
   }
   return c;
 });
@@ -630,11 +629,10 @@ async function desativarHumano(telefone){
   // 🔥 ATUALIZA LOCALMENTE
   dados = dados.map(c=>{
   if(String(c.telefone).trim() === String(telefone).trim()){
-    return { 
-      ...c, 
-      atendimento_humano: false,
-      alterado: true // 👈 NOVO CAMPO
-    };
+   return { 
+  ...c, 
+  atendimento_humano: false
+};
   }
   return c;
 });
@@ -674,10 +672,9 @@ async function ativarSelecionados(){
     // 🔥 ATUALIZA LOCAL (ESSENCIAL)
     dados = dados.map(c=>{
       if(String(c.telefone).trim() === String(telefone).trim()){
-        return { 
+       return { 
   ...c, 
-  atendimento_humano: true,
-  alterado: true
+  atendimento_humano: true
 };
       }
       return c;
@@ -724,8 +721,7 @@ async function desativarSelecionados(){
       if(String(c.telefone).trim() === String(telefone).trim()){
         return { 
   ...c, 
-  atendimento_humano: false,
-  alterado: true
+  atendimento_humano: false
 };
       }
       return c;
