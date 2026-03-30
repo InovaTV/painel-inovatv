@@ -323,12 +323,12 @@ function render(lista){
 `;
     }
 
-    // =========================
-    // 🔵 CONTATOS (CORRIGIDO)
-    // =========================
-    else {
-      return `
-<tr style="${cor}">
+ // =========================
+// 🔵 CONTATOS (CORRIGIDO)
+// =========================
+else {
+  return `
+<tr style="background:#fff9c4;color:#000;">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
@@ -342,7 +342,7 @@ function render(lista){
 </td>
 </tr>
 `;
-    }
+}
 
   }).join('');
 
