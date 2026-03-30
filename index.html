@@ -297,13 +297,12 @@ const cor = isHumano
   : 'background:#c62828;color:#fff;';  // 🔴 BOT
 
     // =========================
-    // 🟢 CLIENTES
-    // =========================
-    if(tela === 'clientes'){
-      return `
-else {
+// =========================
+// 🟢 CLIENTES
+// =========================
+if(tela === 'clientes'){
   return `
-<tr style="background:#1976d2;color:#fff;">
+<tr style="${cor}">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
@@ -324,14 +323,14 @@ else {
 </td>
 </tr>
 `;
-    }
+}
 
- // =========================
-// 🔵 CONTATOS (CORRIGIDO)
+// =========================
+// 🔵 CONTATOS (AZUL FIXO)
 // =========================
 else {
   return `
-<tr style="${cor}">
+<tr style="background:#1976d2;color:#fff;">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
