@@ -280,17 +280,17 @@ function render(lista){
     log("⚠️ LISTA VAZIA");
   }
 
-  // 🔴 HUMANO NO TOPO (CORRIGIDO)
-  lista = lista.sort((a, b) => {
+  // 🔴 HUMANO NO TOPO (100% FUNCIONAL)
+lista = lista.sort((a, b) => {
 
-    const aHumano = a.atendimento_humano === true || a.atendimento_humano === "true";
-    const bHumano = b.atendimento_humano === true || b.atendimento_humano === "true";
+  const aHumano = a.atendimento_humano === true || a.atendimento_humano === "true";
+  const bHumano = b.atendimento_humano === true || b.atendimento_humano === "true";
 
-    if (aHumano && !bHumano) return -1;
-    if (!aHumano && bHumano) return 1;
+  if (aHumano && !bHumano) return -1;
+  if (!aHumano && bHumano) return 1;
 
-    return 0;
-  });
+  return 0;
+});
 
   tabela.innerHTML = lista.map(c => {
 
