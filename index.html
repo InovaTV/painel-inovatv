@@ -285,36 +285,31 @@ function render(lista){
     ? 'background:#1976d2;color:#fff;'
     : 'background:#d32f2f;color:#fff;'
 }">
-    <td>
+<td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
-    <td>${c.nome||''}</td>
-    <td>${c.telefone||''}</td>
-    <td>${c.usuario||''}</td>
+<td>${c.nome||''}</td>
+<td>${c.telefone||''}</td>
+<td>${c.usuario||''}</td>
 ${tela === 'clientes' ? `
-    <td>${c.servidor||''}</td>
-    <td>${c.plano||''}</td>
-    <td>${c.valor||''}</td>
-    <td>${c.vencimento||''}</td>
-    <td>${c.hora_vencimento||''}</td>
-    <td>${c.mac||''}</td>
-    <td>${tela === 'clientes' ? calcularStatus(c) : ''}</td>
+<td>${c.servidor||''}</td>
+<td>${c.plano||''}</td>
+<td>${c.valor||''}</td>
+<td>${c.vencimento||''}</td>
+<td>${c.hora_vencimento||''}</td>
+<td>${c.mac||''}</td>
+<td>${tela === 'clientes' ? calcularStatus(c) : ''}</td>
 ` : ``}
-
 <td>
   <button onclick="editar('${c.id}')">Editar</button>
 
-  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">
-    👤
-  </button>
+  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
 
-  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">
-    🤖
-  </button>
+  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
 </td>
-  </tr>
-  `).join('');
-
+</tr>
+`;
+}).join('');
   contarSelecionados();
   atualizarContadorStatus(lista);
 }
