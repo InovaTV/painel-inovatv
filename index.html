@@ -280,28 +280,47 @@ function render(lista){
     log("⚠️ LISTA VAZIA");
   }
 
-  // 🔥 HUMANO NO TOPO
+  // 🔴 HUMANO NO TOPO (CORRIGIDO)
   lista = lista.sort((a, b) => {
-    if (a.atendimento_humano === b.atendimento_humano) return 0;
-    return a.atendimento_humano ? -1 : 1;
+
+    const aHumano = a.atendimento_humano === true || a.atendimento_humano === "true";
+    const bHumano = b.atendimento_humano === true || b.atendimento_humano === "true";
+
+    if (aHumano && !bHumano) return -1;
+    if (!aHumano && bHumano) return 1;
+
+    return 0;
   });
 
   tabela.innerHTML = lista.map(c => {
 
     console.log("DEBUG HUMANO:", c.telefone, c.atendimento_humano, typeof c.atendimento_humano);
 
-    // 🎯 DEFINE COR (CORRIGIDO)
-const isHumano = c.atendimento_humano === true || c.atendimento_humano === "true";
-const cor = isHumano
-  ? 'background:#2e7d32;color:#fff;'   // 🟢 HUMANO
-  : 'background:#c62828;color:#fff;';  // 🔴 BOT
+    // 🎯 DEFINE ESTADO
+    const isHumano = c.atendimento_humano === true || c.atendimento_humano === "true";
+
+    let cor = "";
+
+    // 🔴 HUMANO (PRIORIDADE TOTAL)
+    if (isHumano) {
+      cor = 'background:#c62828;color:#fff;';
+    }
+
+    // 🟢 CLIENTES (PADRÃO)
+    else if (tela === 'clientes') {
+      cor = 'background:#2e7d32;color:#fff;';
+    }
+
+    // 🔵 CONTATOS (PADRÃO)
+    else {
+      cor = 'background:#1976d2;color:#fff;';
+    }
 
     // =========================
-// =========================
-// 🟢 CLIENTES
-// =========================
-if(tela === 'clientes'){
-  return `
+    // 🟢 CLIENTES
+    // =========================
+    if(tela === 'clientes'){
+      return `
 <tr style="${cor}">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
@@ -323,14 +342,14 @@ if(tela === 'clientes'){
 </td>
 </tr>
 `;
-}
+    }
 
-// =========================
-// 🔵 CONTATOS (AZUL FIXO)
-// =========================
-else {
-  return `
-<tr style="background:#1976d2;color:#fff;">
+    // =========================
+    // 🔵 CONTATOS
+    // =========================
+    else {
+      return `
+<tr style="${cor}">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
@@ -344,7 +363,7 @@ else {
 </td>
 </tr>
 `;
-}
+    }
 
   }).join('');
 
