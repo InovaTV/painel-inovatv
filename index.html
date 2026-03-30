@@ -275,11 +275,15 @@ function render(lista){
   if(lista.length === 0){
     log("⚠️ LISTA VAZIA");
   }
-  tabela.innerHTML=lista.map(c=>`
-  <tr style="${
-  Boolean(c.atendimento_humano) 
-    ? 'background:#2196f3;color:#fff;' 
-    : 'background:#e53935;color:#fff;'
+  tabela.innerHTML = lista.map(c => {
+
+  console.log("DEBUG HUMANO:", c.telefone, c.atendimento_humano, typeof c.atendimento_humano);
+
+  return `
+<tr style="${
+  Boolean(c.atendimento_humano)
+    ? 'background:#1976d2;color:#fff;'
+    : 'background:#d32f2f;color:#fff;'
 }">
     <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
