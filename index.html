@@ -264,7 +264,8 @@ async function carregar(){
 
 // ===== RENDER =====
 function render(lista){
-    log("🧠 RENDER CHAMADO | itens: " + (lista ? lista.length : "null"));
+
+  log("🧠 RENDER CHAMADO | itens: " + (lista ? lista.length : "null"));
 
   if(!lista){
     log("❌ LISTA NULL NO RENDER");
@@ -274,13 +275,14 @@ function render(lista){
 
   if(lista.length === 0){
     log("⚠️ LISTA VAZIA");
-// 🔥 PRIORIZA HUMANO NO TOPO
-lista = lista.sort((a, b) => {
-  if (a.atendimento_humano === b.atendimento_humano) return 0;
-  return a.atendimento_humano ? -1 : 1;
-});
-    
   }
+
+  // 🔥 AQUI FORA DO IF (CORRETO)
+  lista = lista.sort((a, b) => {
+    if (a.atendimento_humano === b.atendimento_humano) return 0;
+    return a.atendimento_humano ? -1 : 1;
+  });
+
   tabela.innerHTML = lista.map(c => {
 
   console.log("DEBUG HUMANO:", c.telefone, c.atendimento_humano, typeof c.atendimento_humano);
