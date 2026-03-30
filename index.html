@@ -290,10 +290,11 @@ function render(lista){
 
     console.log("DEBUG HUMANO:", c.telefone, c.atendimento_humano, typeof c.atendimento_humano);
 
-    // 🎯 DEFINE COR
-    const cor = c.atendimento_humano === true
-      ? 'background:#2e7d32;color:#fff;'   // 🟢 HUMANO
-      : 'background:#c62828;color:#fff;';  // 🔴 BOT
+    // 🎯 DEFINE COR (CORRIGIDO)
+const isHumano = c.atendimento_humano === true || c.atendimento_humano === "true";
+const cor = isHumano
+  ? 'background:#2e7d32;color:#fff;'   // 🟢 HUMANO
+  : 'background:#c62828;color:#fff;';  // 🔴 BOT
 
     // =========================
     // 🟢 CLIENTES
@@ -328,7 +329,7 @@ function render(lista){
 // =========================
 else {
   return `
-<tr style="background:#1976d2;color:#fff;">
+<tr style="${cor}">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
 </td>
