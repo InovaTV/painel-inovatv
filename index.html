@@ -281,13 +281,9 @@ function render(lista){
 
   return `
 <tr style="${
-  c.alterado === true
-    ? (
-        c.atendimento_humano === true
-          ? 'background:#1976d2;color:#fff;'
-          : 'background:#d32f2f;color:#fff;'
-      )
-    : ''
+  c.atendimento_humano === true
+    ? 'background:#2e7d32;color:#fff;'   // 🟢 HUMANO (verde forte bonito)
+    : 'background:#c62828;color:#fff;'   // 🔴 BOT (vermelho padrão)
 }">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
