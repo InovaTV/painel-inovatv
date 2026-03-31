@@ -959,7 +959,7 @@ if(file){
   carregar();
 }
 
-  async function uploadImagem(file){
+ async function uploadImagem(file){
 
   const fileName = Date.now() + "_" + file.name;
 
@@ -969,14 +969,19 @@ if(file){
     .upload(fileName, file);
 
   if(error){
-    console.log("Erro upload:", error);
+    log("❌ ERRO UPLOAD: " + error.message);
+    console.log(error);
     return null;
   }
+
+  log("✅ UPLOAD OK");
 
   const { data: publicUrl } = client
     .storage
     .from('produtos')
     .getPublicUrl(fileName);
+
+  log("🌍 URL GERADA: " + publicUrl.publicUrl);
 
   return publicUrl.publicUrl;
 }
