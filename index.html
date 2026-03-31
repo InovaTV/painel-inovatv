@@ -74,6 +74,15 @@ th,td { padding:6px; border:1px solid #ccc; }
 </style>
 </head>
 
+  <div id="previewProduto" style="display:none;position:fixed;top:10%;left:50%;
+transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius:10px;z-index:999;width:350px;">
+
+<div id="conteudoPreview"></div>
+
+<button onclick="fecharPreview()">Fechar</button>
+
+</div>
+
 <body>
 
 <h2>Painel InovaTV</h2>
@@ -317,7 +326,7 @@ function render(lista){
         }
       </td>
       <td>
-  <button onclick="editarProduto('${p.id}')">✏️</button>
+  <button onclick="editarProduto('${p.id}')">✏️</button><button onclick="verProduto('${p.id}')">👁️</button>
   <button onclick="excluirProduto('${p.id}')" style="background:red;color:#fff;">🗑️</button>
 </td>
     </tr>
@@ -868,6 +877,7 @@ async function salvarProduto(){
   const preco = parseFloat(document.getElementById('p_preco').value);
   let url = document.getElementById('p_url').value.trim();
   const file = document.getElementById('p_imagem').files[0];
+  const descricao = document.getElementById('p_descricao').value;
 
   if(url && !url.startsWith("http")){
     url = "https://" + url;
@@ -890,6 +900,7 @@ async function salvarProduto(){
       nome,
       preco,
       url,
+      descriçao,
       imagem_url,
       tipo: 'tvbox',
       ativo: true,
@@ -1046,6 +1057,39 @@ async function salvarProduto(){
 
   return publicUrl.publicUrl;
 }
+
+  async function verProduto(id){
+
+  const { data } = await client
+    .from('produtos')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  const html = `
+    <h3>${data.nome}</h3>
+
+    ${data.imagem_url 
+      ? `<img src="${data.imagem_url}" style="width:100%;border-radius:10px;">` 
+      : ''
+    }
+
+    <p><b>Preço:</b> R$ ${data.preco}</p>
+
+    <p>${data.descricao || ''}</p>
+
+    <a href="${data.url}" target="_blank" style="color:#4CAF50;">
+      🔗 Abrir no WhatsApp
+    </a>
+  `;
+
+  document.getElementById('conteudoPreview').innerHTML = html;
+  document.getElementById('previewProduto').style.display = 'block';
+}
+
+function fecharPreview(){
+  document.getElementById('previewProduto').style.display = 'none';
+}
   
 </script>
 
@@ -1057,6 +1101,7 @@ background:#222;color:#fff;padding:20px;border-radius:10px;z-index:999;width:300
 <input id="p_nome" placeholder="Nome" style="width:100%;margin-bottom:10px;">
 <input id="p_preco" placeholder="Preço" style="width:100%;margin-bottom:10px;">
 <input id="p_url" placeholder="Link" style="width:100%;margin-bottom:10px;">
+    <textarea id="p_descricao" placeholder="Descrição" style="width:100%;margin-bottom:10px;"></textarea>
     <input type="file" id="p_imagem" style="width:100%;margin-bottom:10px;">
 
 <button onclick="salvarProduto()" style="background:#4CAF50;color:#fff;">Salvar</button>
