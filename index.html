@@ -91,6 +91,7 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 <button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
 <button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
   <button class="btn-topo" onclick="trocarTela('produtos')">Produtos</button>
+  <button onclick="mudarTela('pagamentos')">Pagamentos</button>
 
   <button onclick="ativarSelecionados()" style="background:green;color:white;margin-left:10px;">
   👤 Ativar Humano
@@ -336,6 +337,21 @@ function render(lista){
   return;
 }
 
+// ===== PAGAMENTOS =====
+if(tela === 'pagamentos'){
+  tabela.innerHTML = lista.map(p => `
+<tr style="background:#333;color:#fff;">
+<td>${p.usuario || ''}</td>
+<td>${p.telefone || ''}</td>
+<td>R$ ${p.valor || 0}</td>
+<td>${p.forma_pagamento || ''}</td>
+<td>${p.data_pagamento || ''}</td>
+</tr>
+  `).join('');
+
+  return;
+}
+  
 // 🔴 HUMANO NO TOPO (GARANTIDO)
 const listaHumano = [];
 const listaNormal = [];
@@ -1070,6 +1086,80 @@ function fecharPreview(){
   document.getElementById('previewProduto').style.display = 'none';
 }
 
+// ===== IMPORTAR PAGAMENTOS =====
+async function importarPagamentos(dadosExcel){
+
+  log("📥 INICIANDO IMPORTAÇÃO PAGAMENTOS");
+
+  let erros = 0;
+
+  for(let linha of dadosExcel){
+
+    try{
+
+      let clienteDB = null;
+
+      // 🔥 1. USUARIO
+      if(linha.usuario){
+        const { data } = await client
+          .from("clientes")
+          .select("*")
+          .ilike("usuario", `%${linha.usuario}%`);
+
+        clienteDB = data?.[0];
+      }
+
+      // 🔥 2. TELEFONE
+      if(!clienteDB && linha.telefone){
+        let telefone = linha.telefone.replace(/\D/g,"");
+
+        const { data } = await client
+          .from("clientes")
+          .select("*")
+          .ilike("telefone", `%${telefone}%`);
+
+        clienteDB = data?.[0];
+      }
+
+      // 🔥 3. NOME
+      if(!clienteDB && linha.cliente){
+        const { data } = await client
+          .from("clientes")
+          .select("*")
+          .ilike("nome", `%${linha.cliente}%`);
+
+        clienteDB = data?.[0];
+      }
+
+      if(!clienteDB){
+        log("❌ NÃO ENCONTRADO: " + JSON.stringify(linha));
+        erros++;
+        continue;
+      }
+
+      await client.from("pagamentos").insert({
+
+        telefone: clienteDB.telefone,
+        usuario: clienteDB.usuario,
+        valor: Number(linha.valor) || 0,
+        forma_pagamento: linha.forma_de_pagamento || null,
+        data_pagamento: linha.data_pagamento || null,
+        vencimento: linha.vencimento || null,
+        servidor: linha.servidor || null,
+        observacao: linha.observacao || null
+
+      });
+
+    }catch(e){
+      log("❌ ERRO: " + e.message);
+      erros++;
+    }
+  }
+
+  log("✅ IMPORTAÇÃO FINALIZADA");
+  alert("Pagamentos importados 🚀 Erros: " + erros);
+}
+  
 // ===== EDITAR PRODUTO (NOVO) =====
 async function editarProduto(id){
 
@@ -1098,6 +1188,31 @@ async function editarProduto(id){
   log("📦 PRODUTO CARREGADO PARA EDIÇÃO");
 
   abrirFormProduto();
+}
+
+  async function carregarPagamentos(){
+
+  const { data } = await client
+    .from('pagamentos')
+    .select('*')
+    .order('data_pagamento', { ascending: false });
+
+  const lista = document.getElementById('listaPagamentos');
+
+  if(!data || data.length === 0){
+    lista.innerHTML = "<tr><td colspan='5'>Nenhum pagamento</td></tr>";
+    return;
+  }
+
+  lista.innerHTML = data.map(p => `
+    <tr>
+      <td>${p.usuario || ''}</td>
+      <td>${p.telefone || ''}</td>
+      <td>${p.valor || ''}</td>
+      <td>${p.forma_pagamento || ''}</td>
+      <td>${p.data_pagamento || ''}</td>
+    </tr>
+  `).join('');
 }
   
 </script>
