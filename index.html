@@ -296,8 +296,9 @@ else if(tela==='pagamentos'){
     <th>Data Pagamento</th>
     <th>Vencimento</th>
     <th>Status</th>
-    <th>Último Pgto</th>
+    <th>Ações</th>
   </tr>`;
+}
 }
   
   render(dados);
@@ -354,14 +355,7 @@ function render(lista){
 if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map(p => {
 
-    // 🎯 STATUS
     let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
-
-    // 🎯 VENCIMENTO
-    let vencimento = p.vencimento || "-";
-
-    // 🎯 ÚLTIMO PAGAMENTO (mesmo campo por enquanto)
-    let ultimo = p.data_pagamento || "-";
 
     return `
 <tr style="background:#333;color:#fff;">
@@ -370,9 +364,11 @@ if(tela === 'pagamentos'){
 <td>R$ ${p.valor || 0}</td>
 <td>${p.forma_pagamento || ''}</td>
 <td>${p.data_pagamento || ''}</td>
-<td>${vencimento}</td>
+<td>${p.vencimento || ''}</td>
 <td>${status}</td>
-<td>${ultimo}</td>
+<td>
+  <button onclick="editarPagamento('${p.id}')">✏️</button>
+</td>
 </tr>
     `;
   }).join('');
@@ -1241,6 +1237,47 @@ async function editarProduto(id){
       <td>${p.data_pagamento || ''}</td>
     </tr>
   `).join('');
+}
+
+  // ===== EDITAR PAGAMENTO =====
+async function editarPagamento(id){
+
+  const { data } = await client
+    .from('pagamentos')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  let valor = prompt("Valor:", data.valor);
+  if(valor === null) return;
+
+  let forma = prompt("Forma de pagamento:", data.forma_pagamento || "");
+  if(forma === null) return;
+
+  let data_pagamento = prompt("Data pagamento:", data.data_pagamento || "");
+  if(data_pagamento === null) return;
+
+  let vencimento = prompt("Vencimento:", data.vencimento || "");
+  if(vencimento === null) return;
+
+  const { error } = await client
+    .from('pagamentos')
+    .update({
+      valor: parseFloat(valor),
+      forma_pagamento: forma,
+      data_pagamento,
+      vencimento
+    })
+    .eq('id', id);
+
+  if(error){
+    console.log(error);
+    alert("Erro ao editar pagamento");
+    return;
+  }
+
+  alert("Pagamento atualizado ✅");
+  carregar();
 }
   
 </script>
