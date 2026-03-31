@@ -158,6 +158,8 @@ const client = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 const SUPABASE_KEY = client.supabaseKey;
+
+  let clientesCache = [];
   
 let tela='clientes';
 let dados=[];
@@ -242,6 +244,9 @@ async function carregar(){
   log("🔄 CARREGANDO TELA: " + tela);
 
   const { data, error } = await client.from(tela).select('*');
+  // 🔥 carregar clientes para cruzar dados
+const { data: clientesData } = await client.from('clientes').select('*');
+clientesCache = clientesData || [];
 
   if(error){
     log("❌ ERRO SUPABASE: " + error.message);
@@ -289,7 +294,8 @@ else if(tela==='produtos'){
 
 else if(tela==='pagamentos'){
   thead.innerHTML=`<tr>
-    <th>Usuário</th>
+    <th>Nome</th>
+<th>Usuário</th>
     <th>Telefone</th>
     <th>Valor</th>
     <th>Forma</th>
@@ -353,10 +359,18 @@ function render(lista){
 if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map(p => {
 
-    let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+  // 🔥 BUSCAR CLIENTE PELO USUARIO
+ const cliente = clientesCache.find(c => 
+  c.usuario === p.usuario && c.nome
+);
 
-    return `
+  const nome = cliente ? cliente.nome : "Não encontrado";
+
+  let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+
+  return `
 <tr style="background:#333;color:#fff;">
+<td>${nome}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
@@ -368,8 +382,8 @@ if(tela === 'pagamentos'){
   <button onclick="editarPagamento('${p.id}')">✏️</button>
 </td>
 </tr>
-    `;
-  }).join('');
+  `;
+}).join('');
 
   return;
 }
