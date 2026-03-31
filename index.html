@@ -81,6 +81,7 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
 <button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
+  <button class="btn-topo" onclick="trocarTela('produtos')">Produtos</button>
 
   <button onclick="ativarSelecionados()" style="background:green;color:white;margin-left:10px;">
   👤 Ativar Humano
@@ -249,18 +250,27 @@ async function carregar(){
     return (a.nome || "").localeCompare(b.nome || "");
   });
 
-  if(tela==='clientes'){
-    thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-      <th>Servidor</th><th>Plano</th><th>Valor</th>
-      <th>Vencimento</th><th>Hora</th><th>MAC</th>
-      <th>Status</th><th>Ações</th>
-    </tr>`;
-  } else {
-    thead.innerHTML=`<tr>
-      <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
-    </tr>`;
-  }
+ if(tela==='clientes'){
+  thead.innerHTML=`<tr>
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
+    <th>Servidor</th><th>Plano</th><th>Valor</th>
+    <th>Vencimento</th><th>Hora</th><th>MAC</th>
+    <th>Status</th><th>Ações</th>
+  </tr>`;
+} 
+else if(tela==='contatos'){
+  thead.innerHTML=`<tr>
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
+  </tr>`;
+}
+else if(tela==='produtos'){
+  thead.innerHTML=`<tr>
+    <th>Nome</th>
+    <th>Preço</th>
+    <th>Link</th>
+    <th>Ativo</th>
+  </tr>`;
+}
 
   render(dados);
 }
@@ -279,6 +289,23 @@ function render(lista){
   if(lista.length === 0){
     log("⚠️ LISTA VAZIA");
   }
+
+  if(tela === 'produtos'){
+  tabela.innerHTML = lista.map(p => `
+    <tr style="background:#333;color:#fff;">
+      <td>${p.nome || ''}</td>
+      <td>R$ ${p.preco || 0}</td>
+      <td>
+        <a href="${p.url}" target="_blank" style="color:#4CAF50;">
+          Ver produto
+        </a>
+      </td>
+      <td>${p.ativo ? '✅' : '❌'}</td>
+    </tr>
+  `).join('');
+
+  return;
+}
 
 // 🔴 HUMANO NO TOPO (GARANTIDO)
 const listaHumano = [];
