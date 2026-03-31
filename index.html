@@ -300,9 +300,9 @@ function render(lista){
       <td>${p.nome || ''}</td>
       <td>R$ ${p.preco || 0}</td>
       <td>
-        <a href="${p.url}" target="_blank" style="color:#4CAF50;">
-          Ver produto
-        </a>
+        <a href="${p.url}" target="_blank" style="color:#4CAF50;font-weight:bold;">
+  🔗 Abrir
+</a>
       </td>
       <td>${p.ativo ? '✅' : '❌'}</td>
     </tr>
@@ -883,9 +883,14 @@ async function salvarProduto(){
 // ===== SALVAR PRODUTO =====
 async function salvarProduto(){
 
-  const nome = document.getElementById('p_nome').value;
+  const nome = document.getElementById('p_nome').value.trim();
   const preco = parseFloat(document.getElementById('p_preco').value);
-  const url = document.getElementById('p_url').value;
+  let url = document.getElementById('p_url').value.trim();
+
+  // 🔥 garante que tenha http
+  if(url && !url.startsWith("http")){
+    url = "https://" + url;
+  }
 
   console.log("SALVANDO PRODUTO:", { nome, preco, url });
 
@@ -897,16 +902,16 @@ async function salvarProduto(){
   const { error } = await client
     .from('produtos')
     .insert([{
-      nome: nome,
-      preco: preco,
-      url: url,
+      nome,
+      preco,
+      url,
       tipo: 'tvbox',
       ativo: true,
       prioridade: 1
     }]);
 
   if(error){
-    console.log("ERRO AO SALVAR PRODUTO:", error);
+    console.log("ERRO AO SALVAR:", error);
     alert("Erro ao salvar produto");
     return;
   }
@@ -914,7 +919,6 @@ async function salvarProduto(){
   alert("Produto salvo com sucesso ✅");
 
   fecharFormProduto();
-
   carregar();
 }
   
