@@ -890,9 +890,13 @@ async function salvarProduto(){
 
   let imagem_url = null;
 
-  if(file){
-    imagem_url = await uploadImagem(file);
-  }
+if(file){
+  console.log("📸 ENVIANDO IMAGEM:", file.name);
+
+  imagem_url = await uploadImagem(file);
+
+  console.log("📸 URL GERADA:", imagem_url);
+}
 
   const { error } = await client
     .from('produtos')
