@@ -304,7 +304,12 @@ function render(lista){
           🔗 Abrir
         </a>
       </td>
-      <td>${p.ativo ? '✅' : '❌'}</td>
+      <td>
+        ${p.ativo 
+          ? '<button onclick="toggleProduto(\''+p.id+'\', false)" style="background:green;color:#fff;">ON</button>'
+          : '<button onclick="toggleProduto(\''+p.id+'\', true)" style="background:red;color:#fff;">OFF</button>'
+        }
+      </td>
       <td>
         <button onclick="editarProduto('${p.id}')">✏️</button>
       </td>
@@ -962,6 +967,22 @@ async function salvarProduto(){
   }
 
   alert("Produto atualizado ✅");
+  carregar();
+}
+
+  async function toggleProduto(id, status){
+
+  const { error } = await client
+    .from('produtos')
+    .update({ ativo: status })
+    .eq('id', id);
+
+  if(error){
+    alert("Erro ao atualizar status");
+    console.log(error);
+    return;
+  }
+
   carregar();
 }
   
