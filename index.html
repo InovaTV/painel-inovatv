@@ -91,7 +91,7 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 <button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
 <button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
   <button class="btn-topo" onclick="trocarTela('produtos')">Produtos</button>
-  <button onclick="mudarTela('pagamentos')">Pagamentos</button>
+  <button class="btn-topo" onclick="trocarTela('pagamentos')">Pagamentos</button>
 
   <button onclick="ativarSelecionados()" style="background:green;color:white;margin-left:10px;">
   👤 Ativar Humano
@@ -287,6 +287,16 @@ else if(tela==='produtos'){
   </tr>`;
 }
 
+else if(tela==='pagamentos'){
+  thead.innerHTML=`<tr>
+    <th>Usuário</th>
+    <th>Telefone</th>
+    <th>Valor</th>
+    <th>Forma</th>
+    <th>Data</th>
+  </tr>`;
+}
+  
   render(dados);
 }
 
