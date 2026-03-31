@@ -877,6 +877,7 @@ async function salvarProduto(){
   const preco = parseFloat(document.getElementById('p_preco').value);
   let url = document.getElementById('p_url').value.trim();
   const file = document.getElementById('p_imagem').files[0];
+  log("📸 FILE:", file ? file.name : "SEM IMAGEM");
   const descricao = document.getElementById('p_descricao').value;
 
   if(url && !url.startsWith("http")){
@@ -889,13 +890,12 @@ async function salvarProduto(){
   }
 
   let imagem_url = null;
-
 if(file){
-  console.log("📸 ENVIANDO IMAGEM:", file.name);
+  log("📸 ENVIANDO IMAGEM...");
 
   imagem_url = await uploadImagem(file);
 
-  console.log("📸 URL GERADA:", imagem_url);
+  log("📸 URL:", imagem_url);
 }
 
   const { error } = await client
