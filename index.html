@@ -569,17 +569,29 @@ let linha = window.dadosImportados[index];
 
       let usuario=linha.usuario || ("user"+i);
 
-      await client.from('clientes').insert({
-        nome:linha.nome,
-        telefone,
-        usuario,
-        servidor:linha.servidor,
-        plano:linha.plano,
-        valor:linha.valor,
-        vencimento:linha.vencimento,
-        hora_vencimento:linha.hora_vencimento||linha.hora,
-        mac:linha.mac
-      });
+     await client.from('clientes').insert({
+  nome: linha.nome,
+  telefone,
+  usuario,
+  servidor: linha.servidor,
+  plano: linha.plano,
+  valor: Number(linha.valor) || 0,
+  vencimento: linha.vencimento,
+  hora_vencimento: linha.hora_vencimento || linha.hora,
+  mac: linha.mac,
+
+  // 🔥 NOVOS CAMPOS
+  public_id: linha.public_id || null,
+  forma_pagamento: linha.forma_de_pagamento || null,
+  observacao: linha.observacao || null,
+  dispositivo: linha.dispositivo || null,
+  aplicativo: linha.aplicativo || null,
+
+  // 🔥 DATA (IMPORTANTE)
+  criado_em: linha.data_cadastro 
+    ? new Date(linha.data_cadastro)
+    : new Date()
+});
 
       await salvarContatoSeguro({
         telefone,
