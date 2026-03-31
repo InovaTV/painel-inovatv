@@ -297,7 +297,13 @@ function render(lista){
   if(tela === 'produtos'){
   tabela.innerHTML = lista.map(p => `
     <tr style="background:#333;color:#fff;">
-      <td>${p.nome || ''}</td>
+      <td>
+  ${p.imagem_url 
+    ? `<img src="${p.imagem_url}" width="50" style="border-radius:5px;"><br>` 
+    : ''
+  }
+  ${p.nome || ''}
+</td>
       <td>R$ ${p.preco || 0}</td>
       <td>
         <a href="${p.url}" target="_blank" style="color:#4CAF50;">
