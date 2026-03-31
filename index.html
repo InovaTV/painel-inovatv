@@ -905,7 +905,7 @@ if(file){
       nome,
       preco,
       url,
-      descriçao,
+      descricao,
       imagem_url,
       tipo: 'tvbox',
       ativo: true,
@@ -930,41 +930,6 @@ async function salvarProduto(){
   const nome = document.getElementById('p_nome').value.trim();
   const preco = parseFloat(document.getElementById('p_preco').value);
   let url = document.getElementById('p_url').value.trim();
-
-  // 🔥 garante que tenha http
-  if(url && !url.startsWith("http")){
-    url = "https://" + url;
-  }
-
-  console.log("SALVANDO PRODUTO:", { nome, preco, url });
-
-  if(!nome || !preco || !url){
-    alert("Preencha tudo");
-    return;
-  }
-
-  const { error } = await client
-    .from('produtos')
-    .insert([{
-      nome,
-      preco,
-      url,
-      tipo: 'tvbox',
-      ativo: true,
-      prioridade: 1
-    }]);
-
-  if(error){
-    console.log("ERRO AO SALVAR:", error);
-    alert("Erro ao salvar produto");
-    return;
-  }
-
-  alert("Produto salvo com sucesso ✅");
-
-  fecharFormProduto();
-  carregar();
-}
 
   async function editarProduto(id){
 
