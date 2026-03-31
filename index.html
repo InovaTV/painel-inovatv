@@ -924,53 +924,6 @@ if(file){
   carregar();
 }
 
-// ===== SALVAR PRODUTO =====
-async function salvarProduto(){
-
-  const nome = document.getElementById('p_nome').value.trim();
-  const preco = parseFloat(document.getElementById('p_preco').value);
-  let url = document.getElementById('p_url').value.trim();
-
-  async function editarProduto(id){
-
-  const { data } = await client
-    .from('produtos')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  let nome = prompt("Nome:", data.nome);
-  if(nome === null) return;
-
-  let preco = prompt("Preço:", data.preco);
-  if(preco === null) return;
-
-  let url = prompt("Link:", data.url);
-  if(url === null) return;
-
-  if(url && !url.startsWith("http")){
-    url = "https://" + url;
-  }
-
-  const { error } = await client
-    .from('produtos')
-    .update({
-      nome,
-      preco: parseFloat(preco),
-      url
-    })
-    .eq('id', id);
-
-  if(error){
-    alert("Erro ao editar");
-    console.log(error);
-    return;
-  }
-
-  alert("Produto atualizado ✅");
-  carregar();
-}
-
   async function toggleProduto(id, status){
 
   const { error } = await client
