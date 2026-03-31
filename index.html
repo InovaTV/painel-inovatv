@@ -864,13 +864,24 @@ function fecharFormProduto(){
 
 async function salvarProduto(){
 
-  const nome = document.getElementById('p_nome').value;
+  const nome = document.getElementById('p_nome').value.trim();
   const preco = parseFloat(document.getElementById('p_preco').value);
-  const url = document.getElementById('p_url').value;
+  let url = document.getElementById('p_url').value.trim();
+  const file = document.getElementById('p_imagem').files[0];
+
+  if(url && !url.startsWith("http")){
+    url = "https://" + url;
+  }
 
   if(!nome || !preco || !url){
     alert("Preencha tudo");
     return;
+  }
+
+  let imagem_url = null;
+
+  if(file){
+    imagem_url = await uploadImagem(file);
   }
 
   const { error } = await client
@@ -879,20 +890,22 @@ async function salvarProduto(){
       nome,
       preco,
       url,
+      imagem_url,
       tipo: 'tvbox',
       ativo: true,
       prioridade: 1
     }]);
 
   if(error){
-    alert("Erro ao salvar");
     console.log(error);
+    alert("Erro ao salvar");
     return;
   }
 
+  alert("Produto salvo com imagem ✅");
+
   fecharFormProduto();
   carregar();
-
 }
 
 // ===== SALVAR PRODUTO =====
@@ -1011,6 +1024,28 @@ async function salvarProduto(){
   alert("Produto excluído 🗑️");
   carregar();
 }
+
+  async function uploadImagem(file){
+
+  const fileName = Date.now() + "_" + file.name;
+
+  const { data, error } = await client
+    .storage
+    .from('produtos')
+    .upload(fileName, file);
+
+  if(error){
+    console.log("Erro upload:", error);
+    return null;
+  }
+
+  const { data: publicUrl } = client
+    .storage
+    .from('produtos')
+    .getPublicUrl(fileName);
+
+  return publicUrl.publicUrl;
+}
   
 </script>
 
@@ -1022,6 +1057,7 @@ background:#222;color:#fff;padding:20px;border-radius:10px;z-index:999;width:300
 <input id="p_nome" placeholder="Nome" style="width:100%;margin-bottom:10px;">
 <input id="p_preco" placeholder="Preço" style="width:100%;margin-bottom:10px;">
 <input id="p_url" placeholder="Link" style="width:100%;margin-bottom:10px;">
+    <input type="file" id="p_imagem" style="width:100%;margin-bottom:10px;">
 
 <button onclick="salvarProduto()" style="background:#4CAF50;color:#fff;">Salvar</button>
 <button onclick="fecharFormProduto()">Cancelar</button>
