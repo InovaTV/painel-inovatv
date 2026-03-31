@@ -300,11 +300,14 @@ function render(lista){
       <td>${p.nome || ''}</td>
       <td>R$ ${p.preco || 0}</td>
       <td>
-        <a href="${p.url}" target="_blank" style="color:#4CAF50;font-weight:bold;">
-  🔗 Abrir
-</a>
+        <a href="${p.url}" target="_blank" style="color:#4CAF50;">
+          🔗 Abrir
+        </a>
       </td>
       <td>${p.ativo ? '✅' : '❌'}</td>
+      <td>
+        <button onclick="editarProduto('${p.id}')">✏️</button>
+      </td>
     </tr>
   `).join('');
 
@@ -919,6 +922,46 @@ async function salvarProduto(){
   alert("Produto salvo com sucesso ✅");
 
   fecharFormProduto();
+  carregar();
+}
+
+  async function editarProduto(id){
+
+  const { data } = await client
+    .from('produtos')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  let nome = prompt("Nome:", data.nome);
+  if(nome === null) return;
+
+  let preco = prompt("Preço:", data.preco);
+  if(preco === null) return;
+
+  let url = prompt("Link:", data.url);
+  if(url === null) return;
+
+  if(url && !url.startsWith("http")){
+    url = "https://" + url;
+  }
+
+  const { error } = await client
+    .from('produtos')
+    .update({
+      nome,
+      preco: parseFloat(preco),
+      url
+    })
+    .eq('id', id);
+
+  if(error){
+    alert("Erro ao editar");
+    console.log(error);
+    return;
+  }
+
+  alert("Produto atualizado ✅");
   carregar();
 }
   
