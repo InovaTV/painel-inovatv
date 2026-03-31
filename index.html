@@ -311,8 +311,9 @@ function render(lista){
         }
       </td>
       <td>
-        <button onclick="editarProduto('${p.id}')">✏️</button>
-      </td>
+  <button onclick="editarProduto('${p.id}')">✏️</button>
+  <button onclick="excluirProduto('${p.id}')" style="background:red;color:#fff;">🗑️</button>
+</td>
     </tr>
   `).join('');
 
@@ -983,6 +984,25 @@ async function salvarProduto(){
     return;
   }
 
+  carregar();
+}
+
+  async function excluirProduto(id){
+
+  if(!confirm("Deseja excluir este produto?")) return;
+
+  const { error } = await client
+    .from('produtos')
+    .delete()
+    .eq('id', id);
+
+  if(error){
+    alert("Erro ao excluir");
+    console.log(error);
+    return;
+  }
+
+  alert("Produto excluído 🗑️");
   carregar();
 }
   
