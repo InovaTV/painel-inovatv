@@ -95,6 +95,10 @@ th,td { padding:6px; border:1px solid #ccc; }
 
 <input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') buscar()">
 <button onclick="buscar()">Buscar</button>
+  
+  <button onclick="abrirFormProduto()" style="background:#4CAF50;color:#fff;margin-left:10px;">
+  + Produto
+</button>
 
 <hr>
 
@@ -833,8 +837,102 @@ async function desativarSelecionados(){
  await new Promise(r => setTimeout(r, 800));
 render(dados);
 }
+
+  // ===== PRODUTOS =====
+function abrirFormProduto(){
+  document.getElementById('formProduto').style.display = 'block';
+}
+
+function fecharFormProduto(){
+  document.getElementById('formProduto').style.display = 'none';
+}
+
+async function salvarProduto(){
+
+  const nome = document.getElementById('p_nome').value;
+  const preco = parseFloat(document.getElementById('p_preco').value);
+  const url = document.getElementById('p_url').value;
+
+  if(!nome || !preco || !url){
+    alert("Preencha tudo");
+    return;
+  }
+
+  const { error } = await client
+    .from('produtos')
+    .insert([{
+      nome,
+      preco,
+      url,
+      tipo: 'tvbox',
+      ativo: true,
+      prioridade: 1
+    }]);
+
+  if(error){
+    alert("Erro ao salvar");
+    console.log(error);
+    return;
+  }
+
+  fecharFormProduto();
+  carregar();
+
+}
+
+// ===== SALVAR PRODUTO =====
+async function salvarProduto(){
+
+  const nome = document.getElementById('p_nome').value;
+  const preco = parseFloat(document.getElementById('p_preco').value);
+  const url = document.getElementById('p_url').value;
+
+  console.log("SALVANDO PRODUTO:", { nome, preco, url });
+
+  if(!nome || !preco || !url){
+    alert("Preencha tudo");
+    return;
+  }
+
+  const { error } = await client
+    .from('produtos')
+    .insert([{
+      nome: nome,
+      preco: preco,
+      url: url,
+      tipo: 'tvbox',
+      ativo: true,
+      prioridade: 1
+    }]);
+
+  if(error){
+    console.log("ERRO AO SALVAR PRODUTO:", error);
+    alert("Erro ao salvar produto");
+    return;
+  }
+
+  alert("Produto salvo com sucesso ✅");
+
+  fecharFormProduto();
+
+  carregar();
+}
   
 </script>
+
+  <div id="formProduto" style="display:none;position:fixed;top:20%;left:50%;transform:translateX(-50%);
+background:#222;color:#fff;padding:20px;border-radius:10px;z-index:999;width:300px;">
+
+<h3>Adicionar Produto</h3>
+
+<input id="p_nome" placeholder="Nome" style="width:100%;margin-bottom:10px;">
+<input id="p_preco" placeholder="Preço" style="width:100%;margin-bottom:10px;">
+<input id="p_url" placeholder="Link" style="width:100%;margin-bottom:10px;">
+
+<button onclick="salvarProduto()" style="background:#4CAF50;color:#fff;">Salvar</button>
+<button onclick="fecharFormProduto()">Cancelar</button>
+
+</div>
 
 </body>
 </html>
