@@ -293,7 +293,10 @@ else if(tela==='pagamentos'){
     <th>Telefone</th>
     <th>Valor</th>
     <th>Forma</th>
-    <th>Data</th>
+    <th>Data Pagamento</th>
+    <th>Vencimento</th>
+    <th>Status</th>
+    <th>Último Pgto</th>
   </tr>`;
 }
   
@@ -349,15 +352,30 @@ function render(lista){
 
 // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
-  tabela.innerHTML = lista.map(p => `
+  tabela.innerHTML = lista.map(p => {
+
+    // 🎯 STATUS
+    let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+
+    // 🎯 VENCIMENTO
+    let vencimento = p.vencimento || "-";
+
+    // 🎯 ÚLTIMO PAGAMENTO (mesmo campo por enquanto)
+    let ultimo = p.data_pagamento || "-";
+
+    return `
 <tr style="background:#333;color:#fff;">
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
 <td>${p.forma_pagamento || ''}</td>
 <td>${p.data_pagamento || ''}</td>
+<td>${vencimento}</td>
+<td>${status}</td>
+<td>${ultimo}</td>
 </tr>
-  `).join('');
+    `;
+  }).join('');
 
   return;
 }
