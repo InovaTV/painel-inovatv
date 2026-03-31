@@ -876,7 +876,19 @@ async function salvarProduto(){
   const nome = document.getElementById('p_nome').value.trim();
   const preco = parseFloat(document.getElementById('p_preco').value);
   let url = document.getElementById('p_url').value.trim();
-  const file = document.getElementById('p_imagem').files[0];
+  const inputFile = document.getElementById('p_imagem');
+
+if(!inputFile){
+  log("❌ INPUT NÃO ENCONTRADO");
+  return;
+}
+
+if(inputFile.files.length === 0){
+  log("❌ NENHUM ARQUIVO SELECIONADO");
+}
+
+const file = inputFile.files[0];
+log("📸 FILE:", file ? file.name : "VAZIO");
   log("📸 FILE:", file);
   log("📸 FILE:", file ? file.name : "SEM IMAGEM");
   const descricao = document.getElementById('p_descricao').value;
