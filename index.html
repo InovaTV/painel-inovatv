@@ -162,6 +162,7 @@ let tela='clientes';
 let dados=[];
 let modalResolve;
 let dadosEditados={};
+  let editandoProdutoId = null;
   
   function log(msg){
   const agora = new Date().toLocaleTimeString();
@@ -901,15 +902,51 @@ log("📸 FILE:", file ? file.name : "VAZIO");
     alert("Preencha tudo");
     return;
   }
+let imagem_url = null;
 
-  let imagem_url = null;
+// se estiver editando, mantém a imagem atual
+if(editandoProdutoId){
+  const { data } = await client
+    .from('produtos')
+    .select('imagem_url')
+    .eq('id', editandoProdutoId)
+    .single();
+
+  imagem_url = data.imagem_url;
+}
+
+// se escolher nova imagem, substitui
 if(file){
   log("📸 ENVIANDO IMAGEM...");
-
   imagem_url = await uploadImagem(file);
-
+}
   log("📸 URL:", imagem_url);
 }
+
+  if(editandoProdutoId){
+
+  const { error } = await client
+    .from('produtos')
+    .update({
+      nome,
+      preco,
+      url,
+      descricao,
+      imagem_url
+    })
+    .eq('id', editandoProdutoId);
+
+  if(error){
+    console.log(error);
+    alert("Erro ao atualizar");
+    return;
+  }
+
+  alert("Produto atualizado ✅");
+
+  editandoProdutoId = null;
+
+}else{
 
   const { error } = await client
     .from('produtos')
@@ -931,6 +968,7 @@ if(file){
   }
 
   alert("Produto salvo com imagem ✅");
+}
 
   fecharFormProduto();
   carregar();
@@ -1031,8 +1069,10 @@ function fecharPreview(){
   document.getElementById('previewProduto').style.display = 'none';
 }
 
-  // ===== EDITAR PRODUTO =====
+// ===== EDITAR PRODUTO (NOVO) =====
 async function editarProduto(id){
+
+  log("✏️ EDITANDO PRODUTO: " + id);
 
   const { data } = await client
     .from('produtos')
@@ -1040,44 +1080,23 @@ async function editarProduto(id){
     .eq('id', id)
     .single();
 
-  let nome = prompt("Nome:", data.nome);
-  if(nome === null) return;
-
-  let preco = prompt("Preço:", data.preco);
-  if(preco === null) return;
-
-  let url = prompt("Link:", data.url);
-  if(url === null) return;
-
-  let descricao = prompt("Descrição:", data.descricao || "");
-  if(descricao === null) return;
-
-  let imagem_url = prompt("URL da imagem:", data.imagem_url || "");
-  if(imagem_url === null) return;
-
-  if(url && !url.startsWith("http")){
-    url = "https://" + url;
-  }
-
-  const { error } = await client
-    .from('produtos')
-    .update({
-      nome,
-      preco: parseFloat(preco),
-      url,
-      descricao,
-      imagem_url
-    })
-    .eq('id', id);
-
-  if(error){
-    console.log(error);
-    alert("Erro ao editar");
+  if(!data){
+    log("❌ PRODUTO NÃO ENCONTRADO");
     return;
   }
 
-  alert("Produto atualizado ✅");
-  carregar();
+  // preenche o formulário
+  document.getElementById('p_nome').value = data.nome || '';
+  document.getElementById('p_preco').value = data.preco || '';
+  document.getElementById('p_url').value = data.url || '';
+  document.getElementById('p_descricao').value = data.descricao || '';
+
+  // marca edição
+  editandoProdutoId = id;
+
+  log("📦 PRODUTO CARREGADO PARA EDIÇÃO");
+
+  abrirFormProduto();
 }
   
 </script>
