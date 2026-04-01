@@ -294,7 +294,8 @@ else if(tela==='produtos'){
 
 else if(tela==='pagamentos'){
   thead.innerHTML=`<tr>
-    <th>Nome</th>
+    <th></th>
+<th>Nome</th>
 <th>Usuário</th>
     <th>Telefone</th>
     <th>Valor</th>
@@ -357,20 +358,16 @@ function render(lista){
 
 // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
-  tabela.innerHTML = lista.map(p => {
+  tabela.innerHTML = lista.map((p,i) => {
 
-  // 🔥 BUSCAR CLIENTE PELO USUARIO
- const cliente = clientesCache.find(c => 
-  c.usuario === p.usuario && c.nome
-);
+    let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
 
-  const nome = cliente ? cliente.nome : "Não encontrado";
-
-  let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
-
-  return `
+    return `
 <tr style="background:#333;color:#fff;">
-<td>${nome}</td>
+<td>
+  <input type="checkbox" class="check" data-id="${i}" onchange="contarSelecionados()">
+</td>
+<td>${p.nome || ''}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
@@ -382,9 +379,9 @@ if(tela === 'pagamentos'){
   <button onclick="editarPagamento('${p.id}')">✏️</button>
 </td>
 </tr>
-  `;
-}).join('');
-
+    `;
+  }).join('');
+}
   return;
 }
   
