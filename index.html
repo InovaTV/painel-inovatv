@@ -115,10 +115,10 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 <input type="file" id="inputArquivo">
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
- <button id="btnImportarSelecionados" onclick="importarSelecionados()" style="display:inline-block;" class="btn-verde">
+  <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
   IMPORTAR SELECIONADOS
 </button>
- 
+
 <div id="progressBar"><div id="progress">0%</div></div>
 <div id="logErro"></div>
 
@@ -158,7 +158,7 @@ const client = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 const SUPABASE_KEY = client.supabaseKey;
-const progress = document.getElementById("progress");
+
   let clientesCache = [];
   
 let tela='clientes';
@@ -294,8 +294,7 @@ else if(tela==='produtos'){
 
 else if(tela==='pagamentos'){
   thead.innerHTML=`<tr>
-    <th></th>
-<th>Nome</th>
+    <th>Nome</th>
 <th>Usuário</th>
     <th>Telefone</th>
     <th>Valor</th>
@@ -357,17 +356,20 @@ function render(lista){
 }
 
 // ===== PAGAMENTOS =====
-if(tela && tela.toLowerCase() === 'pagamentos'){
-  console.log("ENTROU NO BLOCO PAGAMENTOS");
-  tabela.innerHTML = lista.map((p,i) => {
+if(tela === 'pagamentos'){
+  tabela.innerHTML = lista.map(p => {
 
-    let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+  // 🔥 BUSCAR CLIENTE PELO USUARIO
+ const cliente = clientesCache.find(c => 
+  c.usuario === p.usuario && c.nome
+);
 
-    return `
+  const nome = cliente ? cliente.nome : "Não encontrado";
+
+  let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+
+  return `
 <tr style="background:#333;color:#fff;">
-<td>
-  <input type="checkbox" class="check" data-id="${i}" data-telefone="${p.telefone || ''}" onchange="contarSelecionados()">
-</td>
 <td>${nome}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
@@ -380,10 +382,9 @@ if(tela && tela.toLowerCase() === 'pagamentos'){
   <button onclick="editarPagamento('${p.id}')">✏️</button>
 </td>
 </tr>
-    `;
-  }).join('');
-const cliente = clientesCache.find(c => c.usuario === p.usuario);
-const nome = cliente ? cliente.nome : "";
+  `;
+}).join('');
+
   return;
 }
   
@@ -642,7 +643,9 @@ async function importarArquivo(){
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
-       // 🔥 CRIA BOTÃO SE NÃO EXISTIR
+    document.getElementById("btnImportarSelecionados").style.display = "inline-block";
+
+    // 🔥 CRIA BOTÃO SE NÃO EXISTIR
     
   };
 
@@ -661,51 +664,37 @@ carregar();
   }
 
   let erros = 0;
-progress.style.width = "0%";
-progress.innerText = "0%";
+
   for(let i=0;i<checks.length;i++){
 
     const index = checks[i].dataset.id;
-let linha = dados[index];
+let linha = window.dadosImportados[index];
 
-// 🔥 PROTEÇÃO (COLE AQUI)
-if(!linha){
-  console.log("❌ LINHA UNDEFINED:", index);
-  continue;
-}    
-    console.log("LINHA:", linha);
-console.log("TELA ATUAL:", tela);
     // ===== PAGAMENTOS =====
-if(tela && tela.toLowerCase() === 'pagamentos'){
+if(tela === 'pagamentos'){
 
   // 🔥 buscar cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    c.usuario === linha.usuario
+    c.usuario === item.usuario
   );
 
   const telefone = cliente ? cliente.telefone : null;
 
   const { error } = await client
-  .from('pagamentos')
-  .insert({
-    usuario: linha.usuario,
-    telefone,
-    valor: parseFloat(linha.valor) || 0,
-    forma_pagamento: linha.forma_pagamento || linha.forma || '',
-    data_pagamento: linha.data_pagamento || null,
-    vencimento: linha.vencimento || null
-  });
+    .from('pagamentos')
+    .insert({
+      usuario: item.usuario,
+      telefone,
+      valor: parseFloat(item.valor) || 0,
+      forma_pagamento: item.forma_pagamento || '',
+      data_pagamento: item.data_pagamento || null,
+      vencimento: item.vencimento || null
+    });
 
   if(error){
     console.log("ERRO PAGAMENTO:", error);
   }
-  // 🔥 PROGRESS AQUI (ANTES DO CONTINUE)
-  let p = Math.floor(((i+1)/checks.length)*100);
 
-  progress.style.width = p + "%";
-  progress.innerText = p + "%";
-
-  await new Promise(r => setTimeout(r, 10));
   continue;
 }
 
@@ -752,13 +741,9 @@ if(tela && tela.toLowerCase() === 'pagamentos'){
       erros++;
     }
 
-   let p = Math.floor(((i+1)/checks.length)*100);
-
-progress.style.width = p + "%";
-progress.innerText = p + "%";
-
-// 🔥 FORÇA ATUALIZAÇÃO VISUAL (ESSENCIAL)
-await new Promise(r => setTimeout(r, 10));
+    let p=Math.floor(((i+1)/checks.length)*100);
+    progress.style.width=p+"%";
+    progress.innerText=p+"%";
   }
 
   alert("Importação concluída 🚀 Erros: "+erros);
