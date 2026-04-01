@@ -115,10 +115,10 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 <input type="file" id="inputArquivo">
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
-  <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
+ <button id="btnImportarSelecionados" onclick="importarSelecionados()" style="display:inline-block;" class="btn-verde">
   IMPORTAR SELECIONADOS
 </button>
-
+ 
 <div id="progressBar"><div id="progress">0%</div></div>
 <div id="logErro"></div>
 
@@ -640,9 +640,7 @@ async function importarArquivo(){
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
-    document.getElementById("btnImportarSelecionados").style.display = "inline-block";
-
-    // 🔥 CRIA BOTÃO SE NÃO EXISTIR
+       // 🔥 CRIA BOTÃO SE NÃO EXISTIR
     
   };
 
