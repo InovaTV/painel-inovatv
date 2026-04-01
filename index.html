@@ -665,7 +665,8 @@ progress.innerText = "0%";
   for(let i=0;i<checks.length;i++){
 
     const index = checks[i].dataset.id;
-let linha = window.dadosImportados[index];
+let linha = dados[index];
+    console.log("LINHA:", linha);
 console.log("TELA ATUAL:", tela);
     // ===== PAGAMENTOS =====
 if(tela && tela.toLowerCase() === 'pagamentos'){
