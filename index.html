@@ -666,6 +666,12 @@ progress.innerText = "0%";
 
     const index = checks[i].dataset.id;
 let linha = dados[index];
+
+// 🔥 PROTEÇÃO (COLE AQUI)
+if(!linha){
+  console.log("❌ LINHA UNDEFINED:", index);
+  continue;
+}    
     console.log("LINHA:", linha);
 console.log("TELA ATUAL:", tela);
     // ===== PAGAMENTOS =====
