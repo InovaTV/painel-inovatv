@@ -366,9 +366,9 @@ if(tela && tela.toLowerCase() === 'pagamentos'){
     return `
 <tr style="background:#333;color:#fff;">
 <td>
-  <input type="checkbox" class="check" data-id="${i}" onchange="contarSelecionados()">
+  <input type="checkbox" class="check" data-id="${i}" data-telefone="${p.telefone || ''}" onchange="contarSelecionados()">
 </td>
-<td>${p.nome || ''}</td>
+<td>${nome}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
@@ -382,7 +382,8 @@ if(tela && tela.toLowerCase() === 'pagamentos'){
 </tr>
     `;
   }).join('');
-
+const cliente = clientesCache.find(c => c.usuario === p.usuario);
+const nome = cliente ? cliente.nome : "";
   return;
 }
   
