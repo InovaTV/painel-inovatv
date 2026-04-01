@@ -158,7 +158,7 @@ const client = supabase.createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
 );
 const SUPABASE_KEY = client.supabaseKey;
-
+const progress = document.getElementById("progress");
   let clientesCache = [];
   
 let tela='clientes';
@@ -357,7 +357,8 @@ function render(lista){
 }
 
 // ===== PAGAMENTOS =====
-if(tela === 'pagamentos'){
+if(tela && tela.toLowerCase() === 'pagamentos'){
+  console.log("ENTROU NO BLOCO PAGAMENTOS");
   tabela.innerHTML = lista.map((p,i) => {
 
     let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
@@ -659,37 +660,44 @@ carregar();
   }
 
   let erros = 0;
-
+progress.style.width = "0%";
+progress.innerText = "0%";
   for(let i=0;i<checks.length;i++){
 
     const index = checks[i].dataset.id;
 let linha = window.dadosImportados[index];
-
+console.log("TELA ATUAL:", tela);
     // ===== PAGAMENTOS =====
-if(tela === 'pagamentos'){
+if(tela && tela.toLowerCase() === 'pagamentos'){
 
   // 🔥 buscar cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    c.usuario === item.usuario
+    c.usuario === linha.usuario
   );
 
   const telefone = cliente ? cliente.telefone : null;
 
   const { error } = await client
-    .from('pagamentos')
-    .insert({
-      usuario: item.usuario,
-      telefone,
-      valor: parseFloat(item.valor) || 0,
-      forma_pagamento: item.forma_pagamento || '',
-      data_pagamento: item.data_pagamento || null,
-      vencimento: item.vencimento || null
-    });
+  .from('pagamentos')
+  .insert({
+    usuario: linha.usuario,
+    telefone,
+    valor: parseFloat(linha.valor) || 0,
+    forma_pagamento: linha.forma_pagamento || linha.forma || '',
+    data_pagamento: linha.data_pagamento || null,
+    vencimento: linha.vencimento || null
+  });
 
   if(error){
     console.log("ERRO PAGAMENTO:", error);
   }
+  // 🔥 PROGRESS AQUI (ANTES DO CONTINUE)
+  let p = Math.floor(((i+1)/checks.length)*100);
 
+  progress.style.width = p + "%";
+  progress.innerText = p + "%";
+
+  await new Promise(r => setTimeout(r, 10));
   continue;
 }
 
@@ -736,9 +744,13 @@ if(tela === 'pagamentos'){
       erros++;
     }
 
-    let p=Math.floor(((i+1)/checks.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
+   let p = Math.floor(((i+1)/checks.length)*100);
+
+progress.style.width = p + "%";
+progress.innerText = p + "%";
+
+// 🔥 FORÇA ATUALIZAÇÃO VISUAL (ESSENCIAL)
+await new Promise(r => setTimeout(r, 10));
   }
 
   alert("Importação concluída 🚀 Erros: "+erros);
