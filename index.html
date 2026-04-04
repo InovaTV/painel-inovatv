@@ -700,13 +700,13 @@ if(tela === 'pagamentos'){
 
     try{
 
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
+      let tellet telefone = (linha.telefone || linha.numero || linha.celular || "").replace(/\D/g,"");efone=(linha.telefone||"").replace(/\D/g,"");
       if(!telefone.startsWith("55")) telefone="55"+telefone;
 
       let usuario=linha.usuario || ("user"+i);
 
      await client.from('clientes').insert({
-  nome: linha.nome,
+  nome: linha.nome || linha.cliente || linha["nome completo"] || null,
   telefone,
   usuario,
   servidor: linha.servidor,
@@ -738,8 +738,10 @@ if(tela === 'pagamentos'){
       });
 
     }catch(e){
-      erros++;
-    }
+  console.log("ERRO IMPORTAÇÃO:", e);
+  log("❌ ERRO: " + e.message);
+  erros++;
+}
 
     let p=Math.floor(((i+1)/checks.length)*100);
     progress.style.width=p+"%";
