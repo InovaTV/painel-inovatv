@@ -668,14 +668,14 @@ carregar();
   for(let i=0;i<checks.length;i++){
 
     const index = checks[i].dataset.id;
-let linha = window.dadosImportados[index];
+let linha = window.dadosImportados[parseInt(index)];
 
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
   // 🔥 buscar cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    c.usuario === item.usuario
+    c.usuario === linha.usuario
   );
 
   const telefone = cliente ? cliente.telefone : null;
