@@ -639,7 +639,7 @@ async function importarArquivo(){
 
     render(dados);
 
-    window.dadosImportados = json;
+    window.dadosImportados = dados;
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
@@ -705,7 +705,11 @@ if(tela === 'pagamentos'){
 
       let usuario=linha.usuario || ("user"+i);
 
-     await client.from('clientes').insert({
+     const { error: erroCliente } = await client.from('clientes').insert({
+       if(erroCliente){
+  console.log("ERRO CLIENTE:", erroCliente);
+  log("❌ ERRO CLIENTE: " + erroCliente.message);
+}
   nome: linha.nome || linha.cliente || linha["nome completo"] || null,
   telefone,
   usuario,
@@ -730,7 +734,7 @@ if(tela === 'pagamentos'){
     : new Date()
 });
 
-      await salvarContatoSeguro({
+      
         telefone,
         usuario,
         nome:linha.nome,
