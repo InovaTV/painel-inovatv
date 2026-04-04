@@ -683,7 +683,7 @@ if(tela === 'pagamentos'){
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario: item.usuario,
+      usuario: linha.usuario,
       telefone,
       valor: parseFloat(item.valor) || 0,
       forma_pagamento: item.forma_pagamento || '',
@@ -700,7 +700,7 @@ if(tela === 'pagamentos'){
 
     try{
 
-      let tellet telefone = (linha.telefone || linha.numero || linha.celular || "").replace(/\D/g,"");efone=(linha.telefone||"").replace(/\D/g,"");
+      let telefone = (linha.telefone || linha.numero || linha.celular || "").replace(/\D/g,"");
       if(!telefone.startsWith("55")) telefone="55"+telefone;
 
       let usuario=linha.usuario || ("user"+i);
