@@ -687,8 +687,8 @@ if(tela === 'pagamentos'){
       telefone,
       valor: parseFloat(linha.valor) || 0,
 forma_pagamento: linha.forma_pagamento || '',
-      data_pagamento: item.data_pagamento || null,
-      vencimento: item.vencimento || null
+      data_pagamento: linha.data_pagamento || null,
+vencimento: linha.vencimento || null
     });
 
   if(error){
@@ -737,14 +737,8 @@ if(erroCliente){
   usuario,
   nome: linha.nome,
   cliente: true
-});
+});  
       
-        telefone,
-        usuario,
-        nome:linha.nome,
-        cliente:true
-      });
-
     }catch(e){
   console.log("ERRO IMPORTAÇÃO:", e);
   log("❌ ERRO: " + e.message);
@@ -1225,9 +1219,10 @@ async function importarPagamentos(dadosExcel){
       });
 
     }catch(e){
-      log("❌ ERRO: " + e.message);
-      erros++;
-    }
+  console.log("ERRO IMPORTAÇÃO COMPLETO:", e);
+  log("❌ ERRO: " + e.message);
+  erros++;
+}
   }
 
   log("✅ IMPORTAÇÃO FINALIZADA");
