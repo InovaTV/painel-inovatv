@@ -685,8 +685,8 @@ if(tela === 'pagamentos'){
     .insert({
       usuario: linha.usuario,
       telefone,
-      valor: parseFloat(item.valor) || 0,
-      forma_pagamento: item.forma_pagamento || '',
+      valor: parseFloat(linha.valor) || 0,
+forma_pagamento: linha.forma_pagamento || '',
       data_pagamento: item.data_pagamento || null,
       vencimento: item.vencimento || null
     });
@@ -732,6 +732,12 @@ if(erroCliente){
   console.log("ERRO CLIENTE:", erroCliente);
   log("❌ ERRO CLIENTE: " + erroCliente.message);
 }
+      await salvarContatoSeguro({
+  telefone,
+  usuario,
+  nome: linha.nome,
+  cliente: true
+});
       
         telefone,
         usuario,
