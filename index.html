@@ -480,7 +480,7 @@ if(tela === 'pagamentos'){
 <tr style="background:#333;color:#fff;">
 
 <td>
-  <input type="checkbox" class="check" data-id="${lista.indexOf(p)}" onchange="contarSelecionados()">
+  <input type="checkbox" class="check" data-id="${p._index}" onchange="contarSelecionados()">
 </td>
 
 <td>${nome}</td>
@@ -752,9 +752,9 @@ async function importarArquivo(){
   id: i // 👈 AQUI É O SEGREDO
 }));
 
-    render(dados);
+    window.dadosImportados = dados;
 
-    window.dadosImportados = json;
+render(dados);
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
