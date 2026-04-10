@@ -715,6 +715,9 @@ if(tela === 'pagamentos'){
   vencimento: linha.vencimento,
   hora_vencimento: linha.hora_vencimento || linha.hora,
   mac: linha.mac,
+       }, {
+  onConflict: 'usuario'
+});
 
   // 🔥 NOVOS CAMPOS
   public_id: linha.public_id || null,
