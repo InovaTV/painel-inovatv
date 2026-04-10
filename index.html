@@ -781,9 +781,12 @@ let linha = window.dadosImportados[index];
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
-  // 🔥 buscar cliente pelo usuario
+  // 🔥 pega usuario OU cliente (do excel)
+  const usuario = linha.usuario || linha.cliente || null;
+
+  // 🔥 busca cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    c.usuario === linha.usuario
+    c.usuario === usuario
   );
 
   const telefone = cliente ? cliente.telefone : null;
@@ -791,17 +794,20 @@ if(tela === 'pagamentos'){
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario: linha.usuario || linha.cliente || null,
-telefone,
-valor: parseFloat(linha.valor) || 0,
-forma_pagamento: linha.forma_de_pagamento || linha.forma_pagamento || '',
-data_pagamento: linha.data_pagamento || null,
-vencimento: linha.vencimento || null
+      usuario,
+      telefone,
+      valor: parseFloat(linha.valor) || 0,
+      forma_pagamento: linha.forma_de_pagamento || linha.forma_pagamento || '',
+      data_pagamento: tratarDataExcel(linha.data_pagamento),
+      vencimento: tratarDataExcel(linha.vencimento)
     });
 
   if(error){
     console.log("ERRO PAGAMENTO:", error);
   }
+
+  continue;
+}
 
   continue;
 }
