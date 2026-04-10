@@ -705,7 +705,7 @@ if(tela === 'pagamentos'){
 
       let usuario=linha.usuario || ("user"+i);
 
-     await client.from('clientes').upsert({
+     await client.from('clientes').insert({
   nome: linha.nome,
   telefone,
   usuario,
@@ -722,9 +722,7 @@ if(tela === 'pagamentos'){
   observacao: linha.observacao || null,
   dispositivo: linha.dispositivo || null,
   aplicativo: linha.aplicativo || null,
-  vencimento_aplicativo: linha.vencimento_aplicativo || null
-
-
+  vencimento_aplicativo: linha.vencimento_aplicativo || null,
 
   // 🔥 DATA (IMPORTANTE)
   criado_em: linha.data_cadastro 
