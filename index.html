@@ -70,6 +70,74 @@ th,td { padding:6px; border:1px solid #ccc; }
 #contadorStatus {
   margin:10px 0;
   font-weight:bold;
+
+/* ===== PADRÃO TABELA BONITA ===== */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+/* cabeçalho */
+table th {
+  text-align: center;
+  padding: 10px;
+  background: #2b2b2b;
+  color: #fff;
+}
+
+/* células */
+table td {
+  text-align: center;
+  padding: 10px;
+  vertical-align: middle;
+}
+
+/* imagem centralizada */
+table td img {
+  display: block;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+
+/* descrição (texto longo) */
+td.descricao {
+  text-align: left;
+  max-width: 300px;
+  word-break: break-word;
+  white-space: normal;
+  color: #ccc;
+  font-size: 13px;
+}
+
+/* zebra */
+table tr:nth-child(even) {
+  background: #2f2f2f;
+}
+
+table tr:nth-child(odd) {
+  background: #3a3a3a;
+}
+
+/* hover */
+table tr:hover {
+  background: #444;
+  transition: 0.2s;
+}
+
+/* botões */
+button {
+  padding: 5px 8px;
+  border-radius: 5px;
+  border: none;
+  cursor: pointer;
+}
+
+button:hover {
+  opacity: 0.8;
+}
+  
 }
 </style>
 </head>
@@ -365,11 +433,9 @@ function render(lista){
 
       <td>R$ ${p.preco || 0}</td>
 
-      <td style="max-width:250px;">
-        <span style="font-size:12px;color:#ccc;">
-          ${p.descricao || ''}
-        </span>
-      </td>
+      <td class="descricao">
+  ${p.descricao || ''}
+</td>
 
       <td>
         <a href="${p.url}" target="_blank" style="color:#4CAF50;">
