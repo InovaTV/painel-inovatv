@@ -231,6 +231,7 @@ const SUPABASE_KEY = client.supabaseKey;
   let clientesCache = [];
   
 let tela='clientes';
+  let importando = false; // 🔥 CONTROLE DE IMPORTAÇÃO
 let dados=[];
 let modalResolve;
 let dadosEditados={};
@@ -335,6 +336,11 @@ function trocarTela(t){
 
 // ===== CARREGAR =====
 async function carregar(){
+
+  if(importando){
+  console.log("⛔ BLOQUEADO CARREGAR DURANTE IMPORTAÇÃO");
+  return;
+}
 
   log("🔄 CARREGANDO TELA: " + tela);
 
@@ -754,6 +760,8 @@ async function importarArquivo(){
 
     window.dadosImportados = dados;
 
+importando = true; // 🔥 ATIVA MODO IMPORTAÇÃO
+
 render(dados);
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
@@ -866,10 +874,11 @@ if(tela === 'pagamentos'){
 
   alert("Importação concluída 🚀 Erros: "+erros);
 
-    document.getElementById("btnImportarSelecionados").style.display = "none";
+document.getElementById("btnImportarSelecionados").style.display = "none";
 
-  carregar();
-}
+importando = false; // 🔥 LIBERA SISTEMA
+
+carregar();
 async function ativarHumano(telefone){
 
   log("Enviando HUMANO: " + telefone);
