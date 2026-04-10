@@ -469,7 +469,7 @@ if(tela === 'pagamentos'){
 
   // 🔥 BUSCAR CLIENTE PELO USUARIO
  const cliente = clientesCache.find(c => 
-  c.usuario === p.usuario && c.nome
+  (c.usuario || '').toLowerCase().trim() === (p.usuario || '').toLowerCase().trim()
 );
 
   const nome = cliente ? cliente.nome : "Não encontrado";
