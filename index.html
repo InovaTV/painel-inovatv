@@ -715,16 +715,16 @@ let usuario = linha.usuario || ("user"+i);
 const usuarioLimpo = String(usuario).trim();
 const telefoneLimpo = String(telefone).trim();
 
-// 🔥 VERIFICA DUPLICADO (CORRETO)
-const { data: existente } = await client
+const { data: existentes } = await client
   .from('clientes')
-  .select('id')
-  .eq('usuario', usuarioLimpo)
-  .eq('telefone', telefoneLimpo)
-  .maybeSingle();
+  .select('usuario');
 
-if (existente) {
-  log("⚠️ DUPLICADO IGNORADO: " + usuarioLimpo);
+const jaExiste = existentes?.some(c => 
+  String(c.usuario).trim() === usuarioLimpo
+);
+
+if (jaExiste) {
+  log("⚠️ CLIENTE DUPLICADO IGNORADO: " + usuarioLimpo);
   continue;
 }
 
