@@ -791,7 +791,7 @@ if(tela === 'pagamentos'){
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario: item.usuario,
+      usuario: linha.usuario,
       telefone,
       valor: parseFloat(item.valor) || 0,
       forma_pagamento: item.forma_pagamento || '',
