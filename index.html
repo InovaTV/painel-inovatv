@@ -391,8 +391,9 @@ else if(tela==='produtos'){
 
 else if(tela==='pagamentos'){
   thead.innerHTML=`<tr>
+    <th></th>
     <th>Nome</th>
-<th>Usuário</th>
+    <th>Usuário</th>
     <th>Telefone</th>
     <th>Valor</th>
     <th>Forma</th>
@@ -467,17 +468,21 @@ function render(lista){
 if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map(p => {
 
-  // 🔥 BUSCAR CLIENTE PELO USUARIO
- const cliente = clientesCache.find(c => 
-  (c.usuario || '').toLowerCase().trim() === (p.usuario || '').toLowerCase().trim()
-);
+    const cliente = clientesCache.find(c => 
+      (c.usuario || '').toLowerCase().trim() === (p.usuario || '').toLowerCase().trim()
+    );
 
-  const nome = cliente ? cliente.nome : "Não encontrado";
+    const nome = cliente ? cliente.nome : "Não encontrado";
 
-  let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+    let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
 
-  return `
+    return `
 <tr style="background:#333;color:#fff;">
+
+<td>
+  <input type="checkbox" class="check" data-id="${p.id}" onchange="contarSelecionados()">
+</td>
+
 <td>${nome}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
@@ -486,12 +491,14 @@ if(tela === 'pagamentos'){
 <td>${p.data_pagamento || ''}</td>
 <td>${p.vencimento || ''}</td>
 <td>${status}</td>
+
 <td>
   <button onclick="editarPagamento('${p.id}')">✏️</button>
 </td>
+
 </tr>
-  `;
-}).join('');
+    `;
+  }).join('');
 
   return;
 }
