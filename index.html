@@ -791,12 +791,12 @@ if(tela === 'pagamentos'){
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario: linha.usuario,
-      telefone,
-      valor: parseFloat(item.valor) || 0,
-      forma_pagamento: item.forma_pagamento || '',
-      data_pagamento: item.data_pagamento || null,
-      vencimento: item.vencimento || null
+      usuario: linha.usuario || linha.cliente || null,
+telefone,
+valor: parseFloat(linha.valor) || 0,
+forma_pagamento: linha.forma_de_pagamento || linha.forma_pagamento || '',
+data_pagamento: linha.data_pagamento || null,
+vencimento: linha.vencimento || null
     });
 
   if(error){
