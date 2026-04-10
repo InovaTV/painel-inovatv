@@ -723,6 +723,21 @@ if (jaExiste) {
   continue;
 }
 
+      const usuarioLimpo = String(usuario).trim();
+const telefoneLimpo = String(telefone).trim();
+
+const { data: existente } = await client
+  .from('clientes')
+  .select('id')
+  .eq('usuario', usuarioLimpo)
+  .eq('telefone', telefoneLimpo)
+  .maybeSingle();
+
+if (existente) {
+  log("⚠️ DUPLICADO IGNORADO: " + usuarioLimpo);
+  continue;
+}
+
      const { error: erroCliente } = await client.from('clientes').insert({
   nome: linha.nome || linha.cliente || linha["nome completo"] || null,
   telefone,
