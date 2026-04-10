@@ -705,7 +705,7 @@ if(tela === 'pagamentos'){
 
       let usuario=linha.usuario || ("user"+i);
 
-     await client.from('clientes').insert({
+     await client.from('clientes').upsert({
   nome: linha.nome,
   telefone,
   usuario,
