@@ -716,13 +716,16 @@ if(tela === 'pagamentos'){
   hora_vencimento: linha.hora_vencimento || linha.hora,
   mac: linha.mac,
 
-  // 🔥 NOVOS CAMPOS
   public_id: linha.public_id || null,
   forma_pagamento: linha.forma_de_pagamento || null,
   observacao: linha.observacao || null,
   dispositivo: linha.dispositivo || null,
   aplicativo: linha.aplicativo || null,
-  vencimento_aplicativo: linha.vencimento_aplicativo || null,
+  vencimento_aplicativo: linha.vencimento_aplicativo || null
+
+}, {
+  onConflict: 'usuario'
+});
 
   // 🔥 DATA (IMPORTANTE)
   criado_em: linha.data_cadastro 
