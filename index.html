@@ -723,14 +723,12 @@ if(tela === 'pagamentos'){
   aplicativo: linha.aplicativo || null,
   vencimento_aplicativo: linha.vencimento_aplicativo || null
 
-}, {
-  onConflict: 'usuario'
-});
-
-  // 🔥 DATA (IMPORTANTE)
+       // 🔥 DATA (IMPORTANTE)
   criado_em: linha.data_cadastro 
     ? new Date(linha.data_cadastro)
-    : new Date()
+    : new Date() 
+}, {
+  onConflict: 'usuario'
 });
 
       await salvarContatoSeguro({
