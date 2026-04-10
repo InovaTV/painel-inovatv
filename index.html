@@ -714,7 +714,7 @@ if(tela === 'pagamentos'){
   valor: Number(linha.valor) || 0,
   vencimento: linha.vencimento,
   hora_vencimento: linha.hora_vencimento || linha.hora,
-  mac: linha.mac,
+  mac: linha.mac
        }, {
   onConflict: 'usuario'
 });
