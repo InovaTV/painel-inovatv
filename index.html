@@ -781,12 +781,10 @@ let linha = window.dadosImportados[index];
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
-  // 🔥 pega usuario OU cliente (do excel)
   const usuario = linha.usuario || linha.cliente || null;
 
-  // 🔥 busca cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    c.usuario === usuario
+    (c.usuario || '').toLowerCase().trim() === (usuario || '').toLowerCase().trim()
   );
 
   const telefone = cliente ? cliente.telefone : null;
@@ -804,12 +802,9 @@ if(tela === 'pagamentos'){
 
   if(error){
     console.log("ERRO PAGAMENTO:", error);
-  
   }
-  continue;
-}
 
-  continue;
+  continue; // ✅ SOMENTE AQUI
 }
 
     try{
