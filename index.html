@@ -712,7 +712,7 @@ if(tela === 'pagamentos'){
   servidor: linha.servidor,
   plano: linha.plano,
   valor: Number(linha.valor) || 0,
-  vencimento: linha.vencimento,
+  vencimento: tratarDataExcel(linha.vencimento),
   hora_vencimento: linha.hora_vencimento || linha.hora,
   mac: linha.mac,
 
@@ -721,12 +721,12 @@ if(tela === 'pagamentos'){
   observacao: linha.observacao || null,
   dispositivo: linha.dispositivo || null,
   aplicativo: linha.aplicativo || null,
-  vencimento_aplicativo: linha.vencimento_aplicativo || null,
+  vencimento_aplicativo: tratarDataExcel(linha.vencimento_aplicativo),
 
   // 🔥 DATA AGORA NO LUGAR CERTO
-  criado_em: linha.data_cadastro
-    ? new Date(linha.data_cadastro)
-    : new Date()
+  criado_em: tratarDataExcel(linha.data_cadastro) 
+  ? tratarDataExcel(linha.data_cadastro) 
+  : new Date().toISOString()
 
 }, {
   onConflict: 'usuario'
