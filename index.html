@@ -705,16 +705,22 @@ vencimento: linha.vencimento || null
 
       let usuario=linha.usuario || ("user"+i);
 
-      // 🔥 VERIFICA SE JÁ EXISTE
-const { data: existente } = await client
-  .from('clientes')
-  .select('id')
-  .eq('usuario', usuario)
-  .maybeSingle();
+      // 🔥 NORMALIZA USUARIO
+const usuarioLimpo = String(usuario).trim();
 
-if (existente) {
-  log("⚠️ CLIENTE DUPLICADO IGNORADO: " + usuario);
-  continue; // 🔥 PULA ESSE CLIENTE
+// 🔥 BUSCA TODOS IGUAIS (flexível)
+const { data: existentes } = await client
+  .from('clientes')
+  .select('usuario');
+
+// 🔥 VERIFICA MANUAL (100% seguro)
+const jaExiste = existentes?.some(c => 
+  String(c.usuario).trim() === usuarioLimpo
+);
+
+if (jaExiste) {
+  log("⚠️ CLIENTE DUPLICADO IGNORADO: " + usuarioLimpo);
+  continue;
 }
 
      const { error: erroCliente } = await client.from('clientes').insert({
