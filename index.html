@@ -362,24 +362,42 @@ function render(lista){
   ${p.nome || ''}
 </td>
       <td>
-  R$ ${p.preco || 0}<br>
-  <small>${p.descricao || ''}</small>
-</td>
-      <td>
-        <a href="${p.url}" target="_blank" style="color:#4CAF50;">
-          🔗 Abrir
-        </a>
-      </td>
-      <td>
-        ${p.ativo 
-          ? '<button onclick="toggleProduto(\''+p.id+'\', false)" style="background:green;color:#fff;">ON</button>'
-          : '<button onclick="toggleProduto(\''+p.id+'\', true)" style="background:red;color:#fff;">OFF</button>'
-        }
-      </td>
-      <td>
-  <button onclick="editarProduto('${p.id}')">✏️</button><button onclick="verProduto('${p.id}')">👁️</button>
-  <button onclick="excluirProduto('${p.id}')" style="background:red;color:#fff;">🗑️</button>
-</td>
+  <tr style="background:#333;color:#fff;">
+  <td>
+    ${p.imagem_url 
+      ? `<img src="${p.imagem_url}" width="50" style="border-radius:5px;"><br>` 
+      : ''
+    }
+    ${p.nome || ''}
+  </td>
+
+  <td>R$ ${p.preco || 0}</td>
+
+  <td>
+    <span style="font-size:12px;color:#ccc;">
+      ${p.descricao || ''}
+    </span>
+  </td>
+
+  <td>
+    <a href="${p.url}" target="_blank" style="color:#4CAF50;">
+      🔗 Abrir
+    </a>
+  </td>
+
+  <td>
+    ${p.ativo 
+      ? '<button onclick="toggleProduto(\''+p.id+'\', false)" style="background:green;color:#fff;">ON</button>'
+      : '<button onclick="toggleProduto(\''+p.id+'\', true)" style="background:red;color:#fff;">OFF</button>'
+    }
+  </td>
+
+  <td>
+    <button onclick="editarProduto('${p.id}')">✏️</button>
+    <button onclick="verProduto('${p.id}')">👁️</button>
+    <button onclick="excluirProduto('${p.id}')" style="background:red;color:#fff;">🗑️</button>
+  </td>
+</tr>
     </tr>
   `).join('');
 
