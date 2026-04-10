@@ -639,7 +639,7 @@ async function importarArquivo(){
 
     render(dados);
 
-    window.dadosImportados = dados;
+    window.dadosImportados = json;
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
@@ -668,14 +668,14 @@ carregar();
   for(let i=0;i<checks.length;i++){
 
     const index = checks[i].dataset.id;
-let linha = window.dadosImportados[parseInt(index)];
+let linha = window.dadosImportados[index];
 
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
   // 🔥 buscar cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    c.usuario === linha.usuario
+    c.usuario === item.usuario
   );
 
   const telefone = cliente ? cliente.telefone : null;
@@ -683,12 +683,12 @@ if(tela === 'pagamentos'){
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario: linha.usuario,
+      usuario: item.usuario,
       telefone,
-      valor: parseFloat(linha.valor) || 0,
-forma_pagamento: linha.forma_pagamento || '',
-      data_pagamento: linha.data_pagamento || null,
-vencimento: linha.vencimento || null
+      valor: parseFloat(item.valor) || 0,
+      forma_pagamento: item.forma_pagamento || '',
+      data_pagamento: item.data_pagamento || null,
+      vencimento: item.vencimento || null
     });
 
   if(error){
@@ -700,36 +700,13 @@ vencimento: linha.vencimento || null
 
     try{
 
-      let telefone = (linha.telefone || linha.numero || linha.celular || "").replace(/\D/g,"");
+      let telefone=(linha.telefone||"").replace(/\D/g,"");
       if(!telefone.startsWith("55")) telefone="55"+telefone;
 
       let usuario=linha.usuario || ("user"+i);
 
-      // 🔥 NORMALIZA USUARIO
-let telefone = (linha.telefone || linha.numero || linha.celular || "").replace(/\D/g,"");
-if(!telefone.startsWith("55")) telefone="55"+telefone;
-
-let usuario = linha.usuario || ("user"+i);
-
-// 🔥 NORMALIZA
-const usuarioLimpo = String(usuario).trim();
-const telefoneLimpo = String(telefone).trim();
-
-const { data: existentes } = await client
-  .from('clientes')
-  .select('usuario');
-
-const jaExiste = existentes?.some(c => 
-  String(c.usuario).trim() === usuarioLimpo
-);
-
-if (jaExiste) {
-  log("⚠️ CLIENTE DUPLICADO IGNORADO: " + usuarioLimpo);
-  continue;
-}
-
-     const { error: erroCliente } = await client.from('clientes').insert({
-  nome: linha.nome || linha.cliente || linha["nome completo"] || null,
+     await client.from('clientes').insert({
+  nome: linha.nome,
   telefone,
   usuario,
   servidor: linha.servidor,
@@ -739,6 +716,7 @@ if (jaExiste) {
   hora_vencimento: linha.hora_vencimento || linha.hora,
   mac: linha.mac,
 
+  // 🔥 NOVOS CAMPOS
   public_id: linha.public_id || null,
   forma_pagamento: linha.forma_de_pagamento || null,
   observacao: linha.observacao || null,
@@ -746,27 +724,22 @@ if (jaExiste) {
   aplicativo: linha.aplicativo || null,
   vencimento_aplicativo: linha.vencimento_aplicativo || null,
 
+  // 🔥 DATA (IMPORTANTE)
   criado_em: linha.data_cadastro 
     ? new Date(linha.data_cadastro)
     : new Date()
 });
 
-if(erroCliente){
-  console.log("ERRO CLIENTE:", erroCliente);
-  log("❌ ERRO CLIENTE: " + erroCliente.message);
-}
       await salvarContatoSeguro({
-  telefone,
-  usuario,
-  nome: linha.nome,
-  cliente: true
-});  
-      
+        telefone,
+        usuario,
+        nome:linha.nome,
+        cliente:true
+      });
+
     }catch(e){
-  console.log("ERRO IMPORTAÇÃO:", e);
-  log("❌ ERRO: " + e.message);
-  erros++;
-}
+      erros++;
+    }
 
     let p=Math.floor(((i+1)/checks.length)*100);
     progress.style.width=p+"%";
@@ -1242,10 +1215,9 @@ async function importarPagamentos(dadosExcel){
       });
 
     }catch(e){
-  console.log("ERRO IMPORTAÇÃO COMPLETO:", e);
-  log("❌ ERRO: " + e.message);
-  erros++;
-}
+      log("❌ ERRO: " + e.message);
+      erros++;
+    }
   }
 
   log("✅ IMPORTAÇÃO FINALIZADA");
