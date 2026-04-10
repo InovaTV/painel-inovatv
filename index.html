@@ -185,6 +185,32 @@ async function salvarContatoSeguro(dados){
   }
 }
 
+  function tratarDataExcel(valor){
+
+  if(!valor) return null;
+
+  // 🔢 número (excel)
+  if(typeof valor === "number"){
+    const data = new Date((valor - 25569) * 86400 * 1000);
+    return data.toISOString().split("T")[0];
+  }
+
+  // 📅 formato BR
+  if(typeof valor === "string" && valor.includes("/")){
+    const p = valor.split("/");
+    if(p.length === 3){
+      return `${p[2]}-${p[1]}-${p[0]}`;
+    }
+  }
+
+  // 📅 já correto
+  if(typeof valor === "string" && valor.includes("-")){
+    return valor;
+  }
+
+  return null;
+}
+
 // ===== MODAL =====
 function abrirModal(label, valor){
   return new Promise(resolve=>{
