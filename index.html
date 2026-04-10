@@ -706,26 +706,16 @@ vencimento: linha.vencimento || null
       let usuario=linha.usuario || ("user"+i);
 
       // 🔥 NORMALIZA USUARIO
+let telefone = (linha.telefone || linha.numero || linha.celular || "").replace(/\D/g,"");
+if(!telefone.startsWith("55")) telefone="55"+telefone;
+
+let usuario = linha.usuario || ("user"+i);
+
+// 🔥 NORMALIZA
 const usuarioLimpo = String(usuario).trim();
-
-// 🔥 BUSCA TODOS IGUAIS (flexível)
-const { data: existentes } = await client
-  .from('clientes')
-  .select('usuario');
-
-// 🔥 VERIFICA MANUAL (100% seguro)
-const jaExiste = existentes?.some(c => 
-  String(c.usuario).trim() === usuarioLimpo
-);
-
-if (jaExiste) {
-  log("⚠️ CLIENTE DUPLICADO IGNORADO: " + usuarioLimpo);
-  continue;
-}
-
-      const usuarioLimpo = String(usuario).trim();
 const telefoneLimpo = String(telefone).trim();
 
+// 🔥 VERIFICA DUPLICADO (CORRETO)
 const { data: existente } = await client
   .from('clientes')
   .select('id')
