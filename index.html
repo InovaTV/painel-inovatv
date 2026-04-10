@@ -359,7 +359,10 @@ function render(lista){
   }
   ${p.nome || ''}
 </td>
-      <td>R$ ${p.preco || 0}</td>
+      <td>
+  R$ ${p.preco || 0}<br>
+  <small>${p.descricao || ''}</small>
+</td>
       <td>
         <a href="${p.url}" target="_blank" style="color:#4CAF50;">
           🔗 Abrir
