@@ -480,7 +480,7 @@ if(tela === 'pagamentos'){
 <tr style="background:#333;color:#fff;">
 
 <td>
-  <input type="checkbox" class="check" data-id="${p.id}" onchange="contarSelecionados()">
+  <input type="checkbox" class="check" data-id="${lista.indexOf(p)}" onchange="contarSelecionados()">
 </td>
 
 <td>${nome}</td>
