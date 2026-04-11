@@ -1356,6 +1356,69 @@ async function editarProduto(id){
   abrirFormProduto();
 }
 
+  // ===== EDITAR PAGAMENTO =====
+let pagamentoEditandoId = null;
+
+async function editarPagamento(id){
+
+  const { data, error } = await client
+    .from('pagamentos')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if(error || !data){
+    alert("Erro ao carregar pagamento");
+    return;
+  }
+
+  pagamentoEditandoId = id;
+
+  document.getElementById("pg_valor").value = data.valor || "";
+  document.getElementById("pg_metodo").value = data.metodo || "";
+  document.getElementById("pg_data").value = data.data_pagamento || "";
+  document.getElementById("pg_vencimento").value = data.vencimento || "";
+
+  document.getElementById("modalPagamento").style.display = "block";
+}
+
+
+// ===== SALVAR EDIÇÃO =====
+async function salvarEdicaoPagamento(){
+
+  const valor = document.getElementById("pg_valor").value;
+  const metodo = document.getElementById("pg_metodo").value;
+  const data_pagamento = document.getElementById("pg_data").value;
+  const vencimento = document.getElementById("pg_vencimento").value;
+
+  const { error } = await client
+    .from('pagamentos')
+    .update({
+      valor: parseFloat(valor) || 0,
+      metodo: metodo || null,
+      data_pagamento: data_pagamento || null,
+      vencimento: vencimento || null,
+      status: data_pagamento ? "pago" : "pendente"
+    })
+    .eq('id', pagamentoEditandoId);
+
+  if(error){
+    console.log(error);
+    alert("Erro ao salvar pagamento");
+    return;
+  }
+
+  alert("Pagamento atualizado ✅");
+  fecharModalPagamento();
+  carregar();
+}
+
+
+// ===== FECHAR MODAL =====
+function fecharModalPagamento(){
+  document.getElementById("modalPagamento").style.display = "none";
+}
+
 </script>
 
 <!-- ===== MODAL PAGAMENTO (ÚNICO) ===== -->
