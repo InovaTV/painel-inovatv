@@ -283,6 +283,15 @@ async function salvarContatoSeguro(dados){
   return null;
 }
 
+  function formatarDataBR(data){
+  if(!data) return "";
+
+  const d = new Date(data);
+  if(isNaN(d)) return data;
+
+  return d.toLocaleDateString('pt-BR');
+}
+
 // ===== MODAL =====
 function abrirModal(label, valor){
   return new Promise(resolve=>{
@@ -562,10 +571,12 @@ lista = [...listaHumano, ...listaNormal];
 <td>${c.servidor||''}</td>
 <td>${c.plano||''}</td>
 <td>${c.valor||''}</td>
-<td>${c.vencimento||''}</td>
+<td>${formatarDataBR(c.vencimento)}</td>
 <td>${c.hora_vencimento||''}</td>
 <td>${c.mac||''}</td>
-<td>${calcularStatus(c)}</td>
+<td style="color:${calcularStatus(c)==='ativo' ? 'lime' : 'red'}">
+  ${calcularStatus(c)}
+</td>
 <td>
   <button onclick="editar('${c.id}')">Editar</button>
   <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
