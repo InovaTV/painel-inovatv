@@ -789,6 +789,8 @@ carregar();
 
   for(let i=0;i<checks.length;i++){
 
+    try{
+
     const index = parseInt(checks[i].dataset.id);
     let linha = dados[index];
     
@@ -809,7 +811,7 @@ log("🔍 BUSCANDO USUARIO: " + usuarioBusca);
   const { data } = await client
   .from("clientes")
   .select("*")
-  .ilike("usuario", `%${usuarioBusca}%`);
+  .eq("usuario", usuarioBusca);
 
         clienteDB = data?.[0];
 
