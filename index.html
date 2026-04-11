@@ -809,6 +809,10 @@ log("🔍 BUSCANDO USUARIO: " + usuarioBusca);
   .eq("usuario", usuarioBusca);
 
         clienteDB = data?.[0];
+
+// 🔥 LOG AQUI
+log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
+        
       }
 
       if(!clienteDB){
