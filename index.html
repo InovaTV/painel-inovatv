@@ -802,7 +802,10 @@ carregar();
       let clienteDB = null;
 
       // 🔥 TRATAR CORRETAMENTE O EXCEL
-const usuarioBusca = (linha.usuario || linha.cliente || "").toString().trim();
+const usuarioBusca = (linha.usuario || linha.cliente || "")
+  .toString()
+  .trim()
+  .toLowerCase();
 
       // 🔥 LOG AQUI
 log("🔍 BUSCANDO USUARIO: " + usuarioBusca);
