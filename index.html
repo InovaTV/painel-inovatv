@@ -783,6 +783,9 @@ carregar();
 console.log("🔥 FUNÇÃO IMPORTAR FOI CHAMADA");
   const checks = document.querySelectorAll('.check:checked');
 
+    console.log("📊 TOTAL SELECIONADOS:", checks.length);
+console.log("📊 TOTAL IMPORTADOS:", window.dadosImportados.length);
+
   if(checks.length === 0){
     alert("Selecione pelo menos um cliente");
     return;
@@ -792,7 +795,7 @@ console.log("🔥 FUNÇÃO IMPORTAR FOI CHAMADA");
 
   for(let i=0;i<checks.length;i++){
 
-    const index = checks[i].dataset.id;
+    const index = parseInt(checks[i].dataset.id);
 let linha = window.dadosImportados[index];
     console.log("🔥 ENTROU NO BLOCO PAGAMENTOS", linha);
 
@@ -810,9 +813,10 @@ if(tela === 'pagamentos'){
   console.log("📦 CLIENTE ENCONTRADO:", cliente);
 
   if(!cliente){
-    console.log("❌ CLIENTE NÃO ENCONTRADO:", usuarioExcel);
-    continue;
-  }
+  console.log("❌ NÃO ACHOU:", usuarioExcel);
+  erros++;
+  continue;
+}
 
   const { error } = await client
     .from('pagamentos')
