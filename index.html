@@ -792,6 +792,11 @@ carregar();
     const index = parseInt(checks[i].dataset.id);
     let linha = lista[index];
 
+    if(!linha){
+  log("❌ LINHA UNDEFINED NO INDEX: " + index);
+  continue;
+}
+
     try{
 
       let clienteDB = null;
