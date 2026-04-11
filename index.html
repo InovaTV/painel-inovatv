@@ -184,6 +184,22 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 <input type="file" id="inputArquivo">
 <button class="btn-verde" onclick="importarArquivo()">IMPORTAR EXCEL</button>
 
+  <br><br>
+
+<!-- 🔵 PAGAMENTOS AUTOMÁTICO -->
+<button onclick="importarArquivoPagamentos()" style="background:#2196F3;color:#fff;">
+  📥 IMPORTAR EXCEL PAGAMENTOS
+</button>
+
+<button onclick="importarPagamentos(window.pagamentosImportados)" style="background:#4CAF50;color:#fff;">
+  🚀 IMPORTAR PAGAMENTOS
+</button>
+
+<!-- 🟠 PAGAMENTOS COM CHECKBOX -->
+<button onclick="importarPagamentosSelecionados()" style="background:orange;color:#fff;">
+  📌 IMPORTAR PAGAMENTOS SELECIONADOS
+</button>
+
   <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
   IMPORTAR SELECIONADOS
 </button>
@@ -1437,6 +1453,63 @@ async function editarPagamento(id){
   };
 
   reader.readAsBinaryString(file);
+}
+
+  async function importarPagamentosSelecionados(){
+
+  const checks = document.querySelectorAll('.check:checked');
+
+  if(checks.length === 0){
+    alert("Selecione pelo menos um pagamento");
+    return;
+  }
+
+  let erros = 0;
+
+  for(let i=0;i<checks.length;i++){
+
+    const index = parseInt(checks[i].dataset.id);
+    let linha = dados[index];
+
+    try{
+
+      let clienteDB = null;
+
+      const busca = linha.usuario || linha.cliente;
+
+      if(busca){
+        const { data } = await client
+          .from("clientes")
+          .select("*")
+          .ilike("usuario", `%${busca}%`);
+
+        clienteDB = data?.[0];
+      }
+
+      if(!clienteDB){
+        log("❌ NÃO ENCONTRADO: " + JSON.stringify(linha));
+        erros++;
+        continue;
+      }
+
+      await client.from("pagamentos").insert({
+        telefone: clienteDB.telefone,
+        usuario: clienteDB.usuario,
+        valor: Number(linha.valor) || 0,
+        forma_pagamento: linha.forma_de_pagamento || linha.forma_pagamento || null,
+        data_pagamento: linha.data_pagamento || null,
+        vencimento: linha.vencimento || null
+      });
+
+    }catch(e){
+      log("❌ ERRO: " + e.message);
+      erros++;
+    }
+  }
+
+  alert("Importação selecionada finalizada 🚀 Erros: " + erros);
+
+  carregar();
 }
   
 </script>
