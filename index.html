@@ -799,6 +799,9 @@ carregar();
       // 🔥 TRATAR CORRETAMENTE O EXCEL
 const usuarioBusca = (linha.usuario || linha.cliente || "").toString().trim();
 
+      // 🔥 LOG AQUI
+log("🔍 BUSCANDO USUARIO: " + usuarioBusca);
+
       if(usuarioBusca){
   const { data } = await client
   .from("clientes")
