@@ -491,8 +491,8 @@ const telefone = cliente?.telefone || p.telefone || "";
 <td>${cliente?.telefone || p.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
 <td>${p.metodo || p.forma_pagamento || ''}</td>
-<td>${p.data_pagamento || ''}</td>
-<td>${p.vencimento || ''}</td>
+<td>${formatarDataBR(p.data_pagamento)}</td>
+<td>${formatarDataBR(p.vencimento)}</td>
 <td>${status}</td>
 
 <td>
