@@ -801,9 +801,9 @@ const usuarioBusca = (linha.usuario || linha.cliente || "").toString().trim();
 
       if(usuarioBusca){
   const { data } = await client
-    .from("clientes")
-    .select("*")
-    .ilike("usuario", `%${usuarioBusca}%`);
+  .from("clientes")
+  .select("*")
+  .eq("usuario", usuarioBusca);
 
         clienteDB = data?.[0];
       }
