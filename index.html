@@ -796,13 +796,14 @@ let linha = window.dadosImportados[index];
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
-  const usuario = linha.usuario || linha.cliente || null;
+  const nomeExcel = linha.cliente || linha.nome || null;
 
-  const cliente = clientesCache.find(c => 
-    (c.usuario || '').toLowerCase().trim() === (usuario || '').toLowerCase().trim()
-  );
+const cliente = clientesCache.find(c => 
+  (c.nome || '').toLowerCase().trim() === (nomeExcel || '').toLowerCase().trim()
+);
 
-  const telefone = cliente ? cliente.telefone : null;
+const usuario = cliente ? cliente.usuario : null;
+const telefone = cliente ? cliente.telefone : null;
 
   const { error } = await client
     .from('pagamentos')
