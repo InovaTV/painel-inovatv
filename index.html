@@ -754,10 +754,14 @@ async function importarArquivo(){
     }
 
     // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
+  if(tela === 'pagamentos'){
+  dados = json; // 👈 SEM ALTERAR ID
+} else {
   dados = json.map((c,i)=>({
-  ...c,
-  id: i // 👈 AQUI É O SEGREDO
-}));
+    ...c,
+    id: i
+  }));
+}
 
     render(dados);
 
