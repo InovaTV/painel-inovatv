@@ -139,7 +139,7 @@ button:hover {
   opacity: 0.8;
 }
   
-
+}
 </style>
 </head>
 
@@ -231,7 +231,6 @@ const SUPABASE_KEY = client.supabaseKey;
   let clientesCache = [];
   
 let tela='clientes';
-  let importando = false; // 🔥 CONTROLE DE IMPORTAÇÃO
 let dados=[];
 let modalResolve;
 let dadosEditados={};
@@ -337,11 +336,6 @@ function trocarTela(t){
 // ===== CARREGAR =====
 async function carregar(){
 
-  if(importando){
-  console.log("⛔ BLOQUEADO CARREGAR DURANTE IMPORTAÇÃO");
-  return;
-}
-
   log("🔄 CARREGANDO TELA: " + tela);
 
   const { data, error } = await client.from(tela).select('*');
@@ -397,9 +391,8 @@ else if(tela==='produtos'){
 
 else if(tela==='pagamentos'){
   thead.innerHTML=`<tr>
-    <th></th>
     <th>Nome</th>
-    <th>Usuário</th>
+<th>Usuário</th>
     <th>Telefone</th>
     <th>Valor</th>
     <th>Forma</th>
@@ -471,24 +464,20 @@ function render(lista){
 }
 
 // ===== PAGAMENTOS =====
-if(tela === 'pagamentos'){  
+if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map(p => {
 
-    const cliente = clientesCache.find(c => 
-      (c.usuario || '').toLowerCase().trim() === (p.usuario || '').toLowerCase().trim()
-    );
+  // 🔥 BUSCAR CLIENTE PELO USUARIO
+ const cliente = clientesCache.find(c => 
+  c.usuario === p.usuario && c.nome
+);
 
-    const nome = cliente ? cliente.nome : "Não encontrado";
+  const nome = cliente ? cliente.nome : "Não encontrado";
 
-    let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
-   
-    return `
+  let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+
+  return `
 <tr style="background:#333;color:#fff;">
-
-<td>
-  <input type="checkbox" class="check" data-id="${p.id}" onchange="contarSelecionados()">
-</td>
-
 <td>${nome}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
@@ -497,14 +486,12 @@ if(tela === 'pagamentos'){
 <td>${p.data_pagamento || ''}</td>
 <td>${p.vencimento || ''}</td>
 <td>${status}</td>
-
 <td>
   <button onclick="editarPagamento('${p.id}')">✏️</button>
 </td>
-
 </tr>
-    `;
-  }).join('');
+  `;
+}).join('');
 
   return;
 }
@@ -753,37 +740,14 @@ async function importarArquivo(){
     }
 
     // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
-  if(tela === 'pagamentos'){
-
   dados = json.map((c,i)=>({
-    id: i,
+  ...c,
+  id: i // 👈 AQUI É O SEGREDO
+}));
 
-    usuario: (c.cliente || '').toString().trim(),
-    telefone: '',
+    render(dados);
 
-    valor: c.valor || 0,
-    forma_pagamento: c.forma_de_pagamento || '',
-
-    data_pagamento: tratarDataExcel(c.data_pagamento),
-    vencimento: tratarDataExcel(c.vencimento)
-  }));
-
-} else {
-
-  // 🔒 CLIENTES (permanece original)
-  dados = json.map((c,i)=>({
-    ...c,
-    id: i
-  }));
-
-}
-    window.dadosImportados = dados;
-
-importando = true; // 🔥 ATIVA MODO IMPORTAÇÃO
-
-    tela = 'pagamentos';
-
-render(dados);
+    window.dadosImportados = json;
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
@@ -799,11 +763,8 @@ render(dados);
 carregar();
 
   async function importarSelecionados(){
-console.log("🔥 FUNÇÃO IMPORTAR FOI CHAMADA");
-  const checks = document.querySelectorAll('.check:checked');
 
-    console.log("📊 TOTAL SELECIONADOS:", checks.length);
-console.log("📊 TOTAL IMPORTADOS:", window.dadosImportados.length);
+  const checks = document.querySelectorAll('.check:checked');
 
   if(checks.length === 0){
     alert("Selecione pelo menos um cliente");
@@ -814,95 +775,81 @@ console.log("📊 TOTAL IMPORTADOS:", window.dadosImportados.length);
 
   for(let i=0;i<checks.length;i++){
 
-    const index = parseInt(checks[i].dataset.id);
+    const index = checks[i].dataset.id;
 let linha = window.dadosImportados[index];
-    console.log("🔥 ENTROU NO BLOCO PAGAMENTOS", linha);
 
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
-  const usuarioExcel = (linha.cliente || '').toString().trim();
-
-  console.log("📥 EXCEL (usuario):", usuarioExcel);
-
+  // 🔥 buscar cliente pelo usuario
   const cliente = clientesCache.find(c => 
-    (c.usuario || '').toLowerCase().trim() === usuarioExcel.toLowerCase().trim()
+    c.usuario === linha.usuario
   );
 
-  console.log("📦 CLIENTE ENCONTRADO:", cliente);
-
-  if(!cliente){
-  console.log("❌ NÃO ACHOU:", usuarioExcel);
-  erros++;
-  continue;
-}
+  const telefone = cliente ? cliente.telefone : null;
 
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario: cliente.usuario,
-      telefone: cliente.telefone,
-      valor: parseFloat(linha.valor) || 0,
-      forma_pagamento: linha.forma_de_pagamento || '',
-      data_pagamento: tratarDataExcel(linha.data_pagamento),
-      vencimento: tratarDataExcel(linha.vencimento)
+      usuario: item.usuario,
+      telefone,
+      valor: parseFloat(item.valor) || 0,
+      forma_pagamento: item.forma_pagamento || '',
+      data_pagamento: item.data_pagamento || null,
+      vencimento: item.vencimento || null
     });
 
   if(error){
-    console.log("❌ ERRO PAGAMENTO:", error);
-    alert("Erro ao salvar pagamento: " + error.message);
-    continue;
+    console.log("ERRO PAGAMENTO:", error);
   }
-
-  console.log("✅ PAGAMENTO SALVO:", cliente.usuario);
 
   continue;
 }
 
-// ===== CLIENTES (NÃO ALTERADO) =====
-try{
+    try{
 
-  let telefone = (linha.telefone || "").replace(/\D/g,"");
-  if(!telefone.startsWith("55")) telefone = "55" + telefone;
+      let telefone=(linha.telefone||"").replace(/\D/g,"");
+      if(!telefone.startsWith("55")) telefone="55"+telefone;
 
-  let usuario = linha.usuario || ("user" + i);
+      let usuario=linha.usuario || ("user"+i);
 
-  await client.from('clientes').upsert({
-    nome: linha.nome,
-    telefone,
-    usuario,
-    servidor: linha.servidor,
-    plano: linha.plano,
-    valor: Number(linha.valor) || 0,
-    vencimento: tratarDataExcel(linha.vencimento),
-    hora_vencimento: linha.hora_vencimento || linha.hora,
-    mac: linha.mac,
+     await client.from('clientes').upsert({
+  nome: linha.nome,
+  telefone,
+  usuario,
+  servidor: linha.servidor,
+  plano: linha.plano,
+  valor: Number(linha.valor) || 0,
+  vencimento: tratarDataExcel(linha.vencimento),
+  hora_vencimento: linha.hora_vencimento || linha.hora,
+  mac: linha.mac,
 
-    public_id: linha.public_id || null,
-    forma_pagamento: linha.forma_de_pagamento || null,
-    observacao: linha.observacao || null,
-    dispositivo: linha.dispositivo || null,
-    aplicativo: linha.aplicativo || null,
-    vencimento_aplicativo: tratarDataExcel(linha.vencimento_aplicativo),
+  public_id: linha.public_id || null,
+  forma_pagamento: linha.forma_de_pagamento || null,
+  observacao: linha.observacao || null,
+  dispositivo: linha.dispositivo || null,
+  aplicativo: linha.aplicativo || null,
+  vencimento_aplicativo: tratarDataExcel(linha.vencimento_aplicativo),
 
-    criado_em: tratarDataExcel(linha.data_cadastro) 
-      ? tratarDataExcel(linha.data_cadastro) 
-      : new Date().toISOString()
+  // 🔥 DATA AGORA NO LUGAR CERTO
+  criado_em: tratarDataExcel(linha.data_cadastro) 
+  ? tratarDataExcel(linha.data_cadastro) 
+  : new Date().toISOString()
 
-  }, {
-    onConflict: 'usuario'
-  });
+}, {
+  onConflict: 'usuario'
+});
 
-  await salvarContatoSeguro({
-    telefone,
-    usuario,
-    nome: linha.nome,
-    cliente: true
-  });
+      await salvarContatoSeguro({
+        telefone,
+        usuario,
+        nome:linha.nome,
+        cliente:true
+      });
 
-}catch(e){
-  erros++;
-}
+    }catch(e){
+      erros++;
+    }
 
     let p=Math.floor(((i+1)/checks.length)*100);
     progress.style.width=p+"%";
@@ -911,12 +858,10 @@ try{
 
   alert("Importação concluída 🚀 Erros: "+erros);
 
-document.getElementById("btnImportarSelecionados").style.display = "none";
+    document.getElementById("btnImportarSelecionados").style.display = "none";
 
-importando = false; // 🔥 LIBERA SISTEMA
-
-carregar();
-  }
+  carregar();
+}
 async function ativarHumano(telefone){
 
   log("Enviando HUMANO: " + telefone);
