@@ -825,14 +825,23 @@ log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
         continue;
       }
 
-      await client.from("pagamentos").insert({
-        telefone: clienteDB.telefone,
-        usuario: clienteDB.usuario,
-        valor: Number(linha.valor) || 0,
-        forma_pagamento: linha.forma_pagamento || linha.forma_de_pagamento || null,
-        data_pagamento: linha.data_pagamento || null,
-        vencimento: linha.vencimento || null
-      });
+      const { error } = await client
+  .from("pagamentos")
+  .insert({
+    telefone: clienteDB.telefone,
+    usuario: clienteDB.usuario,
+    valor: Number(linha.valor) || 0,
+    forma_pagamento: linha.forma_pagamento || linha.forma_de_pagamento || null,
+    data_pagamento: linha.data_pagamento || null,
+    vencimento: linha.vencimento || null
+  });
+
+// 🔥 LOG DO RESULTADO
+if(error){
+  log("❌ ERRO INSERT: " + JSON.stringify(error));
+} else {
+  log("✅ SALVO: " + clienteDB.usuario);
+}
 
     }catch(e){
       log("❌ ERRO: " + e.message);
