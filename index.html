@@ -795,8 +795,8 @@ carregar();
 
     try{
 
-    const index = parseInt(checks[i].dataset.id);
-    let linha = dados[index];
+    const index = [...document.querySelectorAll('.check')].indexOf(checks[i]);
+let linha = dados[index];
     
     if(!linha){
   log("❌ LINHA UNDEFINED NO INDEX: " + index);
