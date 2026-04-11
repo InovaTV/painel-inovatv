@@ -186,20 +186,6 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 
   <br><br>
 
-<!-- 🔵 PAGAMENTOS AUTOMÁTICO -->
-<button onclick="importarArquivoPagamentos()" style="background:#2196F3;color:#fff;">
-  📥 IMPORTAR EXCEL PAGAMENTOS
-</button>
-
-<button onclick="importarPagamentos(window.pagamentosImportados)" style="background:#4CAF50;color:#fff;">
-  🚀 IMPORTAR PAGAMENTOS
-</button>
-
-<!-- 🟠 PAGAMENTOS COM CHECKBOX -->
-<button onclick="importarPagamentosSelecionados()" style="background:orange;color:#fff;">
-  📌 IMPORTAR PAGAMENTOS SELECIONADOS
-</button>
-
   <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
   IMPORTAR SELECIONADOS
 </button>
@@ -755,6 +741,10 @@ async function salvar(id){
 // ===== IMPORTAÇÃO =====
 async function importarArquivo(){
 
+  if(tela === 'pagamentos'){
+  log("📥 IMPORTANDO PAGAMENTOS");
+}
+
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
 
@@ -794,6 +784,60 @@ async function importarArquivo(){
 carregar();
 
   async function importarSelecionados(){
+
+    if(tela === 'pagamentos'){
+
+  const checks = document.querySelectorAll('.check:checked');
+
+  if(checks.length === 0){
+    alert("Selecione pelo menos um pagamento");
+    return;
+  }
+
+  for(let i=0;i<checks.length;i++){
+
+    const index = parseInt(checks[i].dataset.id);
+    let linha = dados[index];
+
+    try{
+
+      let clienteDB = null;
+
+      const busca = linha.usuario || linha.cliente;
+
+      if(busca){
+        const { data } = await client
+          .from("clientes")
+          .select("*")
+          .ilike("usuario", `%${busca}%`);
+
+        clienteDB = data?.[0];
+      }
+
+      if(!clienteDB){
+        log("❌ NÃO ENCONTRADO: " + JSON.stringify(linha));
+        continue;
+      }
+
+      await client.from("pagamentos").insert({
+        telefone: clienteDB.telefone,
+        usuario: clienteDB.usuario,
+        valor: Number(linha.valor) || 0,
+        forma_pagamento: linha.forma_de_pagamento || null,
+        data_pagamento: linha.data_pagamento || null,
+        vencimento: linha.vencimento || null
+      });
+
+    }catch(e){
+      log("❌ ERRO: " + e.message);
+    }
+  }
+
+  alert("Pagamentos importados com sucesso 🚀");
+
+  carregar();
+  return;
+}
 
   const checks = document.querySelectorAll('.check:checked');
 
