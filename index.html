@@ -188,6 +188,14 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
   IMPORTAR SELECIONADOS
 </button>
 
+  <button onclick="importarArquivoPagamentos()" style="background:#2196F3;color:#fff;">
+  📥 IMPORTAR EXCEL PAGAMENTOS
+</button>
+
+<button onclick="importarPagamentos(window.pagamentosImportados)" style="background:#4CAF50;color:#fff;">
+  🚀 IMPORTAR PAGAMENTOS
+</button>
+
 <div id="progressBar"><div id="progress">0%</div></div>
 <div id="logErro"></div>
 
@@ -463,7 +471,7 @@ function render(lista){
   return;
 }
 
-// ===== PAGAMENTOS =====
+// ===== PAGAMENTOS (RENDER - VISUAL) =====
 if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map(p => {
 
@@ -777,34 +785,6 @@ carregar();
 
     const index = checks[i].dataset.id;
 let linha = window.dadosImportados[index];
-
-    // ===== PAGAMENTOS =====
-if(tela === 'pagamentos'){
-
-  // 🔥 buscar cliente pelo usuario
-  const cliente = clientesCache.find(c => 
-    c.usuario === linha.usuario
-  );
-
-  const telefone = cliente ? cliente.telefone : null;
-
-  const { error } = await client
-    .from('pagamentos')
-    .insert({
-      usuario: item.usuario,
-      telefone,
-      valor: parseFloat(item.valor) || 0,
-      forma_pagamento: item.forma_pagamento || '',
-      data_pagamento: item.data_pagamento || null,
-      vencimento: item.vencimento || null
-    });
-
-  if(error){
-    console.log("ERRO PAGAMENTO:", error);
-  }
-
-  continue;
-}
 
     try{
 
@@ -1428,6 +1408,35 @@ async function editarPagamento(id){
 
   alert("Pagamento atualizado ✅");
   carregar();
+}
+
+  async function importarArquivoPagamentos(){
+
+  const file = inputArquivo.files[0];
+  if(!file) return alert("Selecione arquivo");
+
+  const reader = new FileReader();
+
+  reader.onload = async (e)=>{
+
+    const wb = XLSX.read(e.target.result,{type:'binary'});
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+
+    if(json.length === 0){
+      alert("Arquivo vazio");
+      return;
+    }
+
+    // 🔥 GUARDA SEPARADO
+    window.pagamentosImportados = json;
+
+    log("📥 PAGAMENTOS CARREGADOS: " + json.length);
+
+    alert("Arquivo carregado. Agora clique em IMPORTAR PAGAMENTOS");
+
+  };
+
+  reader.readAsBinaryString(file);
 }
   
 </script>
