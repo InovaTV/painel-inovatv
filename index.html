@@ -415,8 +415,9 @@ else if(tela==='produtos'){
 
 else if(tela==='pagamentos'){
   thead.innerHTML=`<tr>
+    <th></th> <!-- checkbox -->
     <th>Nome</th>
-<th>Usuário</th>
+    <th>Usuário</th>
     <th>Telefone</th>
     <th>Valor</th>
     <th>Forma</th>
@@ -489,12 +490,11 @@ function render(lista){
 
 // ===== PAGAMENTOS (RENDER - VISUAL) =====
 if(tela === 'pagamentos'){
-  tabela.innerHTML = lista.map(p => {
+  tabela.innerHTML = lista.map((p, index) => {
 
-  // 🔥 BUSCAR CLIENTE PELO USUARIO
- const cliente = clientesCache.find(c => 
-  c.usuario === p.usuario && c.nome
-);
+  const cliente = clientesCache.find(c => 
+    c.usuario === p.usuario && c.nome
+  );
 
   const nome = cliente ? cliente.nome : "Não encontrado";
 
@@ -502,6 +502,11 @@ if(tela === 'pagamentos'){
 
   return `
 <tr style="background:#333;color:#fff;">
+
+<td>
+  <input type="checkbox" class="check" data-id="${index}" onchange="contarSelecionados()">
+</td>
+
 <td>${nome}</td>
 <td>${p.usuario || ''}</td>
 <td>${p.telefone || ''}</td>
@@ -510,9 +515,11 @@ if(tela === 'pagamentos'){
 <td>${p.data_pagamento || ''}</td>
 <td>${p.vencimento || ''}</td>
 <td>${status}</td>
+
 <td>
   <button onclick="editarPagamento('${p.id}')">✏️</button>
 </td>
+
 </tr>
   `;
 }).join('');
