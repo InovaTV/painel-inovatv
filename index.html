@@ -472,8 +472,8 @@ if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map((p, index) => {
 
   const cliente = clientesCache.find(c => 
-    c.usuario === p.usuario && c.nome
-  );
+  c.id === p.cliente_id
+);
 
   const nome = cliente ? cliente.nome : "Não encontrado";
 
@@ -487,10 +487,10 @@ if(tela === 'pagamentos'){
 </td>
 
 <td>${nome}</td>
-<td>${p.usuario || ''}</td>
-<td>${p.telefone || ''}</td>
+<td>${cliente?.usuario || ''}</td>
+<td>${cliente?.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
-<td>${p.forma_pagamento || ''}</td>
+<td>${p.metodo || ''}</td>
 <td>${p.data_pagamento || ''}</td>
 <td>${p.vencimento || ''}</td>
 <td>${status}</td>
