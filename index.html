@@ -825,8 +825,6 @@ if(!clienteDB){
   continue;
 }
 
-try{
-
   // 🔥 TRATA DATA ANTES (OBRIGATÓRIO)
   const dataPag = tratarDataExcel(linha.data_pagamento || linha["Data Pagamento"]);
   const dataVenc = tratarDataExcel(linha.vencimento || linha["Vencimento"]);
