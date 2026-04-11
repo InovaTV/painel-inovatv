@@ -821,8 +821,12 @@ const telefone = cliente ? cliente.telefone : null;
     });
 
   if(error){
-    console.log("ERRO PAGAMENTO:", error);
-  }
+  console.log("❌ ERRO PAGAMENTO:", error);
+  alert("Erro ao salvar pagamento: " + error.message);
+  continue;
+}
+
+console.log("✅ SALVO COM SUCESSO:", linha);
 
   continue; // ✅ SOMENTE AQUI
 }
