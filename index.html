@@ -481,9 +481,7 @@ if(tela === 'pagamentos'){
     const nome = cliente ? cliente.nome : "Não encontrado";
 
     let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
-   console.log("EXCEL:", usuarioExcel);
-console.log("CLIENTES CACHE:", clientesCache[0]?.usuario);
-
+   
     return `
 <tr style="background:#333;color:#fff;">
 
@@ -803,14 +801,18 @@ if(tela === 'pagamentos'){
 
   const usuarioExcel = (linha.cliente || '').toString().trim();
 
-const cliente = clientesCache.find(c => 
-  (c.usuario || '').toLowerCase().trim() === usuarioExcel.toLowerCase().trim()
-);
+  console.log("📥 EXCEL (usuario):", usuarioExcel);
+
+  const cliente = clientesCache.find(c => 
+    (c.usuario || '').toLowerCase().trim() === usuarioExcel.toLowerCase().trim()
+  );
+
+  console.log("📦 CLIENTE ENCONTRADO:", cliente);
 
   if(!cliente){
-  console.log("❌ CLIENTE NÃO ENCONTRADO:", usuarioExcel);
-  continue;
-} 
+    console.log("❌ CLIENTE NÃO ENCONTRADO:", usuarioExcel);
+    continue;
+  }
 
   const { error } = await client
     .from('pagamentos')
@@ -819,6 +821,7 @@ const cliente = clientesCache.find(c =>
       telefone: cliente.telefone,
       valor: parseFloat(linha.valor) || 0,
       forma_pagamento: linha.forma_de_pagamento || '',
+      data_pagamento: tratarDataExcel(linha.data_pagamento),
       vencimento: tratarDataExcel(linha.vencimento)
     });
 
@@ -828,55 +831,55 @@ const cliente = clientesCache.find(c =>
     continue;
   }
 
-  console.log("✅ PAGAMENTO SALVO:", cliente.nome);
+  console.log("✅ PAGAMENTO SALVO:", cliente.usuario);
 
   continue;
 }
 
-    try{
+// ===== CLIENTES (NÃO ALTERADO) =====
+try{
 
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
-      if(!telefone.startsWith("55")) telefone="55"+telefone;
+  let telefone = (linha.telefone || "").replace(/\D/g,"");
+  if(!telefone.startsWith("55")) telefone = "55" + telefone;
 
-      let usuario=linha.usuario || ("user"+i);
+  let usuario = linha.usuario || ("user" + i);
 
-     await client.from('clientes').upsert({
-  nome: linha.nome,
-  telefone,
-  usuario,
-  servidor: linha.servidor,
-  plano: linha.plano,
-  valor: Number(linha.valor) || 0,
-  vencimento: tratarDataExcel(linha.vencimento),
-  hora_vencimento: linha.hora_vencimento || linha.hora,
-  mac: linha.mac,
+  await client.from('clientes').upsert({
+    nome: linha.nome,
+    telefone,
+    usuario,
+    servidor: linha.servidor,
+    plano: linha.plano,
+    valor: Number(linha.valor) || 0,
+    vencimento: tratarDataExcel(linha.vencimento),
+    hora_vencimento: linha.hora_vencimento || linha.hora,
+    mac: linha.mac,
 
-  public_id: linha.public_id || null,
-  forma_pagamento: linha.forma_de_pagamento || null,
-  observacao: linha.observacao || null,
-  dispositivo: linha.dispositivo || null,
-  aplicativo: linha.aplicativo || null,
-  vencimento_aplicativo: tratarDataExcel(linha.vencimento_aplicativo),
+    public_id: linha.public_id || null,
+    forma_pagamento: linha.forma_de_pagamento || null,
+    observacao: linha.observacao || null,
+    dispositivo: linha.dispositivo || null,
+    aplicativo: linha.aplicativo || null,
+    vencimento_aplicativo: tratarDataExcel(linha.vencimento_aplicativo),
 
-  // 🔥 DATA AGORA NO LUGAR CERTO
-  criado_em: tratarDataExcel(linha.data_cadastro) 
-  ? tratarDataExcel(linha.data_cadastro) 
-  : new Date().toISOString()
+    criado_em: tratarDataExcel(linha.data_cadastro) 
+      ? tratarDataExcel(linha.data_cadastro) 
+      : new Date().toISOString()
 
-}, {
-  onConflict: 'usuario'
-});
+  }, {
+    onConflict: 'usuario'
+  });
 
-      await salvarContatoSeguro({
-        telefone,
-        usuario,
-        nome:linha.nome,
-        cliente:true
-      });
+  await salvarContatoSeguro({
+    telefone,
+    usuario,
+    nome: linha.nome,
+    cliente: true
+  });
 
-    }catch(e){
-      erros++;
-    }
+}catch(e){
+  erros++;
+}
 
     let p=Math.floor(((i+1)/checks.length)*100);
     progress.style.width=p+"%";
