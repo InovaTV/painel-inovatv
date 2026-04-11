@@ -817,49 +817,51 @@ log("🔍 BUSCANDO USUARIO: " + usuarioBusca);
 
 // 🔥 LOG AQUI
 log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
-        
-      }
 
-      if(!clienteDB){
-        log("❌ NÃO ENCONTRADO: " + JSON.stringify(linha));
-        continue;
-      }
-
-      const { error } = await client
-  .from("pagamentos")
-  .insert({
-    cliente_id: clienteDB.id,
-    valor: Number(linha.valor) || 0,
-    metodo: linha.forma_pagamento || linha.forma_de_pagamento || linha.forma || null,
-
-    // 🔥 AGORA SIM
-    data_pagamento: tratarDataExcel(linha.data_pagamento),
-    vencimento: tratarDataExcel(linha.vencimento),
-
-    // 🔥 STATUS INTELIGENTE
-    const dataPag = tratarDataExcel(linha.data_pagamento || linha["Data Pagamento"]);
-
-status: dataPag ? "pago" : "pendente"
-  });
-
-// 🔥 LOG DO RESULTADO
-if(error){
-  log("❌ ERRO INSERT: " + JSON.stringify(error));
-} else {
-  log("✅ SALVO: " + clienteDB.usuario);
 }
 
-    }catch(e){
-      log("❌ ERRO: " + e.message);
-    }
+if(!clienteDB){
+  log("❌ NÃO ENCONTRADO: " + JSON.stringify(linha));
+  continue;
+}
+
+try{
+
+  // 🔥 TRATA DATA ANTES (OBRIGATÓRIO)
+  const dataPag = tratarDataExcel(linha.data_pagamento || linha["Data Pagamento"]);
+  const dataVenc = tratarDataExcel(linha.vencimento || linha["Vencimento"]);
+
+  const { error } = await client
+    .from("pagamentos")
+    .insert({
+      cliente_id: clienteDB.id,
+      valor: Number(linha.valor) || 0,
+      metodo: linha.forma_pagamento || linha.forma_de_pagamento || linha.forma || null,
+
+      data_pagamento: dataPag,
+      vencimento: dataVenc,
+
+      // 🔥 STATUS INTELIGENTE
+      status: dataPag ? "pago" : "pendente"
+    });
+
+  // 🔥 LOG DO RESULTADO
+  if(error){
+    log("❌ ERRO INSERT: " + JSON.stringify(error));
+  } else {
+    log("✅ SALVO: " + clienteDB.usuario);
   }
 
-  alert("Pagamentos importados com sucesso 🚀");
-
-  carregar();
-  return;
+}catch(e){
+  log("❌ ERRO: " + e.message);
 }
 
+}
+
+alert("Pagamentos importados com sucesso 🚀");
+
+carregar();
+return;
   const checks = document.querySelectorAll('.check:checked');
 
   if(checks.length === 0){
