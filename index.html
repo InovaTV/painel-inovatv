@@ -471,11 +471,11 @@ function render(lista){
 if(tela === 'pagamentos'){
   tabela.innerHTML = lista.map((p, index) => {
 
-  const cliente = clientesCache.find(c => 
-  c.id === p.cliente_id
-);
+  const cliente = clientesCache.find(c => c.id === p.cliente_id);
 
-  const nome = cliente ? cliente.nome : "Não encontrado";
+const nome = cliente?.nome || p.cliente || "";
+const usuario = cliente?.usuario || p.usuario || "";
+const telefone = cliente?.telefone || p.telefone || "";
 
   let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
 
@@ -487,10 +487,10 @@ if(tela === 'pagamentos'){
 </td>
 
 <td>${nome}</td>
-<td>${cliente?.usuario || ''}</td>
-<td>${cliente?.telefone || ''}</td>
+<td>${cliente?.usuario || p.usuario || ''}</td>
+<td>${cliente?.telefone || p.telefone || ''}</td>
 <td>R$ ${p.valor || 0}</td>
-<td>${p.metodo || ''}</td>
+<td>${p.metodo || p.forma_pagamento || ''}</td>
 <td>${p.data_pagamento || ''}</td>
 <td>${p.vencimento || ''}</td>
 <td>${status}</td>
