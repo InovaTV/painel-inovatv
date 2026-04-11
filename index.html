@@ -778,34 +778,6 @@ carregar();
     const index = checks[i].dataset.id;
 let linha = window.dadosImportados[index];
 
-    // ===== PAGAMENTOS =====
-if(tela === 'pagamentos'){
-
-  // 🔥 buscar cliente pelo usuario
-  const cliente = clientesCache.find(c => 
-    c.usuario === linha.usuario
-  );
-
-  const telefone = cliente ? cliente.telefone : null;
-
-  const { error } = await client
-    .from('pagamentos')
-    .insert({
-      usuario: item.usuario,
-      telefone,
-      valor: parseFloat(item.valor) || 0,
-      forma_pagamento: item.forma_pagamento || '',
-      data_pagamento: item.data_pagamento || null,
-      vencimento: item.vencimento || null
-    });
-
-  if(error){
-    console.log("ERRO PAGAMENTO:", error);
-  }
-
-  continue;
-}
-
     try{
 
       let telefone=(linha.telefone||"").replace(/\D/g,"");
