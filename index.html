@@ -471,8 +471,7 @@ function render(lista){
 }
 
 // ===== PAGAMENTOS =====
-if(tela === 'pagamentos'){
-  console.log("🔥 ENTROU NO BLOCO PAGAMENTOS", linha);
+if(tela === 'pagamentos'){  
   tabela.innerHTML = lista.map(p => {
 
     const cliente = clientesCache.find(c => 
@@ -482,6 +481,7 @@ if(tela === 'pagamentos'){
     const nome = cliente ? cliente.nome : "Não encontrado";
 
     let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
+    console.log("🔥 ENTROU NO BLOCO PAGAMENTOS", linha);
 
     return `
 <tr style="background:#333;color:#fff;">
