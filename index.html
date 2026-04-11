@@ -481,7 +481,8 @@ if(tela === 'pagamentos'){
     const nome = cliente ? cliente.nome : "Não encontrado";
 
     let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
-   
+   console.log("EXCEL:", usuarioExcel);
+console.log("CLIENTES CACHE:", clientesCache[0]?.usuario);
 
     return `
 <tr style="background:#333;color:#fff;">
