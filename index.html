@@ -800,35 +800,36 @@ let linha = window.dadosImportados[index];
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
-  const nomeExcel = linha.cliente || linha.nome || null;
+  const nomeExcel = linha.cliente || linha.nome || '';
 
-const cliente = clientesCache.find(c => 
-  (c.nome || '').toLowerCase().trim() === (nomeExcel || '').toLowerCase().trim()
-);
+  const cliente = clientesCache.find(c => 
+    (c.nome || '').toLowerCase().trim() === nomeExcel.toLowerCase().trim()
+  );
 
-const usuario = cliente ? cliente.usuario : null;
-const telefone = cliente ? cliente.telefone : null;
+  if(!cliente){
+    console.log("❌ CLIENTE NÃO ENCONTRADO:", nomeExcel);
+    continue;
+  }
 
   const { error } = await client
     .from('pagamentos')
     .insert({
-      usuario,
-      telefone,
+      usuario: cliente.usuario,
+      telefone: cliente.telefone,
       valor: parseFloat(linha.valor) || 0,
-      forma_pagamento: linha.forma_de_pagamento || linha.forma_pagamento || '',
-      data_pagamento: tratarDataExcel(linha.data_pagamento),
+      forma_pagamento: linha.forma_de_pagamento || '',
       vencimento: tratarDataExcel(linha.vencimento)
     });
 
   if(error){
-  console.log("❌ ERRO PAGAMENTO:", error);
-  alert("Erro ao salvar pagamento: " + error.message);
+    console.log("❌ ERRO PAGAMENTO:", error);
+    alert("Erro ao salvar pagamento: " + error.message);
+    continue;
+  }
+
+  console.log("✅ PAGAMENTO SALVO:", cliente.nome);
+
   continue;
-}
-
-console.log("✅ SALVO COM SUCESSO:", linha);
-
-  continue; // ✅ SOMENTE AQUI
 }
 
     try{
