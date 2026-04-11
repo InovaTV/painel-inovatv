@@ -828,11 +828,17 @@ log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
       const { error } = await client
   .from("pagamentos")
   .insert({
-  cliente_id: clienteDB.id,
-  valor: Number(linha.valor) || 0,
-  status: "pendente",
-  metodo: linha.forma_de_pagamento || null
-});
+    cliente_id: clienteDB.id,
+    valor: Number(linha.valor) || 0,
+    metodo: linha.forma_pagamento || linha.forma_de_pagamento || null,
+
+    // 🔥 AGORA SIM
+    data_pagamento: tratarDataExcel(linha.data_pagamento),
+    vencimento: tratarDataExcel(linha.vencimento),
+
+    // 🔥 STATUS INTELIGENTE
+    status: linha.data_pagamento ? "pago" : "pendente"
+  });
 
 // 🔥 LOG DO RESULTADO
 if(error){
@@ -1444,67 +1450,117 @@ async function editarProduto(id){
       <td>${p.telefone || ''}</td>
       <td>${p.valor || ''}</td>
       <td>${p.forma_pagamento || ''}</td>
-      <td>${p.data_pagamento || ''}</td>
+      <td>${p.data_pagamento || ''}</td>      
     </tr>
   `).join('');
 }
 
-  // ===== EDITAR PAGAMENTO =====
+<!-- ===== EDITAR PAGAMENTO ===== -->
+<script>
+
+let pagamentoEditandoId = null;
+
 async function editarPagamento(id){
 
-  const { data } = await client
+  const { data, error } = await client
     .from('pagamentos')
     .select('*')
     .eq('id', id)
     .single();
 
-  let valor = prompt("Valor:", data.valor);
-  if(valor === null) return;
+  if(error || !data){
+    alert("Erro ao carregar pagamento");
+    return;
+  }
 
-  let forma = prompt("Forma de pagamento:", data.forma_pagamento || "");
-  if(forma === null) return;
+  pagamentoEditandoId = id;
 
-  let data_pagamento = prompt("Data pagamento:", data.data_pagamento || "");
-  if(data_pagamento === null) return;
+  document.getElementById("pg_valor").value = data.valor || "";
+  document.getElementById("pg_metodo").value = data.metodo || "";
+  document.getElementById("pg_data").value = data.data_pagamento || "";
+  document.getElementById("pg_vencimento").value = data.vencimento || "";
 
-  let vencimento = prompt("Vencimento:", data.vencimento || "");
-  if(vencimento === null) return;
+  document.getElementById("modalPagamento").style.display = "block";
+}
+
+
+// ===== SALVAR EDIÇÃO =====
+async function salvarEdicaoPagamento(){
+
+  const valor = document.getElementById("pg_valor").value;
+  const metodo = document.getElementById("pg_metodo").value;
+  const data_pagamento = document.getElementById("pg_data").value;
+  const vencimento = document.getElementById("pg_vencimento").value;
 
   const { error } = await client
     .from('pagamentos')
     .update({
-      valor: parseFloat(valor),
-      forma_pagamento: forma,
-      data_pagamento,
-      vencimento
+      valor: parseFloat(valor) || 0,
+      metodo: metodo || null,
+      data_pagamento: data_pagamento || null,
+      vencimento: vencimento || null,
+      status: data_pagamento ? "pago" : "pendente"
     })
-    .eq('id', id);
+    .eq('id', pagamentoEditandoId);
 
   if(error){
     console.log(error);
-    alert("Erro ao editar pagamento");
+    alert("Erro ao salvar pagamento");
     return;
   }
 
   alert("Pagamento atualizado ✅");
+  fecharModalPagamento();
   carregar();
 }
-  
+
+
+// ===== FECHAR MODAL =====
+function fecharModalPagamento(){
+  document.getElementById("modalPagamento").style.display = "none";
+}
+
 </script>
 
-  <div id="formProduto" style="display:none;position:fixed;top:20%;left:50%;transform:translateX(-50%);
-background:#222;color:#fff;padding:20px;border-radius:10px;z-index:999;width:300px;">
 
-<h3>Adicionar Produto</h3>
+<!-- ===== MODAL PAGAMENTO ===== -->
+<div id="modalPagamento" style="
+  display:none;
+  position:fixed;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  background:#222;
+  padding:20px;
+  border-radius:10px;
+  color:#fff;
+  z-index:9999;
+  width:300px;
+">
 
-<input id="p_nome" placeholder="Nome" style="width:100%;margin-bottom:10px;">
-<input id="p_preco" placeholder="Preço" style="width:100%;margin-bottom:10px;">
-<input id="p_url" placeholder="Link" style="width:100%;margin-bottom:10px;">
-    <textarea id="p_descricao" placeholder="Descrição" style="width:100%;margin-bottom:10px;"></textarea>
-    <input type="file" id="p_imagem" style="width:100%;margin-bottom:10px;">
+  <h3>Editar Pagamento</h3>
 
-<button onclick="salvarProduto()" style="background:#4CAF50;color:#fff;">Salvar</button>
-<button onclick="fecharFormProduto()">Cancelar</button>
+  <input id="pg_valor" placeholder="Valor" style="width:100%;margin-bottom:10px;">
+  <input id="pg_metodo" placeholder="Forma de pagamento" style="width:100%;margin-bottom:10px;">
+  <input id="pg_data" placeholder="Data pagamento" style="width:100%;margin-bottom:10px;">
+  <input id="pg_vencimento" placeholder="Vencimento" style="width:100%;margin-bottom:10px;">
+
+  <button onclick="salvarEdicaoPagamento()" style="background:#4CAF50;color:#fff;">Salvar</button>
+  <button onclick="fecharModalPagamento()">Cancelar</button>
+
+</div>
+
+  <div id="modalPagamento" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#222; padding:20px; border-radius:10px; color:#fff; z-index:9999;">
+
+  <h3>Editar Pagamento</h3>
+
+  <input id="pg_valor" placeholder="Valor"><br><br>
+  <input id="pg_metodo" placeholder="Forma de pagamento"><br><br>
+  <input id="pg_data" placeholder="Data pagamento"><br><br>
+  <input id="pg_vencimento" placeholder="Vencimento"><br><br>
+
+  <button onclick="salvarEdicaoPagamento()">Salvar</button>
+  <button onclick="fecharModalPagamento()">Cancelar</button>
 
 </div>
 
