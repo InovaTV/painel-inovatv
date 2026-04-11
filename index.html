@@ -796,13 +796,14 @@ carregar();
 
       let clienteDB = null;
 
-      const busca = linha.usuario || linha.cliente;
+      // 🔥 TRATAR CORRETAMENTE O EXCEL
+const usuarioBusca = (linha.usuario || linha.cliente || "").toString().trim();
 
-      if(busca){
-        const { data } = await client
-          .from("clientes")
-          .select("*")
-          .ilike("usuario", `%${busca}%`);
+      if(usuarioBusca){
+  const { data } = await client
+    .from("clientes")
+    .select("*")
+    .ilike("usuario", `%${usuarioBusca}%`);
 
         clienteDB = data?.[0];
       }
@@ -816,7 +817,7 @@ carregar();
         telefone: clienteDB.telefone,
         usuario: clienteDB.usuario,
         valor: Number(linha.valor) || 0,
-        forma_pagamento: linha.forma_de_pagamento || null,
+        forma_pagamento: linha.forma_pagamento || linha.forma_de_pagamento || null,
         data_pagamento: linha.data_pagamento || null,
         vencimento: linha.vencimento || null
       });
