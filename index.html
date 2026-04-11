@@ -828,13 +828,11 @@ log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
       const { error } = await client
   .from("pagamentos")
   .insert({
-    telefone: clienteDB.telefone,
-    usuario: clienteDB.usuario,
-    valor: Number(linha.valor) || 0,
-    forma_pagamento: linha.forma_pagamento || linha.forma_de_pagamento || null,
-    data_pagamento: linha.data_pagamento || null,
-    vencimento: linha.vencimento || null
-  });
+  cliente_id: clienteDB.id,
+  valor: Number(linha.valor) || 0,
+  status: "pendente",
+  metodo: linha.forma_de_pagamento || null
+});
 
 // 🔥 LOG DO RESULTADO
 if(error){
