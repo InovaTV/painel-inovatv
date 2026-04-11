@@ -753,11 +753,30 @@ async function importarArquivo(){
     }
 
     // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
-  dados = json.map((c,i)=>({
-  ...c,
-  id: i // 👈 AQUI É O SEGREDO
-}));
+  if(tela === 'pagamentos'){
 
+  dados = json.map((c,i)=>({
+    id: i,
+
+    usuario: (c.cliente || '').toString().trim(),
+    telefone: '',
+
+    valor: c.valor || 0,
+    forma_pagamento: c.forma_de_pagamento || '',
+
+    data_pagamento: tratarDataExcel(c.data_pagamento),
+    vencimento: tratarDataExcel(c.vencimento)
+  }));
+
+} else {
+
+  // 🔒 CLIENTES (permanece original)
+  dados = json.map((c,i)=>({
+    ...c,
+    id: i
+  }));
+
+}
     window.dadosImportados = dados;
 
 importando = true; // 🔥 ATIVA MODO IMPORTAÇÃO
