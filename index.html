@@ -1430,7 +1430,10 @@ async function editarProduto(id){
   abrirFormProduto();
 }
 
-  async function carregarPagamentos(){
+  <script>
+
+// ===== CARREGAR PAGAMENTOS (CORRIGIDO) =====
+async function carregarPagamentos(){
 
   const { data } = await client
     .from('pagamentos')
@@ -1440,24 +1443,32 @@ async function editarProduto(id){
   const lista = document.getElementById('listaPagamentos');
 
   if(!data || data.length === 0){
-    lista.innerHTML = "<tr><td colspan='5'>Nenhum pagamento</td></tr>";
+    lista.innerHTML = "<tr><td colspan='6'>Nenhum pagamento</td></tr>";
     return;
   }
 
-  lista.innerHTML = data.map(p => `
-    <tr>
-      <td>${p.usuario || ''}</td>
-      <td>${p.telefone || ''}</td>
-      <td>${p.valor || ''}</td>
-      <td>${p.forma_pagamento || ''}</td>
-      <td>${p.data_pagamento || ''}</td>      
-    </tr>
-  `).join('');
+  // 🔥 buscar clientes para cruzar dados
+  const { data: clientes } = await client.from('clientes').select('*');
+
+  lista.innerHTML = data.map(p => {
+
+    const cliente = clientes.find(c => c.id === p.cliente_id);
+
+    return `
+      <tr>
+        <td>${cliente?.usuario || ''}</td>
+        <td>${cliente?.telefone || ''}</td>
+        <td>${p.valor || ''}</td>
+        <td>${p.metodo || ''}</td>
+        <td>${p.data_pagamento || ''}</td>
+        <td>${p.vencimento || ''}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
-<!-- ===== EDITAR PAGAMENTO ===== -->
-<script>
 
+// ===== EDITAR PAGAMENTO =====
 let pagamentoEditandoId = null;
 
 async function editarPagamento(id){
@@ -1522,8 +1533,7 @@ function fecharModalPagamento(){
 
 </script>
 
-
-<!-- ===== MODAL PAGAMENTO ===== -->
+<!-- ===== MODAL PAGAMENTO (ÚNICO) ===== -->
 <div id="modalPagamento" style="
   display:none;
   position:fixed;
@@ -1549,21 +1559,3 @@ function fecharModalPagamento(){
   <button onclick="fecharModalPagamento()">Cancelar</button>
 
 </div>
-
-  <div id="modalPagamento" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#222; padding:20px; border-radius:10px; color:#fff; z-index:9999;">
-
-  <h3>Editar Pagamento</h3>
-
-  <input id="pg_valor" placeholder="Valor"><br><br>
-  <input id="pg_metodo" placeholder="Forma de pagamento"><br><br>
-  <input id="pg_data" placeholder="Data pagamento"><br><br>
-  <input id="pg_vencimento" placeholder="Vencimento"><br><br>
-
-  <button onclick="salvarEdicaoPagamento()">Salvar</button>
-  <button onclick="fecharModalPagamento()">Cancelar</button>
-
-</div>
-
-</body>
-</html>
-
