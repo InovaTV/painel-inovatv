@@ -800,16 +800,16 @@ let linha = window.dadosImportados[index];
     // ===== PAGAMENTOS =====
 if(tela === 'pagamentos'){
 
-  const nomeExcel = linha.cliente || linha.nome || '';
+  const usuarioExcel = (linha.cliente || '').toString().trim();
 
-  const cliente = clientesCache.find(c => 
-    (c.nome || '').toLowerCase().trim() === nomeExcel.toLowerCase().trim()
-  );
+const cliente = clientesCache.find(c => 
+  (c.usuario || '').toLowerCase().trim() === usuarioExcel.toLowerCase().trim()
+);
 
   if(!cliente){
-    console.log("❌ CLIENTE NÃO ENCONTRADO:", nomeExcel);
-    continue;
-  }
+  console.log("❌ CLIENTE NÃO ENCONTRADO:", usuarioExcel);
+  continue;
+} 
 
   const { error } = await client
     .from('pagamentos')
