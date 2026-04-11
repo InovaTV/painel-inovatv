@@ -830,14 +830,16 @@ log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
   .insert({
     cliente_id: clienteDB.id,
     valor: Number(linha.valor) || 0,
-    metodo: linha.forma_pagamento || linha.forma_de_pagamento || null,
+    metodo: linha.forma_pagamento || linha.forma_de_pagamento || linha.forma || null,
 
     // 🔥 AGORA SIM
     data_pagamento: tratarDataExcel(linha.data_pagamento),
     vencimento: tratarDataExcel(linha.vencimento),
 
     // 🔥 STATUS INTELIGENTE
-    status: linha.data_pagamento ? "pago" : "pendente"
+    const dataPag = tratarDataExcel(linha.data_pagamento || linha["Data Pagamento"]);
+
+status: dataPag ? "pago" : "pendente"
   });
 
 // 🔥 LOG DO RESULTADO
