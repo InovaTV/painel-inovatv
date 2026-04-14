@@ -697,37 +697,29 @@ async function importarArquivo(){
 
   reader.onload = async (e)=>{
 
-  const wb = XLSX.read(e.target.result,{type:'binary'});
-  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+    const wb = XLSX.read(e.target.result,{type:'binary'});
+    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-  if(json.length === 0){
-    alert("Arquivo vazio");
-    return;
-  }
+    if(json.length === 0){
+      alert("Arquivo vazio");
+      return;
+    }
 
-  // 🔥 monta dados
-  dados = json.map((c,i)=>({
-    ...c,
-    id: i
-  }));
+    // 🔥 monta dados
+    dados = json.map((c,i)=>({
+      ...c,
+      id: i
+    }));
 
-  // 🔥 render correto
-  render(dados);
+    // 🔥 render
+    render(dados);
 
-  // 🔥 salva global
-  window.dadosImportados = json;
-
-  alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
-
-  document.getElementById("btnImportarSelecionados").style.display = "inline-block";
-};
+    // 🔥 salva global
+    window.dadosImportados = json;
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
     document.getElementById("btnImportarSelecionados").style.display = "inline-block";
-
-    // 🔥 CRIA BOTÃO SE NÃO EXISTIR
-    
   };
 
   reader.readAsBinaryString(file);
