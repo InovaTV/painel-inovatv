@@ -697,25 +697,30 @@ async function importarArquivo(){
 
   reader.onload = async (e)=>{
 
-    const wb = XLSX.read(e.target.result,{type:'binary'});
-    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
+  const wb = XLSX.read(e.target.result,{type:'binary'});
+  const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
 
-    if(json.length === 0){
-      alert("Arquivo vazio");
-      return;
-    }
-    
-    // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
-  
+  if(json.length === 0){
+    alert("Arquivo vazio");
+    return;
+  }
+
+  // 🔥 monta dados
   dados = json.map((c,i)=>({
     ...c,
     id: i
   }));
-}
 
-    render(dados);
+  // 🔥 render correto
+  render(dados);
 
-    window.dadosImportados = json;
+  // 🔥 salva global
+  window.dadosImportados = json;
+
+  alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
+
+  document.getElementById("btnImportarSelecionados").style.display = "inline-block";
+};
 
     alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
 
