@@ -160,7 +160,7 @@ transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius
 <button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
 <button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
   <button class="btn-topo" onclick="trocarTela('produtos')">Produtos</button>
-  <button class="btn-topo" onclick="trocarTela('pagamentos')">Pagamentos</button>
+  
 
   <button onclick="ativarSelecionados()" style="background:green;color:white;margin-left:10px;">
   👤 Ativar Humano
@@ -400,22 +400,6 @@ else if(tela==='produtos'){
     <th>Ações</th>
   </tr>`;
 }
-
-else if(tela==='pagamentos'){
-  thead.innerHTML=`<tr>
-    <th></th> <!-- checkbox -->
-    <th>Nome</th>
-    <th>Usuário</th>
-    <th>Telefone</th>
-    <th>Valor</th>
-    <th>Forma</th>
-    <th>Data Pagamento</th>
-    <th>Vencimento</th>
-    <th>Status</th>
-    <th>Ações</th>
-  </tr>`;
-}
-
 render(dados);
 }
 // ===== RENDER =====
@@ -472,45 +456,6 @@ function render(lista){
 
     </tr>
   `).join('');
-
-  return;
-}
-
-// ===== PAGAMENTOS (RENDER - VISUAL) =====
-if(tela === 'pagamentos'){
-  tabela.innerHTML = lista.map((p, index) => {
-
-  const cliente = clientesCache.find(c => c.id === p.cliente_id);
-
-const nome = cliente?.nome || p.cliente || "";
-const usuario = cliente?.usuario || p.usuario || "";
-const telefone = cliente?.telefone || p.telefone || "";
-
-  let status = p.data_pagamento ? "✅ Pago" : "❌ Pendente";
-
-  return `
-<tr style="background:#333;color:#fff;">
-
-<td>
-  <input type="checkbox" class="check" data-id="${p.id}" onchange="contarSelecionados()">
-</td>
-
-<td>${nome}</td>
-<td>${cliente?.usuario || p.usuario || ''}</td>
-<td>${cliente?.telefone || p.telefone || ''}</td>
-<td>R$ ${p.valor || 0}</td>
-<td>${p.metodo || p.forma_pagamento || ''}</td>
-<td>${formatarDataBR(p.data_pagamento)}</td>
-<td>${formatarDataBR(p.vencimento)}</td>
-<td>${status}</td>
-
-<td>
-  <button onclick="editarPagamento('${p.id}')">✏️</button>
-</td>
-
-</tr>
-  `;
-}).join('');
 
   return;
 }
@@ -743,11 +688,7 @@ async function salvar(id){
 }
   
 // ===== IMPORTAÇÃO =====
-async function importarArquivo(){
-
-  if(tela === 'pagamentos'){
-  log("📥 IMPORTANDO PAGAMENTOS");
-}
+async function importarArquivo(){  
 
   const file = inputArquivo.files[0];
   if(!file) return alert("Selecione arquivo");
@@ -763,11 +704,9 @@ async function importarArquivo(){
       alert("Arquivo vazio");
       return;
     }
-
+    
     // 🔥 MOSTRA NA SUA TABELA (SEM SALVAR)
-  if(tela === 'pagamentos'){
-  dados = json; // 👈 SEM ALTERAR ID
-} else {
+  
   dados = json.map((c,i)=>({
     ...c,
     id: i
@@ -791,94 +730,7 @@ async function importarArquivo(){
 
 carregar();
 
-  async function importarSelecionados(){
-
-    if(tela === 'pagamentos'){
-
-  const checks = document.querySelectorAll('.check:checked');
-
-  if(checks.length === 0){
-    alert("Selecione pelo menos um pagamento");
-    return;
-  }
-
-  for(let i=0;i<checks.length;i++){
-
-    try{
-
-    const index = [...document.querySelectorAll('.check')].indexOf(checks[i]);
-let linha = dados[index];
-    
-    if(!linha){
-  log("❌ LINHA UNDEFINED NO INDEX: " + index);
-  continue;
-}    
-
-      let clienteDB = null;
-
-      // 🔥 TRATAR CORRETAMENTE O EXCEL
-const usuarioBusca = (linha.usuario || linha.cliente || "")
-  .toString()
-  .trim()
-  .toLowerCase();
-
-      // 🔥 LOG AQUI
-log("🔍 BUSCANDO USUARIO: " + usuarioBusca);
-
-      if(usuarioBusca){
-  const { data } = await client
-  .from("clientes")
-  .select("*")
-  .ilike("usuario", `%${usuarioBusca}%`);
-
-        clienteDB = data?.[0];
-
-// 🔥 LOG AQUI
-log("📦 RESULTADO BUSCA: " + JSON.stringify(clienteDB));
-
-}
-
-if(!clienteDB){
-  log("❌ NÃO ENCONTRADO: " + JSON.stringify(linha));
-  continue;
-}
-
-  // 🔥 TRATA DATA ANTES (OBRIGATÓRIO)
-  const dataPag = tratarDataExcel(linha.data_pagamento || linha["Data Pagamento"]);
-  const dataVenc = tratarDataExcel(linha.vencimento || linha["Vencimento"]);
-
-  const { error } = await client
-    .from("pagamentos")
-    .insert({
-      cliente_id: clienteDB.id,
-      valor: Number(linha.valor) || 0,
-      metodo: linha.forma_pagamento || linha.forma_de_pagamento || linha.forma || null,
-
-      data_pagamento: dataPag,
-      vencimento: dataVenc,
-
-      // 🔥 STATUS INTELIGENTE
-      status: dataPag ? "pago" : "pendente"
-    });
-
-  // 🔥 LOG DO RESULTADO
-  if(error){
-    log("❌ ERRO INSERT: " + JSON.stringify(error));
-  } else {
-    log("✅ SALVO: " + clienteDB.usuario);
-  }
-
-}catch(e){
-  log("❌ ERRO: " + e.message);
-}
-
-}
-
-alert("Pagamentos importados com sucesso 🚀");
-
-carregar();
-return;
-  }
+  async function importarSelecionados(){    
     
   const checks = document.querySelectorAll('.check:checked');
 
@@ -1377,95 +1229,5 @@ async function editarProduto(id){
 
   abrirFormProduto();
 }
-
-  // ===== EDITAR PAGAMENTO =====
-let pagamentoEditandoId = null;
-
-async function editarPagamento(id){
-
-  const { data, error } = await client
-    .from('pagamentos')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if(error || !data){
-    alert("Erro ao carregar pagamento");
-    return;
-  }
-
-  pagamentoEditandoId = id;
-
-  document.getElementById("pg_valor").value = data.valor || "";
-  document.getElementById("pg_metodo").value = data.metodo || "";
-  document.getElementById("pg_data").value = data.data_pagamento || "";
-  document.getElementById("pg_vencimento").value = data.vencimento || "";
-
-  document.getElementById("modalPagamento").style.display = "block";
-}
-
-
-// ===== SALVAR EDIÇÃO =====
-async function salvarEdicaoPagamento(){
-
-  const valor = document.getElementById("pg_valor").value;
-  const metodo = document.getElementById("pg_metodo").value;
-  const data_pagamento = document.getElementById("pg_data").value;
-  const vencimento = document.getElementById("pg_vencimento").value;
-
-  const { error } = await client
-    .from('pagamentos')
-    .update({
-      valor: parseFloat(valor) || 0,
-      metodo: metodo || null,
-      data_pagamento: data_pagamento || null,
-      vencimento: vencimento || null,
-      status: data_pagamento ? "pago" : "pendente"
-    })
-    .eq('id', pagamentoEditandoId);
-
-  if(error){
-    console.log(error);
-    alert("Erro ao salvar pagamento");
-    return;
-  }
-
-  alert("Pagamento atualizado ✅");
-  fecharModalPagamento();
-  carregar();
-}
-
-
-// ===== FECHAR MODAL =====
-function fecharModalPagamento(){
-  document.getElementById("modalPagamento").style.display = "none";
-}
-
+  
 </script>
-
-<!-- ===== MODAL PAGAMENTO (ÚNICO) ===== -->
-<div id="modalPagamento" style="
-  display:none;
-  position:fixed;
-  top:50%;
-  left:50%;
-  transform:translate(-50%,-50%);
-  background:#222;
-  padding:20px;
-  border-radius:10px;
-  color:#fff;
-  z-index:9999;
-  width:300px;
-">
-
-  <h3>Editar Pagamento</h3>
-
-  <input id="pg_valor" placeholder="Valor" style="width:100%;margin-bottom:10px;">
-  <input id="pg_metodo" placeholder="Forma de pagamento" style="width:100%;margin-bottom:10px;">
-  <input id="pg_data" placeholder="Data pagamento" style="width:100%;margin-bottom:10px;">
-  <input id="pg_vencimento" placeholder="Vencimento" style="width:100%;margin-bottom:10px;">
-
-  <button onclick="salvarEdicaoPagamento()" style="background:#4CAF50;color:#fff;">Salvar</button>
-  <button onclick="fecharModalPagamento()">Cancelar</button>
-
-</div>
