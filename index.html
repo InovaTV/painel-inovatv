@@ -524,7 +524,6 @@ lista = [...listaHumano, ...listaNormal];
 </td>
 <td>
   <button onclick="editar('${c.id}')">Editar</button>
-<button onclick="renovarCliente('${c.id}')" style="background:orange;color:#fff;">🔄</button>
 <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
 <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
 </td>
@@ -1226,56 +1225,6 @@ async function editarProduto(id){
   log("📦 PRODUTO CARREGADO PARA EDIÇÃO");
 
   abrirFormProduto();
-}
-
-  async function renovarCliente(id){
-
-  const { data, error } = await client
-    .from('clientes')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if(error || !data){
-    alert("Erro ao buscar cliente");
-    return;
-  }
-
-  let hoje = new Date();
-
-  let vencimentoAtual;
-
-  if(data.vencimento){
-    const p = data.vencimento.split("-");
-    vencimentoAtual = new Date(p[0], p[1]-1, p[2]);
-  } else {
-    vencimentoAtual = new Date();
-  }
-
-  // 🔥 usa a maior data (não perde dias)
-  let base = vencimentoAtual > hoje ? vencimentoAtual : hoje;
-
-  // 🔥 soma 30 dias
-  base.setDate(base.getDate() + 30);
-
-  const novoVencimento = base.toISOString().split("T")[0];
-
-  const { error: erroUpdate } = await client
-    .from('clientes')
-    .update({
-      vencimento: novoVencimento
-    })
-    .eq('id', id);
-
-  if(erroUpdate){
-    console.log(erroUpdate);
-    alert("Erro ao renovar");
-    return;
-  }
-
-  alert("Cliente renovado até " + novoVencimento);
-
-  carregar();
-}
+}  
   
 </script>
