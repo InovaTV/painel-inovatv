@@ -382,7 +382,10 @@ clientesCache = clientesData || [];
     <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
     <th>Servidor</th><th>Plano</th><th>Valor</th>
     <th>Vencimento</th><th>Hora</th><th>MAC</th>
-    <th>Status</th><th>Ações</th>
+    <th>Status</th>
+<th>Teste A</th>
+<th>Teste S</th>
+<th>Ações</th>
   </tr>`;
 } 
 else if(tela==='contatos'){
@@ -522,6 +525,11 @@ lista = [...listaHumano, ...listaNormal];
 <td style="color:${calcularStatus(c)==='ativo' ? 'lime' : 'red'}">
   ${calcularStatus(c)}
 </td>
+
+<td>${c.ultimo_teste_adulto ? formatarDataBR(c.ultimo_teste_adulto) : "-"}</td>
+<td>${c.ultimo_teste_sem_adulto ? formatarDataBR(c.ultimo_teste_sem_adulto) : "-"}</td>
+
+<td>
 <td>
   <button onclick="editar('${c.id}')">Editar</button>
   <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
