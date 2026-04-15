@@ -540,7 +540,7 @@ lista = [...listaHumano, ...listaNormal];
     // 🔵 CONTATOS
     // =========================
     else {
-      return `
+  return `
 <tr style="${cor}">
 <td>
   <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
@@ -552,10 +552,15 @@ lista = [...listaHumano, ...listaNormal];
   <button onclick="editar('${c.id}')">Editar</button>
   <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
   <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
+
+  <button onclick="liberarTeste('${c.telefone}')" 
+    style="background:orange;color:#000;">
+    🔓 Teste
+  </button>
 </td>
 </tr>
 `;
-    }
+}
 
   }).join('');
 
