@@ -524,8 +524,13 @@ lista = [...listaHumano, ...listaNormal];
 </td>
 <td>
   <button onclick="editar('${c.id}')">Editar</button>
-<button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
-<button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
+  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
+  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
+
+  <button onclick="liberarTeste('${c.telefone}')" 
+    style="background:orange;color:#000;">
+    🔓 Teste
+  </button>
 </td>
 </tr>
 `;
@@ -1195,6 +1200,28 @@ if(file){
 
 function fecharPreview(){
   document.getElementById('previewProduto').style.display = 'none';
+}
+
+  // ===== LIBERAR TESTE =====
+async function liberarTeste(telefone){
+
+  if(!confirm("Liberar teste para este cliente?")) return;
+
+  const { error } = await client
+    .from('contatos')
+    .update({
+      ultimo_teste_adulto: null,
+      ultimo_teste_sem_adulto: null
+    })
+    .eq('telefone', telefone);
+
+  if(error){
+    alert("Erro ao liberar teste");
+    console.log(error);
+    return;
+  }
+
+  alert("Teste liberado com sucesso ✅");
 }
 
 // ===== EDITAR PRODUTO (NOVO) =====
