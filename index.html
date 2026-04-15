@@ -379,8 +379,8 @@ clientesCache = clientesData || [];
 
  if(tela==='clientes'){
   thead.innerHTML=`<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th>
-    <th>Servidor</th><th>Plano</th><th>Valor</th>
+    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Senha</th>
+<th>Servidor</th><th>Plano</th><th>Valor</th>
     <th>Vencimento</th><th>Hora</th><th>MAC</th>
     <th>Status</th>
 <th>Teste A</th>
@@ -772,9 +772,12 @@ let linha = window.dadosImportados[index];
   nome: linha.nome,
   telefone,
   usuario,
+  senha: linha.senha || null,
   servidor: linha.servidor,
   plano: linha.plano,
-  valor: Number(linha.valor) || 0,
+  valor: linha.valor 
+  ? Number(String(linha.valor).replace(",", ".")) 
+  : 0,
   vencimento: tratarDataExcel(linha.vencimento),
   hora_vencimento: linha.hora_vencimento || linha.hora,
   mac: linha.mac,
