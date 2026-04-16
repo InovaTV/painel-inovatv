@@ -232,6 +232,7 @@ const client = supabase.createClient(
 const SUPABASE_KEY = client.supabaseKey;
 
   let clientesCache = [];
+  let contatosCache = [];
   
 let tela='clientes';
 let dados=[];
@@ -351,9 +352,16 @@ async function carregar(){
   log("🔄 CARREGANDO TELA: " + tela);
 
   const { data, error } = await client.from(tela).select('*');
+  
   // 🔥 carregar clientes para cruzar dados
 const { data: clientesData } = await client.from('clientes').select('*');
 clientesCache = clientesData || [];
+
+  const { data: contatosData } = await client
+  .from('contatos')
+  .select('telefone, atendimento_humano');
+
+contatosCache = contatosData || [];
 
   if(error){
     log("❌ ERRO SUPABASE: " + error.message);
@@ -464,7 +472,7 @@ function render(lista){
 }
 
   const telefonesHumanos = new Set(
-  lista
+  contatosCache
     .filter(c => c.atendimento_humano === true || c.atendimento_humano === "true")
     .map(c => c.telefone)
 );
