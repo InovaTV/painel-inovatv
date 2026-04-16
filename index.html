@@ -879,6 +879,17 @@ async function ativarHumano(telefone){
   return c;
 });
 
+  // 🔥 ATUALIZA contatosCache (AQUI QUE ESTAVA FALTANDO)
+contatosCache = contatosCache.map(c=>{
+  if(String(c.telefone).trim() === String(telefone).trim()){
+    return {
+      ...c,
+      atendimento_humano: true
+    };
+  }
+  return c;
+});
+
 await new Promise(r => setTimeout(r, 800));
 render(dados);
 }
@@ -929,6 +940,17 @@ async function desativarHumano(telefone){
   }
   return c;
 });
+
+contatosCache = contatosCache.map(c=>{
+  if(String(c.telefone).trim() === String(telefone).trim()){
+    return {
+      ...c,
+      atendimento_humano: false
+    };
+  }
+  return c;
+});
+  
  await new Promise(r => setTimeout(r, 800));
 render(dados);
 }
