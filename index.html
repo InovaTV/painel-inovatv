@@ -825,6 +825,15 @@ let linha = window.dadosImportados[index];
   nome_confirmado: true
 });
 
+      // 🔥 GARANTE QUE O CONTATO FIQUE CORRETO
+await client
+  .from('contatos')
+  .update({
+    nome: linha.nome,
+    nome_confirmado: true
+  })
+  .eq('telefone', telefone);
+
     }catch(e){
       erros++;
     }
