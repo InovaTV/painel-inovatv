@@ -819,12 +819,10 @@ let linha = window.dadosImportados[index];
   onConflict: 'usuario'
 });
 
-      await salvarContatoSeguro({
+     await salvarContatoSeguro({
   telefone,
-  usuario,
   nome: linha.nome,
-  nome_confirmado: true, // 🔥 ESSENCIAL
-  cliente: true
+  nome_confirmado: true
 });
 
     }catch(e){
