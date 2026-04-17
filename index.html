@@ -248,10 +248,15 @@ let dadosEditados={};
 
 // ===== CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
-  const { error } = await client.from('contatos').upsert(dados, {
-  onConflict: 'telefone'
-    console.log("SALVANDO CONTATO:", dados);
-});
+
+  console.log("SALVANDO CONTATO:", dados); // 🔥 AQUI É O LUGAR CERTO
+
+  const { error } = await client
+    .from('contatos')
+    .upsert(dados, {
+      onConflict: 'telefone'
+    });
+
   if(error){
     if(error.message.includes("duplicate key")){
       console.log("Contato duplicado ignorado");
@@ -260,7 +265,6 @@ async function salvarContatoSeguro(dados){
     }
   }
 }
-
   function tratarDataExcel(valor){
 
   if(!valor) return null;
