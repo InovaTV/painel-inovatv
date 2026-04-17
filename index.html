@@ -250,6 +250,7 @@ let dadosEditados={};
 async function salvarContatoSeguro(dados){
   const { error } = await client.from('contatos').upsert(dados, {
   onConflict: 'telefone'
+    console.log("SALVANDO CONTATO:", dados);
 });
   if(error){
     if(error.message.includes("duplicate key")){
