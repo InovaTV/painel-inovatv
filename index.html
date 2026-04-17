@@ -248,7 +248,9 @@ let dadosEditados={};
 
 // ===== CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
-  const { error } = await client.from('contatos').insert(dados);
+  const { error } = await client.from('contatos').upsert(dados, {
+  onConflict: 'telefone'
+});
   if(error){
     if(error.message.includes("duplicate key")){
       console.log("Contato duplicado ignorado");
@@ -813,11 +815,12 @@ let linha = window.dadosImportados[index];
 });
 
       await salvarContatoSeguro({
-        telefone,
-        usuario,
-        nome:linha.nome,
-        cliente:true
-      });
+  telefone,
+  usuario,
+  nome: linha.nome,
+  nome_confirmado: true, // 🔥 ESSENCIAL
+  cliente: true
+});
 
     }catch(e){
       erros++;
