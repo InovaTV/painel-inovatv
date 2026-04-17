@@ -784,10 +784,14 @@ let linha = window.dadosImportados[index];
 
     try{
 
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
-      if(!telefone.startsWith("55")) telefone="55"+telefone;
+      let telefone = (linha.telefone || "").replace(/\D/g,"");
 
-      let usuario=linha.usuario || ("user"+i);
+if(!telefone.startsWith("55")) telefone = "55" + telefone;
+
+// 🔥 ADICIONE ESSA LINHA
+telefone = String(telefone).trim();
+
+let usuario = linha.usuario || ("user"+i);
 
      await client.from('clientes').upsert({
   nome: linha.nome,
