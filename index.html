@@ -793,7 +793,19 @@ telefone = String(telefone).trim();
 
 let usuario = linha.usuario || ("user"+i);
 
-     await client.from('clientes').upsert({
+     await client.from('clientes').upsert({...});
+
+// ⏳ AGUARDA TRIGGER TERMINAR
+await new Promise(r => setTimeout(r, 500));
+
+// 🔥 AGORA SIM ATUALIZA CERTO
+await client
+  .from('contatos')
+  .update({
+    nome: linha.nome,
+    nome_confirmado: true
+  })
+  .eq('telefone', telefone);
   nome: linha.nome,
   telefone,
   usuario,
