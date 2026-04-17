@@ -248,15 +248,7 @@ let dadosEditados={};
 
 // ===== CONTATO SEGURO =====
 async function salvarContatoSeguro(dados){
-
-  console.log("SALVANDO CONTATO:", dados); // 🔥 AQUI É O LUGAR CERTO
-
-  const { error } = await client
-    .from('contatos')
-    .upsert(dados, {
-      onConflict: 'telefone'
-    });
-
+  const { error } = await client.from('contatos').insert(dados);
   if(error){
     if(error.message.includes("duplicate key")){
       console.log("Contato duplicado ignorado");
@@ -265,6 +257,7 @@ async function salvarContatoSeguro(dados){
     }
   }
 }
+
   function tratarDataExcel(valor){
 
   if(!valor) return null;
@@ -784,28 +777,12 @@ let linha = window.dadosImportados[index];
 
     try{
 
-      let telefone = (linha.telefone || "").replace(/\D/g,"");
+      let telefone=(linha.telefone||"").replace(/\D/g,"");
+      if(!telefone.startsWith("55")) telefone="55"+telefone;
 
-if(!telefone.startsWith("55")) telefone = "55" + telefone;
+      let usuario=linha.usuario || ("user"+i);
 
-// 🔥 ADICIONE ESSA LINHA
-telefone = String(telefone).trim();
-
-let usuario = linha.usuario || ("user"+i);
-
-     await client.from('clientes').upsert({...});
-
-// ⏳ AGUARDA TRIGGER TERMINAR
-await new Promise(r => setTimeout(r, 500));
-
-// 🔥 AGORA SIM ATUALIZA CERTO
-await client
-  .from('contatos')
-  .update({
-    nome: linha.nome,
-    nome_confirmado: true
-  })
-  .eq('telefone', telefone);
+     await client.from('clientes').upsert({
   nome: linha.nome,
   telefone,
   usuario,
@@ -835,20 +812,12 @@ await client
   onConflict: 'usuario'
 });
 
-     await salvarContatoSeguro({
-  telefone,
-  nome: linha.nome,
-  nome_confirmado: true
-});
-
-      // 🔥 GARANTE QUE O CONTATO FIQUE CORRETO
-await client
-  .from('contatos')
-  .update({
-    nome: linha.nome,
-    nome_confirmado: true
-  })
-  .eq('telefone', telefone);
+      await salvarContatoSeguro({
+        telefone,
+        usuario,
+        nome:linha.nome,
+        cliente:true
+      });
 
     }catch(e){
       erros++;
@@ -1338,3 +1307,4 @@ async function editarProduto(id){
 }  
   
 </script>
+
