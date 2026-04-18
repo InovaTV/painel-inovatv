@@ -1148,7 +1148,8 @@ if(file){
       preco,
       url,
       descricao,
-      imagem_url
+      imagem_url,
+      palavras_chave: gerarPalavrasChave(nome) // 🔥 ESSENCIAL
     })
     .eq('id', editandoProdutoId);
 
