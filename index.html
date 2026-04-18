@@ -1306,7 +1306,24 @@ async function editarProduto(id){
   log("📦 PRODUTO CARREGADO PARA EDIÇÃO");
 
   abrirFormProduto();
-}  
+}
+
+  <div id="formProduto" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%);
+background:#222; color:#fff; padding:20px; border-radius:10px; z-index:999; width:300px;">
+
+<h3>Novo Produto</h3>
+
+<input id="p_nome" placeholder="Nome"><br><br>
+<input id="p_preco" placeholder="Preço" type="number"><br><br>
+<input id="p_url" placeholder="Link"><br><br>
+<textarea id="p_descricao" placeholder="Descrição"></textarea><br><br>
+
+<input type="file" id="p_imagem"><br><br>
+
+<button onclick="salvarProduto()">Salvar</button>
+<button onclick="fecharFormProduto()">Cancelar</button>
+
+</div>
   
 </script>
 
