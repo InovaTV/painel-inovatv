@@ -1076,12 +1076,24 @@ function fecharFormProduto(){
   document.getElementById('formProduto').style.display = 'none';
 }
 
+  function gerarPalavrasChave(nome) {
+  return nome
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .split(" ")
+    .filter(p => p.length > 2 || p === "4k" || p === "5g")
+    .join(", ");
+}
+
 async function salvarProduto(){
 
-  const nome = document.getElementById('p_nome').value.trim();
+  const nome = document.getElementById('p_nome').value.trim();  
   const preco = parseFloat(document.getElementById('p_preco').value);
   let url = document.getElementById('p_url').value.trim();
   const inputFile = document.getElementById('p_imagem');
+  const palavras_chave = gerarPalavrasChave(nome);
 
 if(!inputFile){
   log("❌ INPUT NÃO ENCONTRADO");
@@ -1162,7 +1174,8 @@ if(file){
       imagem_url,
       tipo: 'tvbox',
       ativo: true,
-      prioridade: 1
+      prioridade: 1,
+      palavras_chave
     }]);
 
   if(error){
