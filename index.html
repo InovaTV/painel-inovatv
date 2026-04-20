@@ -1181,7 +1181,7 @@ if(file){
       url,
       descricao,
       imagem_url,
-      palavras_chave: "XXXXXX" // 🔥 ESSENCIAL
+      palavras_chave: gerarPalavrasChave(nome) // 🔥 ESSENCIAL
     })
     .eq('id', editandoProdutoId);
 
