@@ -1116,6 +1116,10 @@ function fecharFormProduto(){
   // 🔥 remove duplicados
   palavras = [...new Set(palavras)];
 
+    palavras = palavras.filter(p => {
+  return p !== "pro" && p !== "pro 4k" && p !== "pro 5g";
+});
+
   return palavras.join(", ");
 }
 
