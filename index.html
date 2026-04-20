@@ -1077,14 +1077,44 @@ function fecharFormProduto(){
 }
 
   function gerarPalavrasChave(nome) {
-  return nome
+
+  const n = nome
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/[^a-z0-9\s]/g, "")
-    .split(" ")
-    .filter(p => p.length > 2 || p === "4k" || p === "5g")
-    .join(", ");
+    .trim();
+
+  let palavras = [];
+
+  // 🔥 FRASE COMPLETA (sempre)
+  palavras.push(n);
+
+  const partes = n.split(" ");
+
+  // 🔥 monta combinações de 2 e 3 palavras
+  for (let i = 0; i < partes.length; i++) {
+
+    if (partes[i + 1]) {
+      palavras.push(`${partes[i]} ${partes[i + 1]}`);
+    }
+
+    if (partes[i + 2]) {
+      palavras.push(`${partes[i]} ${partes[i + 1]} ${partes[i + 2]}`);
+    }
+  }
+
+  // 🔥 remove palavras perigosas
+  const blacklist = ["pro", "tv", "smart", "app", "player"];
+
+  palavras = palavras.filter(p => {
+    return !blacklist.includes(p.trim());
+  });
+
+  // 🔥 remove duplicados
+  palavras = [...new Set(palavras)];
+
+  return palavras.join(", ");
 }
 
 async function salvarProduto(){
