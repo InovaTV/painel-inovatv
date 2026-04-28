@@ -1,1379 +1,218 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <title>Painel InovaTV</title>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
 <style>
-body { font-family: Arial; padding:20px; }
-
-button {
-  margin:4px;
-  padding:6px 12px;
-  border:none;
-  border-radius:4px;
-  cursor:pointer;
-  font-weight:bold;
-}
-td:last-child {
-  white-space: nowrap;
-  text-align: center;
-}
-.btn-topo { background:#2196F3; color:#fff; }
-.btn-verde { background:#4CAF50; color:#fff; }
-.btn-vermelho { background:#f44336; color:#fff; }
-
-#progressBar { width:100%; background:#ccc; height:20px; }
-#progress { width:0%; height:100%; background:green; color:#fff; text-align:center; }
-
-#logErro {
-  background:#000;
-  color:#0f0;
-  padding:10px;
-  margin-top:10px;
-  font-size:12px;
-  max-height:200px;
-  overflow:auto;
+body{
+    font-family: Arial;
+    background:#0a0e27;
+    color:#fff;
+    padding:20px;
 }
 
-table { width:100%; border-collapse: collapse; font-size:13px; }
-th,td { padding:6px; border:1px solid #ccc; }
-
-#modalEdit {
-  display:none;
-  position:fixed;
-  top:0; left:0;
-  width:100%; height:100%;
-  background:rgba(0,0,0,0.6);
-  align-items:center;
-  justify-content:center;
+.container{
+    max-width:900px;
+    margin:auto;
 }
 
-#modalBox {
-  background:#111;
-  padding:20px;
-  border-radius:10px;
-  color:#fff;
-  width:350px;
+h1{ margin:20px 0 10px }
+
+.card{
+    background:#141937;
+    padding:15px;
+    border-radius:10px;
+    margin-bottom:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
 }
 
-#modalBox input {
-  width:100%;
-  padding:8px;
-  margin-top:10px;
+.btn{
+    border:none;
+    padding:6px 10px;
+    border-radius:6px;
+    cursor:pointer;
+    font-weight:bold;
 }
 
-/* NOVO */
-#contadorStatus {
-  margin:10px 0;
-  font-weight:bold;
+.bot{ background:#00d9ff; color:#000; }
+.humano{ background:#ff4d4d; }
+
+.produto{
+    background:#1e244d;
+    padding:10px;
+    border-radius:8px;
+    margin-top:10px;
 }
 
-/* ===== PADRÃO TABELA BONITA ===== */
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-/* cabeçalho */
-table th {
-  text-align: center;
-  padding: 10px;
-  background: #2b2b2b;
-  color: #fff;
-}
-
-/* células */
-table td {
-  text-align: center;
-  padding: 10px;
-  vertical-align: middle;
-}
-
-/* imagem centralizada */
-table td img {
-  display: block;
-  margin: 0 auto;
-  border-radius: 6px;
-}
-
-/* descrição (texto longo) */
-td.descricao {
-  text-align: left;
-  max-width: 300px;
-  word-break: break-word;
-  white-space: normal;
-  color: #ccc;
-  font-size: 13px;
-}
-
-/* zebra */
-table tr:nth-child(even) {
-  background: #2f2f2f;
-}
-
-table tr:nth-child(odd) {
-  background: #3a3a3a;
-}
-
-/* hover */
-table tr:hover {
-  background: #444;
-  transition: 0.2s;
-}
-
-/* botões */
-button {
-  padding: 5px 8px;
-  border-radius: 5px;
-  border: none;
-  cursor: pointer;
-}
-
-button:hover {
-  opacity: 0.8;
-
-  
+input{
+    padding:6px;
+    margin:5px;
 }
 </style>
 </head>
 
-  <div id="previewProduto" style="display:none;position:fixed;top:10%;left:50%;
-transform:translateX(-50%);background:#222;color:#fff;padding:20px;border-radius:10px;z-index:999;width:350px;">
-
-<div id="conteudoPreview"></div>
-
-<button onclick="fecharPreview()">Fechar</button>
-
-</div>
-
 <body>
 
-<h2>Painel InovaTV</h2>
-<h3 id="statusTela">Você está em: CLIENTES</h3>
+<div class="container">
 
-<button class="btn-topo" onclick="trocarTela('clientes')">Clientes</button>
-<button class="btn-topo" onclick="trocarTela('contatos')">Contatos</button>
-  <button class="btn-topo" onclick="trocarTela('produtos')">Produtos</button>
-  
+<h1>📞 Contatos</h1>
+<div id="lista"></div>
 
-  <button onclick="ativarSelecionados()" style="background:green;color:white;margin-left:10px;">
-  👤 Ativar Humano
-</button>
+<h1>📦 Produtos</h1>
 
-<button onclick="desativarSelecionados()" style="background:red;color:white;">
-  🤖 Ativar Bot
-</button>
+<input id="nomeProduto" placeholder="Nome">
+<input id="valorProduto" placeholder="Valor">
+<button onclick="addProduto()">Adicionar</button>
 
-<br><br>
-
-<input id="busca" placeholder="Telefone ou Nome" onkeypress="if(event.key==='Enter') buscar()">
-<button onclick="buscar()">Buscar</button>
-  
-  <button onclick="abrirFormProduto()" style="background:#4CAF50;color:#fff;margin-left:10px;">
-  + Produto
-</button>
-
-<hr>
-
-<input type="file" id="inputArquivo">
-<button class="btn-verde" onclick="importarArquivo()" style="margin-right:10px;">
-  IMPORTAR EXCEL</button>
-
-  <button id="btnImportarSelecionados" class="btn-verde" onclick="importarSelecionados()" style="display:none;">
-  IMPORTAR SELECIONADOS
-</button>  
-
-  <br><br>
-  
-<div id="progressBar"><div id="progress">0%</div></div>
-<div id="logErro"></div>
-
-<hr>
-
-<div id="contadorSelecionados">Selecionados: 0</div>
-
-<!-- NOVO -->
-<div id="contadorStatus">Ativos: 0 | Vencidos: 0</div>
-
-<button onclick="selecionarTodos()">Selecionar todos</button>
-<button onclick="desmarcarTodos()">Desmarcar</button>
-<button onclick="filtrarAtivos()">Ativos</button>
-<button onclick="filtrarVencidos()">Vencidos</button>
-<button class="btn-vermelho" onclick="deletarSelecionados()">Excluir</button>
-
-<table>
-<thead id="thead"></thead>
-<tbody id="tabela"></tbody>
-</table>
-
-<div id="modalEdit">
-  <div id="modalBox">
-    <div id="modalLabel"></div>
-    <input id="modalInput">
-    <br><br>
-    <button onclick="modalCancelar()">Cancelar</button>
-    <button onclick="modalSalvar()">Salvar edição</button>
-    <button onclick="modalOk()">OK</button>
-  </div>
-</div>
-
-  <div id="formProduto" style="display:none; position:fixed; top:20%; left:50%; transform:translateX(-50%);
-background:#222; color:#fff; padding:20px; border-radius:10px; z-index:999; width:300px;">
-
-<h3>Novo Produto</h3>
-
-<input id="p_nome" placeholder="Nome"><br><br>
-<input id="p_preco" placeholder="Preço" type="number"><br><br>
-<input id="p_url" placeholder="Link"><br><br>
-<textarea id="p_descricao" placeholder="Descrição"></textarea><br><br>
-
-<input type="file" id="p_imagem"><br><br>
-
-<button onclick="salvarProduto()">Salvar</button>
-<button onclick="fecharFormProduto()">Cancelar</button>
+<div id="produtos"></div>
 
 </div>
 
 <script>
 
-const client = supabase.createClient(
-  'https://tiupgtbzikwmseecxbvo.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c'
-);
-const SUPABASE_KEY = client.supabaseKey;
+// CONFIG
+const SUPABASE_URL = "SUA_URL";
+const SUPABASE_KEY = "SUA_KEY";
 
-  let clientesCache = [];
-  let contatosCache = [];
-  
-let tela='clientes';
-let dados=[];
-let modalResolve;
-let dadosEditados={};
-  let editandoProdutoId = null;
-  
-  function log(msg){
-  const agora = new Date().toLocaleTimeString();
-  logErro.innerHTML += `[${agora}] ${msg}<br>`;
-  logErro.scrollTop = logErro.scrollHeight;
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ================= CONTATOS =================
+async function carregarContatos(){
+
+    const { data: contatos } = await supabaseClient
+        .from("contatos")
+        .select("*");
+
+    const { data: atendimentos } = await supabaseClient
+        .from("atendimentos")
+        .select("*");
+
+    const mapa = {};
+    atendimentos.forEach(a => mapa[a.telefone] = a.humano);
+
+    const lista = document.getElementById("lista");
+    lista.innerHTML = "";
+
+    contatos.forEach(c => {
+
+        const humano = mapa[c.telefone] || false;
+
+        lista.innerHTML += `
+        <div class="card">
+            <div>
+                <b>${c.nome || "Sem nome"}</b><br>
+                ${c.telefone}
+            </div>
+
+            <button class="btn ${humano ? 'humano':'bot'}"
+                onclick="toggle('${c.telefone}', ${!humano})">
+                ${humano ? '👤 HUMANO':'🤖 BOT'}
+            </button>
+        </div>`;
+    });
 }
 
-// ===== CONTATO SEGURO =====
-async function salvarContatoSeguro(dados){
+async function toggle(telefone, status){
 
-  const { error } = await client
-    .from('contatos')
-    .upsert(dados, {
-      onConflict: 'telefone'
+    await fetch("SUA_EDGE_URL/humano-toggle", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ telefone, status })
     });
 
-  if(error){
-    console.error("Erro contato:", error.message);
-  }
+    carregarContatos();
 }
 
-  function tratarDataExcel(valor){
-
-  if(!valor) return null;
-
-  // 🔢 número (excel)
-  if(typeof valor === "number"){
-    const data = new Date((valor - 25569) * 86400 * 1000);
-    return data.toISOString().split("T")[0];
-  }
-
-  // 📅 formato BR
-  if(typeof valor === "string" && valor.includes("/")){
-    const p = valor.split("/");
-    if(p.length === 3){
-      return `${p[2]}-${p[1]}-${p[0]}`;
-    }
-  }
-
-  // 📅 já correto
-  if(typeof valor === "string" && valor.includes("-")){
-    return valor;
-  }
-
-  return null;
-}
-
- function formatarDataBR(data){
-  if(!data) return "";
-
-  const partes = data.split("-");
-  if(partes.length !== 3) return data;
-
-  return `${partes[2]}/${partes[1]}/${partes[0]}`;
-}
-
-// ===== MODAL =====
-function abrirModal(label, valor){
-  return new Promise(resolve=>{
-    modalResolve=resolve;
-    modalLabel.innerText=label;
-    modalInput.value=valor||"";
-    modalEdit.style.display="flex";
-  });
-}
-
-function modalOk(){ modalEdit.style.display="none"; modalResolve({tipo:"ok",valor:modalInput.value}); }
-function modalCancelar(){ modalEdit.style.display="none"; modalResolve({tipo:"cancelar"}); }
-function modalSalvar(){ modalEdit.style.display="none"; modalResolve({tipo:"salvar",valor:modalInput.value}); }
-
-// ===== STATUS =====
-function calcularStatus(c){
-
-  if(!c.vencimento || !c.hora_vencimento){
-    return "-";
-  }
-
-  let hoje = new Date();
-  hoje.setHours(0,0,0,0);
-
-  let data = c.vencimento.split("-");
-  let venc = new Date(data[0], data[1]-1, data[2]);
-
-  return venc < hoje ? "inativo" : "ativo";
-}
-
-// ===== CONTADOR =====
-function atualizarContadorStatus(lista){
-
-  let ativos = 0;
-  let vencidos = 0;
-
-  lista.forEach(c=>{
-    let status = calcularStatus(c);
-    if(status === "ativo") ativos++;
-    if(status === "inativo") vencidos++;
-  });
-
-  contadorStatus.innerText = `Ativos: ${ativos} | Vencidos: ${vencidos}`;
-}
-
-// ===== TROCAR TELA =====
-function trocarTela(t){
-  log("🔁 TROCA DE TELA: " + t);
-  tela=t;
-  statusTela.innerText="Você está em: "+t.toUpperCase();
-  carregar();
-}
-
-// ===== CARREGAR =====
-async function carregar(){
-
-  log("🔄 CARREGANDO TELA: " + tela);
-
-  const { data, error } = await client.from(tela).select('*');
-  
-  // 🔥 carregar clientes para cruzar dados
-const { data: clientesData } = await client.from('clientes').select('*');
-clientesCache = clientesData || [];
-
-  const { data: contatosData } = await client
-  .from('contatos')
-  .select('telefone, atendimento_humano');
-
-contatosCache = contatosData || [];
-
-  if(error){
-    log("❌ ERRO SUPABASE: " + error.message);
-    return;
-  }
-
-  if(!data){
-    log("⚠️ DATA VEIO NULL");
-    dados = [];
-    render(dados);
-    return;
-  }
-
-  log("📦 TOTAL REGISTROS: " + data.length);
-
-  if(data.length > 0){
-    log("🔎 PRIMEIRO ITEM: " + JSON.stringify(data[0]));
-  }
-
-  dados = data.sort((a,b)=>{
-    return (a.nome || "").localeCompare(b.nome || "");
-  });
-
- if(tela==='clientes'){
-  thead.innerHTML=`<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Senha</th>
-<th>Servidor</th><th>Plano</th><th>Valor</th>
-    <th>Vencimento</th><th>Hora</th><th>MAC</th>
-    <th>Status</th>
-<th>Teste A</th>
-<th>Teste S</th>
-<th>Ações</th>
-  </tr>`;
-} 
-else if(tela==='contatos'){
-  thead.innerHTML=`<tr>
-    <th></th><th>Nome</th><th>Telefone</th><th>Usuário</th><th>Ações</th>
-  </tr>`;
-}
-else if(tela==='produtos'){
-  thead.innerHTML=`<tr>
-    <th>Nome</th>
-    <th>Preço</th>
-    <th>Descrição</th>
-    <th>Link</th>
-    <th>Ativo</th>
-    <th>Ações</th>
-  </tr>`;
-}
-render(dados);
-}
-// ===== RENDER =====
-function render(lista){
-
-  log("🧠 RENDER CHAMADO | itens: " + (lista ? lista.length : "null"));
-
-  if(!lista){
-    log("❌ LISTA NULL NO RENDER");
-    tabela.innerHTML = "";
-    return;
-  }
-
-  if(lista.length === 0){
-    log("⚠️ LISTA VAZIA");
-  }
-
-  if(tela === 'produtos'){
-  tabela.innerHTML = lista.map(p => `
-    <tr style="background:#333;color:#fff;">
-
-      <td>
-        ${p.imagem_url 
-          ? `<img src="${p.imagem_url}" width="50" style="border-radius:5px;"><br>` 
-          : ''
-        }
-        ${p.nome || ''}
-      </td>
-
-      <td>R$ ${p.preco || 0}</td>
-
-      <td class="descricao">
-  ${p.descricao || ''}
-</td>
-
-      <td>
-        <a href="${p.url}" target="_blank" style="color:#4CAF50;">
-          🔗 Abrir
-        </a>
-      </td>
-
-      <td>
-        ${p.ativo 
-          ? '<button onclick="toggleProduto(\''+p.id+'\', false)" style="background:green;color:#fff;">ON</button>'
-          : '<button onclick="toggleProduto(\''+p.id+'\', true)" style="background:red;color:#fff;">OFF</button>'
-        }
-      </td>
-
-      <td>
-        <button onclick="editarProduto('${p.id}')">✏️</button>
-        <button onclick="verProduto('${p.id}')">👁️</button>
-        <button onclick="excluirProduto('${p.id}')" style="background:red;color:#fff;">🗑️</button>
-      </td>
-
-    </tr>
-  `).join('');
-
-  return;
-}
-
-  const telefonesHumanos = new Set(
-  contatosCache
-    .filter(c => c.atendimento_humano === true || c.atendimento_humano === "true")
-    .map(c => c.telefone)
-);
-  
-// 🔴 HUMANO NO TOPO (GARANTIDO)
-const listaHumano = [];
-const listaNormal = [];
-
-lista.forEach(c => {
-  const isHumano = telefonesHumanos.has(c.telefone);
-
-  if (isHumano) {
-    listaHumano.push(c);
-  } else {
-    listaNormal.push(c);
-  }
-});
-
-// junta: humano primeiro
-lista = [...listaHumano, ...listaNormal];
-
-  tabela.innerHTML = lista.map(c => {
-
-    console.log("DEBUG HUMANO:", c.telefone, c.atendimento_humano, typeof c.atendimento_humano);
-
-    // 🎯 DEFINE ESTADO
-   const isHumano = telefonesHumanos.has(c.telefone);
-
-    let cor = "";
-
-    // 🔴 HUMANO (PRIORIDADE TOTAL)
-    if (isHumano) {
-      cor = 'background:#c62828;color:#fff;';
-    }
-
-    // 🟢 CLIENTES (PADRÃO)
-    else if (tela === 'clientes') {
-      cor = 'background:#2e7d32;color:#fff;';
-    }
-
-    // 🔵 CONTATOS (PADRÃO)
-    else {
-      cor = 'background:#1976d2;color:#fff;';
-    }
-
-    // =========================
-    // 🟢 CLIENTES
-    // =========================
-    if(tela === 'clientes'){
-      return `
-<tr style="${cor}">
-<td>
-  <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
-</td>
-<td>${c.nome||''}</td>
-<td>${c.telefone||''}</td>
-<td>${c.usuario||''}</td>
-<td>${c.senha||''}</td> <!-- 🔥 AQUI -->
-<td>${c.servidor||''}</td>
-<td>${c.plano||''}</td>
-<td>${c.valor||''}</td>
-<td>${formatarDataBR(c.vencimento)}</td>
-<td>${c.hora_vencimento||''}</td>
-<td>${c.mac||''}</td>
-<td style="color:${calcularStatus(c)==='ativo' ? 'lime' : 'red'}">
-  ${calcularStatus(c)}
-</td>
-
-<td>${c.ultimo_teste_adulto ? formatarDataBR(c.ultimo_teste_adulto) : "-"}</td>
-<td>${c.ultimo_teste_sem_adulto ? formatarDataBR(c.ultimo_teste_sem_adulto) : "-"}</td>
-
-<td>
-  <button onclick="editar('${c.id}')">Editar</button>
-  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
-  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
-
-  <button onclick="liberarTeste('${c.telefone}')" 
-    style="background:orange;color:#000;">
-    🔓 Teste
-  </button>
-</td>
-</tr>
-`;
-    }
-
-    // =========================
-    // 🔵 CONTATOS
-    // =========================
-    else {
-  return `
-<tr style="${cor}">
-<td>
-  <input type="checkbox" class="check" data-id="${c.id}" data-telefone="${c.telefone}" onchange="contarSelecionados()">
-</td>
-<td>${c.nome||''}</td>
-<td>${c.telefone||''}</td>
-<td>${c.usuario||''}</td>
-<td>
-  <button onclick="editar('${c.id}')">Editar</button>
-  <button class="btn-verde" onclick="ativarHumano('${c.telefone}')">👤</button>
-  <button class="btn-vermelho" onclick="desativarHumano('${c.telefone}')">🤖</button>
-
-  <button onclick="liberarTeste('${c.telefone}')" 
-    style="background:orange;color:#000;">
-    🔓 Teste
-  </button>
-</td>
-</tr>
-`;
-}
-
-  }).join('');
-
-  contarSelecionados();
-  atualizarContadorStatus(lista);
-}
-
-// ===== CRON AUTOMÁTICO =====
-setInterval(()=>{
-  console.log("Sincronizando...");
-  carregar();
-}, 60000);
-
-// ===== RESTO DO CÓDIGO (INTACTO) =====
-function contarSelecionados(){
-  contadorSelecionados.innerText="Selecionados: "+document.querySelectorAll('.check:checked').length;
-}
-function selecionarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=true); contarSelecionados(); }
-function desmarcarTodos(){ document.querySelectorAll('.check').forEach(c=>c.checked=false); contarSelecionados(); }
-function filtrarAtivos(){ render(dados.filter(c=>calcularStatus(c)==="ativo")); }
-function filtrarVencidos(){ render(dados.filter(c=>calcularStatus(c)==="inativo")); }
-
-async function deletarSelecionados(){
-  let ids=[...document.querySelectorAll('.check:checked')].map(c=>c.dataset.id);
-  if(ids.length===0)return alert("Nada selecionado");
-  if(!confirm("Deseja excluir?"))return;
-
-  for(let i=0;i<ids.length;i++){
-    await client.from(tela).delete().eq('id',ids[i]);
-    let p=Math.floor(((i+1)/ids.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
-  }
-
-  alert("Excluído");
-  carregar();
-}
-
-function normalizar(t){
-  return (t||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
-}
-
-function buscar(){
-  let termo=normalizar(busca.value);
-  render(dados.filter(c =>
-    normalizar(c.nome).includes(termo) ||
-    (c.telefone||"").includes(termo)
-  ));
-}
-
-// ===== EDITAR =====
-async function editar(id){
-
-  const { data } = await client.from(tela).select('*').eq('id',id).single();
-
-  let campos;
-
-  // 🔥 DEFINE CAMPOS POR TELA (SEM QUEBRAR CONTATOS)
-  if(tela === 'clientes'){
-    campos = [
-      'nome',
-      'telefone',
-      'usuario',
-      'servidor',
-      'plano',
-      'valor',
-      'vencimento',
-      'hora_vencimento',
-      'mac'
-    ];
-  } else {
-    campos = ['nome','telefone','usuario'];
-  }
-
-  dadosEditados={};
-
-  for(let campo of campos){
-
-    let r = await abrirModal(campo, data[campo]);
-
-    if(r.tipo === "cancelar") return;
-
-    dadosEditados[campo] = r.valor;
-
-    // 🔥 SALVAR PARCIAL (SEM QUEBRAR SUA LÓGICA)
-    if(r.tipo === "salvar"){
-      await salvar(id);
-      return;
-    }
-  }
-
-  // 🔥 SALVAR FINAL
-  await salvar(id);
-}
-
-// ===== SALVAR (CORRETO SEM QUEBRAR NADA) =====
-async function salvar(id){
-
-  let dados = { ...dadosEditados };
-
-  // 🔥 TRATAMENTO SOMENTE PARA CLIENTES
-  if(tela === 'clientes'){
-
-    // DATA (se vier dd/mm/yyyy → converte)
-    if(dados.vencimento && typeof dados.vencimento === 'string'){
-      if(dados.vencimento.includes('/')){
-        let p = dados.vencimento.split('/');
-        if(p.length === 3){
-          dados.vencimento = `${p[2]}-${p[1]}-${p[0]}T12:00:00`;
-        }
-      }
-    }
-
-    // VALOR → número
-    if(dados.valor){
-      dados.valor = Number(dados.valor);
-    }
-  }
-
-  console.log("SALVANDO:", dados);
-
-  const { error } = await client
-    .from(tela)
-    .update(dados)
-    .eq('id', id);
-
-  if(error){
-    console.log("ERRO AO SALVAR:", error);
-    alert("Erro ao salvar");
-    return;
-  }
-
-  // 🔥 IMPORTANTE: NÃO ALTEREI SUA LÓGICA
-  carregar();
-}
-  
-// ===== IMPORTAÇÃO =====
-async function importarArquivo(){  
-
-  const file = inputArquivo.files[0];
-  if(!file) return alert("Selecione arquivo");
-
-  const reader = new FileReader();
-
-  reader.onload = async (e)=>{
-
-    const wb = XLSX.read(e.target.result,{type:'binary'});
-    const json = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-
-    if(json.length === 0){
-      alert("Arquivo vazio");
-      return;
-    }
-
-    // 🔥 monta dados
-    dados = json.map((c,i)=>({
-      ...c,
-      id: i
-    }));
-
-    // 🔥 render
-    render(dados);
-
-    // 🔥 salva global
-    window.dadosImportados = json;
-
-    alert("Agora selecione os clientes e clique em IMPORTAR SELECIONADOS");
-
-    document.getElementById("btnImportarSelecionados").style.display = "inline-block";
-  };
-
-  reader.readAsBinaryString(file);
-}
-
-carregar();
-
-  async function importarSelecionados(){    
-    
-  const checks = document.querySelectorAll('.check:checked');
-
-  if(checks.length === 0){
-    alert("Selecione pelo menos um cliente");
-    return;
-  }
-
-  let erros = 0;
-
-  for(let i=0;i<checks.length;i++){
-
-    const index = checks[i].dataset.id;
-let linha = window.dadosImportados[index];
-
-    try{
-
-      let telefone=(linha.telefone||"").replace(/\D/g,"");
-      if(!telefone.startsWith("55")) telefone="55"+telefone;
-
-      let usuario=linha.usuario || ("user"+i);
-
-     await client.from('clientes').upsert({
-  nome: linha.nome,
-  telefone,
-  usuario,
-  senha: linha.senha || null,
-  servidor: linha.servidor,
-  plano: linha.plano,
-  valor: linha.valor 
-  ? Number(String(linha.valor).replace(",", ".")) 
-  : 0,
-  vencimento: tratarDataExcel(linha.vencimento),
-  hora_vencimento: linha.hora_vencimento || linha.hora,
-  mac: linha.mac,
-
-  public_id: linha.public_id || null,
-  forma_pagamento: linha.forma_de_pagamento || null,
-  observacao: linha.observacao || null,
-  dispositivo: linha.dispositivo || null,
-  aplicativo: linha.aplicativo || null,
-  vencimento_aplicativo: tratarDataExcel(linha.vencimento_aplicativo),
-
-  // 🔥 DATA AGORA NO LUGAR CERTO
-  criado_em: tratarDataExcel(linha.data_cadastro) 
-  ? tratarDataExcel(linha.data_cadastro) 
-  : new Date().toISOString()
-
-}, {
-  onConflict: 'usuario'
-});
-
-      await salvarContatoSeguro({
-        telefone,
-        usuario,
-        nome:linha.nome,
-        cliente:true
-      });
-
-    }catch(e){
-      erros++;
-    }
-
-    let p=Math.floor(((i+1)/checks.length)*100);
-    progress.style.width=p+"%";
-    progress.innerText=p+"%";
-  }
-
-  alert("Importação concluída 🚀 Erros: "+erros);
-
-    document.getElementById("btnImportarSelecionados").style.display = "none";
-
-  carregar();
-}
-async function ativarHumano(telefone){
-
-  log("Enviando HUMANO: " + telefone);
-
-  let res;
-
-  try {
-    res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ 
-        "Content-Type":"application/json",
-        "Authorization":"Bearer " + SUPABASE_KEY
-      },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: true
-      })
+// ================= PRODUTOS =================
+
+async function carregarProdutos(){
+
+    const { data } = await supabaseClient
+        .from("produtos")
+        .select("*")
+        .order("criado_em", { ascending:false });
+
+    const div = document.getElementById("produtos");
+    div.innerHTML = "";
+
+    data.forEach(p => {
+
+        div.innerHTML += `
+        <div class="produto">
+            <input value="${p.nome}" id="nome-${p.id}">
+            <input value="${p.valor}" id="valor-${p.id}">
+
+            <button onclick="salvar('${p.id}')">💾</button>
+            <button onclick="toggleAtivo('${p.id}', ${!p.ativo})">
+                ${p.ativo ? '🟢':'⚫'}
+            </button>
+            <button onclick="remover('${p.id}')">🗑</button>
+        </div>`;
     });
-  } catch(e){
-    log("ERRO FETCH HUMANO: " + e.message);
-    return;
-  }
-
-  log("STATUS HTTP HUMANO: " + res.status);
-
-  let txt = "";
-
-  try {
-    txt = await res.text();
-    log("RESPOSTA HUMANO: " + txt);
-  } catch(e) {
-    log("ERRO AO LER RESPOSTA HUMANO: " + e.message);
-  }
-
-  // 🔥 ATUALIZA LOCALMENTE
-  dados = dados.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return { 
-  ...c, 
-  atendimento_humano: true
-};
-  }
-  return c;
-});
-
-  // 🔥 ATUALIZA contatosCache (AQUI QUE ESTAVA FALTANDO)
-contatosCache = contatosCache.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return {
-      ...c,
-      atendimento_humano: true
-    };
-  }
-  return c;
-});
-
-await new Promise(r => setTimeout(r, 800));
-render(dados);
 }
 
+async function addProduto(){
 
+    const nome = document.getElementById("nomeProduto").value;
+    const valor = document.getElementById("valorProduto").value;
 
-async function desativarHumano(telefone){
+    if(!nome || !valor) return alert("Preencha");
 
-  log("Enviando BOT: " + telefone);
-
-  let res;
-
-  try {
-    res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ 
-        "Content-Type":"application/json",
-        "Authorization":"Bearer " + SUPABASE_KEY
-      },
-      body: JSON.stringify({
-        telefone: telefone,
-        status: false
-      })
-    });
-  } catch(e){
-    log("ERRO FETCH BOT: " + e.message);
-    return;
-  }
-
-  log("STATUS HTTP BOT: " + res.status);
-
-  let txt = "";
-
-  try {
-    txt = await res.text();
-    log("RESPOSTA BOT: " + txt);
-  } catch(e) {
-    log("ERRO AO LER RESPOSTA BOT: " + e.message);
-  }
-
-  // 🔥 ATUALIZA LOCALMENTE
-  dados = dados.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-   return { 
-  ...c, 
-  atendimento_humano: false
-};
-  }
-  return c;
-});
-
-contatosCache = contatosCache.map(c=>{
-  if(String(c.telefone).trim() === String(telefone).trim()){
-    return {
-      ...c,
-      atendimento_humano: false
-    };
-  }
-  return c;
-});
-  
- await new Promise(r => setTimeout(r, 800));
-render(dados);
-}
-
-async function ativarSelecionados(){
-
-  const checks = document.querySelectorAll(".check:checked");
-
-  if(checks.length === 0){
-    alert("Selecione pelo menos um contato");
-    return;
-  }
-
-  log("🚀 INICIO MASSA HUMANO | total: " + checks.length);
-
-  for(const check of checks){
-
-    const telefone = check.dataset.telefone;
-
-    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ 
-  "Content-Type":"application/json",
-  "Authorization":"Bearer " + SUPABASE_KEY
-},
-      body: JSON.stringify({
-        telefone: telefone,
-        status: true
-      })
-    });
-
-    log("STATUS MASSA: " + res.status);
-
-    // 🔥 ATUALIZA LOCAL (ESSENCIAL)
-    dados = dados.map(c=>{
-      if(String(c.telefone).trim() === String(telefone).trim()){
-       return { 
-  ...c, 
-  atendimento_humano: true
-};
-      }
-      return c;
-    });
-
-  }
-
-  await new Promise(r => setTimeout(r, 800));
-render(dados);
-
-}
-
-async function desativarSelecionados(){
-
-  const checks = document.querySelectorAll(".check:checked");
-
-  if(checks.length === 0){
-    alert("Selecione pelo menos um contato");
-    return;
-  }
-
-  log("🚀 INICIO MASSA BOT | total: " + checks.length);
-
-  for(const check of checks){
-
-    const telefone = check.dataset.telefone;
-
-    const res = await fetch("https://tiupgtbzikwmseecxbvo.supabase.co/functions/v1/humano-toggle",{
-      method:"POST",
-      headers:{ 
-  "Content-Type":"application/json",
-  "Authorization":"Bearer " + SUPABASE_KEY
-},
-      body: JSON.stringify({
-        telefone: telefone,
-        status: false
-      })
-    });
-
-    log("STATUS MASSA: " + res.status);
-
-    // 🔥 ATUALIZA LOCAL (ESSENCIAL)
-    dados = dados.map(c=>{
-      if(String(c.telefone).trim() === String(telefone).trim()){
-        return { 
-  ...c, 
-  atendimento_humano: false
-};
-      }
-      return c;
-    });
-
-  }
-
- await new Promise(r => setTimeout(r, 800));
-render(dados);
-}
-
-  // ===== PRODUTOS =====
-function abrirFormProduto(){
-  document.getElementById('formProduto').style.display = 'block';
-}
-
-function fecharFormProduto(){
-  document.getElementById('formProduto').style.display = 'none';
-}
-
-  function gerarPalavrasChave(nome) {
-      console.log("🔥 FUNÇÃO NOVA RODANDO");
-
-
-  const n = nome
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim();
-
-  let palavras = [];
-
-  // 🔥 FRASE COMPLETA (sempre)
-  palavras.push(n);
-
-  const partes = n.split(" ");
-
-  // 🔥 monta combinações de 2 e 3 palavras
-  for (let i = 0; i < partes.length; i++) {
-
-    if (partes[i + 1]) {
-      palavras.push(`${partes[i]} ${partes[i + 1]}`);
-    }
-
-    if (partes[i + 2]) {
-      palavras.push(`${partes[i]} ${partes[i + 1]} ${partes[i + 2]}`);
-    }
-  }
-
-  // 🔥 remove palavras perigosas
-  const blacklist = ["pro", "tv", "smart", "app", "player"];
-
-  palavras = palavras.filter(p => {
-    return !blacklist.includes(p.trim());
-  });
-
-  // 🔥 remove duplicados
-  palavras = [...new Set(palavras)];
-
-    palavras = palavras.filter(p => {
-  return p !== "pro" && p !== "pro 4k" && p !== "pro 5g";
-});
-
-  return palavras.join(", ");
-}
-
-async function salvarProduto(){
-
-  const nome = document.getElementById('p_nome').value.trim();  
-  const preco = parseFloat(document.getElementById('p_preco').value);
-  let url = document.getElementById('p_url').value.trim();
-  const inputFile = document.getElementById('p_imagem');
-  const palavras_chave = gerarPalavrasChave(nome);
-
-if(!inputFile){
-  log("❌ INPUT NÃO ENCONTRADO");
-  return;
-}
-
-if(inputFile.files.length === 0){
-  log("❌ NENHUM ARQUIVO SELECIONADO");
-}
-
-const file = inputFile.files[0];
-log("📸 FILE:", file ? file.name : "VAZIO");
-  log("📸 FILE:", file);
-  log("📸 FILE:", file ? file.name : "SEM IMAGEM");
-  const descricao = document.getElementById('p_descricao').value;
-
-  if(url && !url.startsWith("http")){
-    url = "https://" + url;
-  }
-
-  if(!nome || !preco || !url){
-    alert("Preencha tudo");
-    return;
-  }
-let imagem_url = null;
-
-// se estiver editando, mantém a imagem atual
-if(editandoProdutoId){
-  const { data } = await client
-    .from('produtos')
-    .select('imagem_url')
-    .eq('id', editandoProdutoId)
-    .single();
-
-  imagem_url = data.imagem_url;
-}
-
-// se escolher nova imagem, substitui
-if(file){
-  log("📸 ENVIANDO IMAGEM...");
-  imagem_url = await uploadImagem(file);
-}
-  log("📸 URL:", imagem_url);
-
-
-  if(editandoProdutoId){
-
-  const { error } = await client
-    .from('produtos')
-    .update({
-      nome,
-      preco,
-      url,
-      descricao,
-      imagem_url,
-      palavras_chave: gerarPalavrasChave(nome) // 🔥 ESSENCIAL
-    })
-    .eq('id', editandoProdutoId);
-
-  if(error){
-    console.log(error);
-    alert("Erro ao atualizar");
-    return;
-  }
-
-  alert("Produto atualizado ✅");
-
-  editandoProdutoId = null;
-
-}else{
-
-  const { error } = await client
-    .from('produtos')
-    .insert([{
-      nome,
-      preco,
-      url,
-      descricao,
-      imagem_url,
-      tipo: 'tvbox',
-      ativo: true,
-      prioridade: 1,
-      palavras_chave
+    await supabaseClient.from("produtos").insert([{
+        nome, valor
     }]);
 
-  if(error){
-    console.log(error);
-    alert("Erro ao salvar");
-    return;
-  }
+    document.getElementById("nomeProduto").value = "";
+    document.getElementById("valorProduto").value = "";
 
-  alert("Produto salvo com imagem ✅");
+    carregarProdutos();
 }
 
-  fecharFormProduto();
-  carregar();
+async function salvar(id){
+
+    const nome = document.getElementById("nome-"+id).value;
+    const valor = document.getElementById("valor-"+id).value;
+
+    await supabaseClient
+        .from("produtos")
+        .update({ nome, valor })
+        .eq("id", id);
+
+    carregarProdutos();
 }
 
-  async function toggleProduto(id, status){
+async function toggleAtivo(id, status){
 
-  const { error } = await client
-    .from('produtos')
-    .update({ ativo: status })
-    .eq('id', id);
+    await supabaseClient
+        .from("produtos")
+        .update({ ativo: status })
+        .eq("id", id);
 
-  if(error){
-    alert("Erro ao atualizar status");
-    console.log(error);
-    return;
-  }
-
-  carregar();
+    carregarProdutos();
 }
 
-  async function excluirProduto(id){
+async function remover(id){
 
-  if(!confirm("Deseja excluir este produto?")) return;
+    if(!confirm("Excluir produto?")) return;
 
-  const { error } = await client
-    .from('produtos')
-    .delete()
-    .eq('id', id);
+    await supabaseClient
+        .from("produtos")
+        .delete()
+        .eq("id", id);
 
-  if(error){
-    alert("Erro ao excluir");
-    console.log(error);
-    return;
-  }
-
-  alert("Produto excluído 🗑️");
-  carregar();
+    carregarProdutos();
 }
 
- async function uploadImagem(file){
+// INIT
+carregarContatos();
+carregarProdutos();
 
-  const fileName = Date.now() + "_" + file.name;
-
-  const { data, error } = await client
-    .storage
-    .from('produtos')
-    .upload(fileName, file);
-
-  if(error){
-    log("❌ ERRO UPLOAD: " + error.message);
-    console.log(error);
-    return null;
-  }
-
-  log("✅ UPLOAD OK");
-
-  const { data: publicUrl } = client
-    .storage
-    .from('produtos')
-    .getPublicUrl(fileName);
-
-  log("🌍 URL GERADA: " + publicUrl.publicUrl);
-
-  return publicUrl.publicUrl;
-}
-
-  async function verProduto(id){
-
-  const { data } = await client
-    .from('produtos')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  const html = `
-    <h3>${data.nome}</h3>
-
-    ${data.imagem_url 
-      ? `<img src="${data.imagem_url}" style="width:100%;border-radius:10px;">` 
-      : ''
-    }
-
-    <p><b>Preço:</b> R$ ${data.preco}</p>
-
-    <p>${data.descricao || ''}</p>
-
-    <a href="${data.url}" target="_blank" style="color:#4CAF50;">
-      🔗 Abrir no WhatsApp
-    </a>
-  `;
-
-  document.getElementById('conteudoPreview').innerHTML = html;
-  document.getElementById('previewProduto').style.display = 'block';
-}
-
-function fecharPreview(){
-  document.getElementById('previewProduto').style.display = 'none';
-}
-
-  // ===== LIBERAR TESTE =====
-async function liberarTeste(telefone){
-
-  if(!confirm("Liberar teste para este cliente?")) return;
-
-  const { error } = await client
-    .from('contatos')
-    .update({
-      ultimo_teste_adulto: null,
-      ultimo_teste_sem_adulto: null
-    })
-    .eq('telefone', telefone);
-
-  if(error){
-    alert("Erro ao liberar teste");
-    console.log(error);
-    return;
-  }
-
-  alert("Teste liberado com sucesso ✅");
-}
-
-// ===== EDITAR PRODUTO (NOVO) =====
-async function editarProduto(id){
-
-  log("✏️ EDITANDO PRODUTO: " + id);
-
-  const { data } = await client
-    .from('produtos')
-    .select('*')
-    .eq('id', id)
-    .single();
-
-  if(!data){
-    log("❌ PRODUTO NÃO ENCONTRADO");
-    return;
-  }
-
-  // preenche o formulário
-  document.getElementById('p_nome').value = data.nome || '';
-  document.getElementById('p_preco').value = data.preco || '';
-  document.getElementById('p_url').value = data.url || '';
-  document.getElementById('p_descricao').value = data.descricao || '';
-
-  // marca edição
-  editandoProdutoId = id;
-
-  log("📦 PRODUTO CARREGADO PARA EDIÇÃO");
-
-  abrirFormProduto();
-}  
-  
 </script>
 
+</body>
+</html>
