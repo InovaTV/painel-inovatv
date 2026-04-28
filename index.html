@@ -177,57 +177,76 @@ async function carregarContatos(){
     const lista = document.getElementById("lista");
     lista.innerHTML = "Carregando...";
 
-    const url = `${ROCKET_URL}/gerenciador/api/v1/clientes/?page=${pagina}&page_size=20&busca=${encodeURIComponent(busca)}`;
+    try {
 
-    const res = await fetch(url, {
-        headers: {
-            "Authorization": "Bearer " + ROCKET_KEY
+        const url = `${ROCKET_URL}/gerenciador/api/v1/clientes/?page=${pagina}&page_size=20&busca=${encodeURIComponent(busca)}`;
+
+        const res = await fetch(url, {
+            headers: {
+                "Authorization": "Bearer " + ROCKET_KEY
+            }
+        });
+
+        if (!res.ok) {
+            const erro = await res.text();
+            lista.innerHTML = "Erro Rocket:<br>" + erro;
+            console.error("ERRO ROCKET:", erro);
+            return;
         }
-    });
 
-    const json = await res.json();
-    const clientes = json.itens || [];
+        const json = await res.json();
+        const clientes = json.itens || [];
 
-    // pegar status humano
-    const { data: atendimentos } = await supabaseClient
-        .from("atendimentos")
-        .select("*");
+        if(clientes.length === 0){
+            lista.innerHTML = "Nenhum cliente encontrado";
+            return;
+        }
 
-    const mapa = {};
-    atendimentos.forEach(a => {
-        const tel = (a.telefone || "").replace(/\D/g,"");
-        mapa[tel] = a.humano;
-    });
+        // ===== pega humano =====
+        const { data: atendimentos } = await supabaseClient
+            .from("atendimentos")
+            .select("*");
 
-    lista.innerHTML = "";
+        const mapa = {};
+        atendimentos.forEach(a => {
+            const tel = (a.telefone || "").replace(/\D/g,"");
+            mapa[tel] = a.humano;
+        });
 
-    clientes.forEach(c => {
+        lista.innerHTML = "";
 
-        const telefone = (c.telefone || "").replace(/\D/g,"");
-        const humano = mapa[telefone] || false;
+        clientes.forEach(c => {
 
-        const vencido = new Date(c.vencimento) < new Date();
+            const telefone = (c.telefone || "").replace(/\D/g,"");
+            const humano = mapa[telefone] || false;
 
-        lista.innerHTML += `
-        <div class="card">
-            <div>
-                <b>${c.nome}</b><br>
-                📞 ${c.telefone}<br>
-                📦 ${c.plano?.nome || "-"}<br>
-                💰 R$ ${c.valor || 0}<br>
-                📅 <span style="color:${vencido ? 'red':'#00ff88'}">
-                    ${new Date(c.vencimento).toLocaleDateString()}
-                </span>
-            </div>
+            const vencido = new Date(c.vencimento) < new Date();
 
-            <button class="btn ${humano ? 'humano':'bot'}"
-                onclick="toggle('${telefone}', ${!humano})">
-                ${humano ? '👤 HUMANO':'🤖 BOT'}
-            </button>
-        </div>`;
-    });
+            lista.innerHTML += `
+            <div class="card">
+                <div>
+                    <b>${c.nome}</b><br>
+                    📞 ${c.telefone}<br>
+                    📦 ${c.plano?.nome || "-"}<br>
+                    💰 R$ ${c.valor || 0}<br>
+                    📅 <span style="color:${vencido ? 'red':'#00ff88'}">
+                        ${new Date(c.vencimento).toLocaleDateString()}
+                    </span>
+                </div>
 
-    renderPaginacao(json.paginacao);
+                <button class="btn ${humano ? 'humano':'bot'}"
+                    onclick="toggle('${telefone}', ${!humano})">
+                    ${humano ? '👤 HUMANO':'🤖 BOT'}
+                </button>
+            </div>`;
+        });
+
+        renderPaginacao(json.paginacao);
+
+    } catch (err) {
+        console.error(err);
+        lista.innerHTML = "Erro ao conectar com Rocket";
+    }
 }
 
 // ================= PAGINAÇÃO =================
