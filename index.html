@@ -179,7 +179,7 @@ async function carregarContatos(){
 
     try {
 
-        const url = `${ROCKET_URL}/gerenciador/api/v1/clientes/?page=${pagina}&page_size=20&busca=${encodeURIComponent(busca)}`;
+       const url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=${pagina}&busca=${encodeURIComponent(busca)}`;
 
         const res = await fetch(url, {
             headers: {
