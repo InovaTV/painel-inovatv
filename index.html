@@ -20,20 +20,12 @@ body{
     padding:20px;
 }
 
-/* TOPO */
 .topo{
     display:flex;
     justify-content:space-between;
-    align-items:center;
     margin-bottom:20px;
 }
 
-.logo{
-    font-size:22px;
-    font-weight:bold;
-}
-
-/* MENU */
 .menu{
     display:flex;
     gap:10px;
@@ -49,13 +41,8 @@ body{
     cursor:pointer;
 }
 
-.menu button.active{
+.menu .active{
     background:#b024ff;
-}
-
-/* BUSCA */
-.busca{
-    margin-bottom:15px;
 }
 
 input{
@@ -64,7 +51,7 @@ input{
     border:none;
 }
 
-/* CARD */
+/* LISTA */
 .card{
     background:#141937;
     padding:15px;
@@ -75,7 +62,6 @@ input{
     align-items:center;
 }
 
-/* BOTÕES */
 .btn{
     border:none;
     padding:6px 10px;
@@ -102,7 +88,7 @@ input{
 <div class="container">
 
 <div class="topo">
-    <div class="logo">📺 Painel InovaTV</div>
+    <h2>📺 Painel InovaTV</h2>
 </div>
 
 <div class="menu">
@@ -113,9 +99,7 @@ input{
 <!-- CONTATOS -->
 <div id="telaContatos">
 
-<div class="busca">
-    <input id="busca" placeholder="Buscar cliente" oninput="pagina=1; carregarContatos()">
-</div>
+<input id="busca" placeholder="Buscar cliente" oninput="pagina=1; carregarContatos()">
 
 <div id="lista"></div>
 
@@ -136,96 +120,79 @@ input{
 
 <script>
 
-// ================= CONFIG =================
+// CONFIG
 const SUPABASE_URL = "https://tiupgtbzikwmseecxbvo.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c";
-
-const ROCKET_URL = "https://app.rocketgestor.com";
-const ROCKET_KEY = "Mqlr36HuVX3c1CF8TkDgyxFizavSLbz1D2svhgrpaO8";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let pagina = 1;
 
-// ================= TROCAR TELA =================
+// TROCAR TELA
 function trocar(tela){
+    document.getElementById("telaContatos").style.display = tela === "contatos" ? "block":"none";
+    document.getElementById("telaProdutos").style.display = tela === "produtos" ? "block":"none";
 
-    document.getElementById("telaContatos").style.display = "none";
-    document.getElementById("telaProdutos").style.display = "none";
+    document.getElementById("btnContatos").classList.toggle("active", tela==="contatos");
+    document.getElementById("btnProdutos").classList.toggle("active", tela==="produtos");
 
-    document.getElementById("btnContatos").classList.remove("active");
-    document.getElementById("btnProdutos").classList.remove("active");
-
-    if(tela === "contatos"){
-        document.getElementById("telaContatos").style.display = "block";
-        document.getElementById("btnContatos").classList.add("active");
-        carregarContatos();
-    }
-
-    if(tela === "produtos"){
-        document.getElementById("telaProdutos").style.display = "block";
-        document.getElementById("btnProdutos").classList.add("active");
-        carregarProdutos();
-    }
+    if(tela==="contatos") carregarContatos();
+    if(tela==="produtos") carregarProdutos();
 }
 
-// ================= CONTATOS (ROCKET) =================
+// ================= CONTATOS =================
 async function carregarContatos(){
 
-    const buscaInput = document.getElementById("busca").value.trim();
-
+    const busca = document.getElementById("busca").value.trim();
     const lista = document.getElementById("lista");
+
     lista.innerHTML = "Carregando...";
 
     try {
 
-        // 🔥 monta URL corretamente (sem busca vazia)
         let url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=${pagina}`;
-
-        if (buscaInput) {
-            url += `&busca=${encodeURIComponent(buscaInput)}`;
-        }
+        if (busca) url += `&busca=${encodeURIComponent(busca)}`;
 
         const res = await fetch(url);
 
-        // ❌ erro HTTP
-        if (!res.ok) {
+        if (!res.ok){
             const erro = await res.text();
-            lista.innerHTML = "Erro Rocket:<br>" + erro;
-            console.error("ERRO ROCKET:", erro);
+            lista.innerHTML = "Erro Rocket:<br>"+erro;
+            console.error(erro);
             return;
         }
 
         const json = await res.json();
 
-        // 🔥 debug importante
-        if (!json || !json.itens) {
+        if (!json || !json.itens){
             lista.innerHTML = "Erro na resposta da API";
-            console.log("RESPOSTA COMPLETA:", json);
+            console.log(json);
             return;
         }
 
         const clientes = json.itens;
 
-        // ❌ vazio vindo do Rocket
         if (clientes.length === 0){
-            lista.innerHTML = "Nenhum cliente encontrado (Rocket retornou vazio)";
-            console.log("RESPOSTA VAZIA:", json);
+            lista.innerHTML = "Nenhum cliente encontrado";
             return;
         }
 
-        // ===== pega humano =====
-        const { data: atendimentos } = await supabaseClient
-    .from("atendimentos")
-    .select("*");
+        // ===== HUMANO =====
+        let mapa = {};
 
-const mapa = {};
+        try{
+            const { data } = await supabaseClient
+                .from("atendimentos")
+                .select("*");
 
-// 🔥 proteção contra erro do supabase
-(atendimentos || []).forEach(a => {
-    const tel = (a.telefone || "").replace(/\D/g,"");
-    mapa[tel] = a.humano;
-});
+            (data || []).forEach(a=>{
+                const tel = (a.telefone || "").replace(/\D/g,"");
+                mapa[tel] = a.humano;
+            });
+
+        }catch(e){
+            console.warn("Erro atendimentos:", e);
+        }
 
         lista.innerHTML = "";
 
@@ -257,17 +224,18 @@ const mapa = {};
 
         renderPaginacao(json.paginacao);
 
-    } catch (err) {
+    } catch(err){
         console.error(err);
         lista.innerHTML = "Erro ao conectar com Rocket";
     }
 }
 
-// ================= PAGINAÇÃO =================
+// PAGINAÇÃO
 function renderPaginacao(p){
 
+    if(!p) return;
+
     const div = document.createElement("div");
-    div.style.marginTop = "20px";
 
     div.innerHTML = `
         <button onclick="prev()" ${!p.has_previous ? "disabled":""}>⬅</button>
@@ -278,19 +246,10 @@ function renderPaginacao(p){
     document.getElementById("lista").appendChild(div);
 }
 
-function next(){
-    pagina++;
-    carregarContatos();
-}
+function next(){ pagina++; carregarContatos(); }
+function prev(){ if(pagina>1){ pagina--; carregarContatos(); } }
 
-function prev(){
-    if(pagina > 1){
-        pagina--;
-        carregarContatos();
-    }
-}
-
-// ================= TOGGLE HUMANO =================
+// TOGGLE
 async function toggle(telefone, status){
 
     await fetch(`${SUPABASE_URL}/functions/v1/humano-toggle`, {
@@ -313,7 +272,7 @@ async function carregarProdutos(){
     const div = document.getElementById("produtos");
     div.innerHTML = "";
 
-    data.forEach(p => {
+    (data || []).forEach(p => {
 
         div.innerHTML += `
         <div class="produto">
@@ -337,9 +296,6 @@ async function addProduto(){
     if(!nome || !valor) return alert("Preencha");
 
     await supabaseClient.from("produtos").insert([{ nome, valor }]);
-
-    document.getElementById("nomeProduto").value = "";
-    document.getElementById("valorProduto").value = "";
 
     carregarProdutos();
 }
