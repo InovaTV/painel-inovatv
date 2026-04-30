@@ -172,17 +172,23 @@ function trocar(tela){
 // ================= CONTATOS (ROCKET) =================
 async function carregarContatos(){
 
-    const busca = document.getElementById("busca").value;
+    const buscaInput = document.getElementById("busca").value.trim();
 
     const lista = document.getElementById("lista");
     lista.innerHTML = "Carregando...";
 
     try {
 
-       const url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=${pagina}&busca=${encodeURIComponent(busca)}`;
+        // 🔥 monta URL corretamente (sem busca vazia)
+        let url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=${pagina}`;
+
+        if (buscaInput) {
+            url += `&busca=${encodeURIComponent(buscaInput)}`;
+        }
 
         const res = await fetch(url);
 
+        // ❌ erro HTTP
         if (!res.ok) {
             const erro = await res.text();
             lista.innerHTML = "Erro Rocket:<br>" + erro;
@@ -191,10 +197,20 @@ async function carregarContatos(){
         }
 
         const json = await res.json();
-        const clientes = json.itens || [];
 
-        if(clientes.length === 0){
-            lista.innerHTML = "Nenhum cliente encontrado";
+        // 🔥 debug importante
+        if (!json || !json.itens) {
+            lista.innerHTML = "Erro na resposta da API";
+            console.log("RESPOSTA COMPLETA:", json);
+            return;
+        }
+
+        const clientes = json.itens;
+
+        // ❌ vazio vindo do Rocket
+        if (clientes.length === 0){
+            lista.innerHTML = "Nenhum cliente encontrado (Rocket retornou vazio)";
+            console.log("RESPOSTA VAZIA:", json);
             return;
         }
 
