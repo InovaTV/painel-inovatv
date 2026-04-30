@@ -15,16 +15,12 @@ body{
 }
 
 .container{
-    max-width:1100px;
+    max-width:1200px;
     margin:auto;
     padding:20px;
 }
 
-.topo{
-    display:flex;
-    justify-content:space-between;
-    margin-bottom:20px;
-}
+h2{ margin-bottom:20px }
 
 .menu{
     display:flex;
@@ -51,17 +47,25 @@ input{
     border:none;
 }
 
-/* LISTA */
-.card{
-    background:#141937;
-    padding:15px;
-    border-radius:10px;
-    margin-bottom:10px;
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
+/* TABELA */
+table{
+    width:100%;
+    border-collapse:collapse;
+    background:#111;
 }
 
+th{
+    background:#222;
+    padding:10px;
+    text-align:left;
+}
+
+td{
+    padding:10px;
+    border-bottom:1px solid #333;
+}
+
+/* BOTÕES */
 .btn{
     border:none;
     padding:6px 10px;
@@ -87,21 +91,36 @@ input{
 
 <div class="container">
 
-<div class="topo">
-    <h2>📺 Painel InovaTV</h2>
-</div>
+<h2>📺 Painel InovaTV</h2>
 
 <div class="menu">
-    <button id="btnContatos" class="active" onclick="trocar('contatos')">Contatos</button>
+    <button id="btnContatos" class="active" onclick="trocar('contatos')">Clientes</button>
     <button id="btnProdutos" onclick="trocar('produtos')">Produtos</button>
 </div>
 
-<!-- CONTATOS -->
+<!-- CLIENTES -->
 <div id="telaContatos">
 
-<input id="busca" placeholder="Buscar cliente" oninput="pagina=1; carregarContatos()">
+<div style="margin-bottom:10px;">
+    <input id="busca" placeholder="Telefone ou Nome" oninput="pagina=1; carregarContatos()">
+</div>
 
-<div id="lista"></div>
+<table>
+<thead>
+<tr>
+    <th>Nome</th>
+    <th>Telefone</th>
+    <th>Plano</th>
+    <th>Valor</th>
+    <th>Vencimento</th>
+    <th>Ação</th>
+</tr>
+</thead>
+
+<tbody id="lista"></tbody>
+</table>
+
+<div id="paginacao" style="margin-top:10px;"></div>
 
 </div>
 
@@ -130,8 +149,9 @@ let pagina = 1;
 
 // TROCAR TELA
 function trocar(tela){
-    document.getElementById("telaContatos").style.display = tela === "contatos" ? "block":"none";
-    document.getElementById("telaProdutos").style.display = tela === "produtos" ? "block":"none";
+
+    document.getElementById("telaContatos").style.display = tela==="contatos" ? "block":"none";
+    document.getElementById("telaProdutos").style.display = tela==="produtos" ? "block":"none";
 
     document.getElementById("btnContatos").classList.toggle("active", tela==="contatos");
     document.getElementById("btnProdutos").classList.toggle("active", tela==="produtos");
@@ -140,13 +160,15 @@ function trocar(tela){
     if(tela==="produtos") carregarProdutos();
 }
 
-// ================= CONTATOS =================
+// ================= CLIENTES =================
 async function carregarContatos(){
 
     const busca = document.getElementById("busca").value.trim();
     const lista = document.getElementById("lista");
+    const paginacao = document.getElementById("paginacao");
 
-    lista.innerHTML = "Carregando...";
+    lista.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
+    paginacao.innerHTML = "";
 
     try {
 
@@ -156,24 +178,21 @@ async function carregarContatos(){
         const res = await fetch(url);
 
         if (!res.ok){
-            const erro = await res.text();
-            lista.innerHTML = "Erro Rocket:<br>"+erro;
-            console.error(erro);
+            lista.innerHTML = "<tr><td colspan='6'>Erro Rocket</td></tr>";
             return;
         }
 
         const json = await res.json();
 
         if (!json || !json.itens){
-            lista.innerHTML = "Erro na resposta da API";
-            console.log(json);
+            lista.innerHTML = "<tr><td colspan='6'>Erro API</td></tr>";
             return;
         }
 
         const clientes = json.itens;
 
         if (clientes.length === 0){
-            lista.innerHTML = "Nenhum cliente encontrado";
+            lista.innerHTML = "<tr><td colspan='6'>Nenhum cliente</td></tr>";
             return;
         }
 
@@ -191,7 +210,7 @@ async function carregarContatos(){
             });
 
         }catch(e){
-            console.warn("Erro atendimentos:", e);
+            console.warn(e);
         }
 
         lista.innerHTML = "";
@@ -204,52 +223,40 @@ async function carregarContatos(){
             const vencido = new Date(c.vencimento) < new Date();
 
             lista.innerHTML += `
-            <div class="card">
-                <div>
-                    <b>${c.nome}</b><br>
-                    📞 ${c.telefone}<br>
-                    📦 ${c.plano?.nome || "-"}<br>
-                    💰 R$ ${c.valor || 0}<br>
-                    📅 <span style="color:${vencido ? 'red':'#00ff88'}">
-                        ${new Date(c.vencimento).toLocaleDateString()}
-                    </span>
-                </div>
-
-                <button class="btn ${humano ? 'humano':'bot'}"
-                    onclick="toggle('${telefone}', ${!humano})">
-                    ${humano ? '👤 HUMANO':'🤖 BOT'}
-                </button>
-            </div>`;
+            <tr>
+                <td>${c.nome}</td>
+                <td>${c.telefone}</td>
+                <td>${c.plano?.nome || "-"}</td>
+                <td>R$ ${c.valor || 0}</td>
+                <td style="color:${vencido ? 'red':'#00ff88'}">
+                    ${new Date(c.vencimento).toLocaleDateString()}
+                </td>
+                <td>
+                    <button class="btn ${humano ? 'humano':'bot'}"
+                        onclick="toggle('${telefone}', ${!humano})">
+                        ${humano ? '👤 HUMANO':'🤖 BOT'}
+                    </button>
+                </td>
+            </tr>`;
         });
 
-        renderPaginacao(json.paginacao);
+        const p = json.paginacao;
+
+        paginacao.innerHTML = `
+            <button onclick="prev()" ${!p.has_previous ? "disabled":""}>⬅</button>
+            Página ${p.page} de ${p.total_pages}
+            <button onclick="next()" ${!p.has_next ? "disabled":""}>➡</button>
+        `;
 
     } catch(err){
-        console.error(err);
-        lista.innerHTML = "Erro ao conectar com Rocket";
+        lista.innerHTML = "<tr><td colspan='6'>Erro conexão</td></tr>";
     }
-}
-
-// PAGINAÇÃO
-function renderPaginacao(p){
-
-    if(!p) return;
-
-    const div = document.createElement("div");
-
-    div.innerHTML = `
-        <button onclick="prev()" ${!p.has_previous ? "disabled":""}>⬅</button>
-        Página ${p.page} de ${p.total_pages}
-        <button onclick="next()" ${!p.has_next ? "disabled":""}>➡</button>
-    `;
-
-    document.getElementById("lista").appendChild(div);
 }
 
 function next(){ pagina++; carregarContatos(); }
 function prev(){ if(pagina>1){ pagina--; carregarContatos(); } }
 
-// TOGGLE
+// ================= HUMANO =================
 async function toggle(telefone, status){
 
     await fetch(`${SUPABASE_URL}/functions/v1/humano-toggle`, {
