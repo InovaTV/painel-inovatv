@@ -63,7 +63,7 @@ td{
 }
 
 /* destaque humano */
-tr.humano-row{
+tr.humano{
     background:#3a1111;
 }
 
@@ -76,7 +76,7 @@ tr.humano-row{
 }
 
 .bot{ background:#00d9ff; color:#000; }
-.humano{ background:#ff4d4d; }
+.humano-btn{ background:#ff4d4d; color:#fff; }
 
 </style>
 </head>
@@ -88,10 +88,13 @@ tr.humano-row{
 <h2>📺 Painel InovaTV</h2>
 
 <div class="menu">
-    <button class="active">Clientes</button>
+    <button class="active" onclick="trocar('clientes')">Clientes</button>
+    <button onclick="trocar('produtos')">Produtos</button>
 </div>
 
-<input id="busca" placeholder="Buscar cliente" oninput="pagina=1; carregarContatos()">
+<div id="telaClientes">
+
+<input id="busca" placeholder="Buscar cliente" oninput="carregar()">
 
 <table>
 <thead>
@@ -101,12 +104,18 @@ tr.humano-row{
 <th>Plano</th>
 <th>Valor</th>
 <th>Vencimento</th>
-<th>Ação</th>
+<th>Ações</th>
 </tr>
 </thead>
 
 <tbody id="lista"></tbody>
 </table>
+
+</div>
+
+<div id="telaProdutos" style="display:none">
+<h3>Produtos (em breve)</h3>
+</div>
 
 </div>
 
@@ -117,109 +126,103 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-let pagina = 1;
-
 // NORMALIZA TELEFONE
-function normalizar(tel){
-    return (tel || "").replace(/\D/g,"").slice(-11);
+function tel(t){
+    return (t || "").replace(/\D/g,"").slice(-11);
 }
 
-// ================= CLIENTES =================
-async function carregarContatos(){
+// TROCAR TELA
+function trocar(t){
+    document.getElementById("telaClientes").style.display = t==="clientes"?"block":"none";
+    document.getElementById("telaProdutos").style.display = t==="produtos"?"block":"none";
+}
+
+// ================= CARREGAR =================
+async function carregar(){
 
     const busca = document.getElementById("busca").value;
     const lista = document.getElementById("lista");
 
     lista.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
 
-    try {
+    try{
 
-        let url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=${pagina}`;
-        if (busca) url += `&busca=${encodeURIComponent(busca)}`;
+        let url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=1`;
+        if(busca) url += `&busca=${encodeURIComponent(busca)}`;
 
         const res = await fetch(url);
         const json = await res.json();
 
-        if (!json.itens){
-            lista.innerHTML = "<tr><td colspan='6'>Erro API</td></tr>";
-            return;
-        }
+        let clientes = json.itens || [];
 
-        let clientes = json.itens;
-
-        // ===== BUSCA HUMANO =====
+        // ===== PEGAR HUMANO =====
         let mapa = {};
 
-        try{
-            const { data } = await supabaseClient
-                .from("atendimentos")
-                .select("*");
+        const { data } = await supabaseClient
+            .from("atendimentos")
+            .select("*");
 
-            (data || []).forEach(a=>{
-                const tel = normalizar(a.telefone);
-                mapa[tel] = a.humano === true;
-            });
-
-        }catch(e){
-            console.log("Erro atendimentos:", e);
-        }
-
-        // ===== APLICA HUMANO =====
-        clientes = clientes.map(c=>{
-            const tel = normalizar(c.telefone);
-            return {
-                ...c,
-                telefone_normalizado: tel,
-                humano: mapa[tel] === true
-            };
+        (data || []).forEach(a=>{
+            mapa[tel(a.telefone)] = a.humano;
         });
 
-        // ===== ORDENA (HUMANO PRIMEIRO) =====
+        // ===== APLICAR HUMANO =====
+        clientes = clientes.map(c=>{
+            const t = tel(c.telefone);
+            return {
+                ...c,
+                t,
+                humano: mapa[t] === true
+            }
+        });
+
+        // ===== ORDENAR =====
         clientes.sort((a,b)=> b.humano - a.humano);
 
         lista.innerHTML = "";
 
-        clientes.forEach(c => {
+        clientes.forEach(c=>{
 
             const vencido = new Date(c.vencimento) < new Date();
 
             lista.innerHTML += `
-            <tr class="${c.humano ? 'humano-row':''}">
+            <tr class="${c.humano ? 'humano':''}">
                 <td>${c.nome}</td>
                 <td>${c.telefone}</td>
                 <td>${c.plano?.nome || '-'}</td>
-                <td>R$ ${c.valor || 0}</td>
-                <td style="color:${vencido ? 'red':'#00ff88'}">
+                <td>R$ ${c.valor}</td>
+                <td style="color:${vencido?'red':'#00ff88'}">
                     ${new Date(c.vencimento).toLocaleDateString()}
                 </td>
                 <td>
-                    <button class="btn ${c.humano ? 'humano':'bot'}"
-                        onclick="toggle('${c.telefone_normalizado}', ${!c.humano})">
+                    <button class="btn ${c.humano?'humano-btn':'bot'}"
+                        onclick="toggle('${c.t}', ${!c.humano})">
                         ${c.humano ? '👤 HUMANO':'🤖 BOT'}
                     </button>
                 </td>
             </tr>`;
         });
 
-    } catch(e){
-        lista.innerHTML = "<tr><td colspan='6'>Erro conexão</td></tr>";
+    }catch(e){
+        lista.innerHTML = "<tr><td colspan='6'>Erro</td></tr>";
     }
 }
 
 // ================= TOGGLE =================
 async function toggle(telefone, status){
 
-    await fetch(`${SUPABASE_URL}/functions/v1/humano-toggle`, {
-        method:"POST",
-        headers:{ "Content-Type":"application/json" },
-        body: JSON.stringify({ telefone, status })
-    });
+    await supabaseClient
+        .from("atendimentos")
+        .upsert([{
+            telefone,
+            humano: status
+        }]);
 
-    carregarContatos();
+    carregar();
 }
 
 // INIT
-carregarContatos();
+carregar();
 
 </script>
 
