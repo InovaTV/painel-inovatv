@@ -20,8 +20,6 @@ body{
     padding:20px;
 }
 
-h2{ margin-bottom:20px }
-
 .menu{
     display:flex;
     gap:10px;
@@ -32,7 +30,7 @@ h2{ margin-bottom:20px }
     background:#1e244d;
     border:none;
     color:#fff;
-    padding:10px 15px;
+    padding:10px;
     border-radius:8px;
     cursor:pointer;
 }
@@ -41,13 +39,6 @@ h2{ margin-bottom:20px }
     background:#b024ff;
 }
 
-input{
-    padding:8px;
-    border-radius:6px;
-    border:none;
-}
-
-/* TABELA */
 table{
     width:100%;
     border-collapse:collapse;
@@ -57,7 +48,6 @@ table{
 th{
     background:#222;
     padding:10px;
-    text-align:left;
 }
 
 td{
@@ -65,10 +55,13 @@ td{
     border-bottom:1px solid #333;
 }
 
-/* BOTÕES */
+tr.humano-row{
+    background:#2a0f0f;
+}
+
 .btn{
-    border:none;
     padding:6px 10px;
+    border:none;
     border-radius:6px;
     cursor:pointer;
     font-weight:bold;
@@ -77,13 +70,6 @@ td{
 .bot{ background:#00d9ff; color:#000; }
 .humano{ background:#ff4d4d; }
 
-/* PRODUTOS */
-.produto{
-    background:#1e244d;
-    padding:10px;
-    border-radius:8px;
-    margin-top:10px;
-}
 </style>
 </head>
 
@@ -98,40 +84,26 @@ td{
     <button id="btnProdutos" onclick="trocar('produtos')">Produtos</button>
 </div>
 
-<!-- CLIENTES -->
 <div id="telaContatos">
 
-<div style="margin-bottom:10px;">
-    <input id="busca" placeholder="Telefone ou Nome" oninput="pagina=1; carregarContatos()">
-</div>
+<input id="busca" placeholder="Buscar cliente" oninput="pagina=1; carregarContatos()">
 
 <table>
 <thead>
 <tr>
-    <th>Nome</th>
-    <th>Telefone</th>
-    <th>Plano</th>
-    <th>Valor</th>
-    <th>Vencimento</th>
-    <th>Ação</th>
+<th>Nome</th>
+<th>Telefone</th>
+<th>Plano</th>
+<th>Valor</th>
+<th>Vencimento</th>
+<th>Ação</th>
 </tr>
 </thead>
 
 <tbody id="lista"></tbody>
 </table>
 
-<div id="paginacao" style="margin-top:10px;"></div>
-
-</div>
-
-<!-- PRODUTOS -->
-<div id="telaProdutos" style="display:none">
-
-<input id="nomeProduto" placeholder="Nome">
-<input id="valorProduto" placeholder="Valor">
-<button onclick="addProduto()">Adicionar</button>
-
-<div id="produtos"></div>
+<div id="paginacao"></div>
 
 </div>
 
@@ -139,7 +111,6 @@ td{
 
 <script>
 
-// CONFIG
 const SUPABASE_URL = "https://tiupgtbzikwmseecxbvo.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c";
 
@@ -147,28 +118,13 @@ const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let pagina = 1;
 
-// TROCAR TELA
-function trocar(tela){
-
-    document.getElementById("telaContatos").style.display = tela==="contatos" ? "block":"none";
-    document.getElementById("telaProdutos").style.display = tela==="produtos" ? "block":"none";
-
-    document.getElementById("btnContatos").classList.toggle("active", tela==="contatos");
-    document.getElementById("btnProdutos").classList.toggle("active", tela==="produtos");
-
-    if(tela==="contatos") carregarContatos();
-    if(tela==="produtos") carregarProdutos();
-}
-
 // ================= CLIENTES =================
 async function carregarContatos(){
 
-    const busca = document.getElementById("busca").value.trim();
+    const busca = document.getElementById("busca").value;
     const lista = document.getElementById("lista");
-    const paginacao = document.getElementById("paginacao");
 
     lista.innerHTML = "<tr><td colspan='6'>Carregando...</td></tr>";
-    paginacao.innerHTML = "";
 
     try {
 
@@ -176,27 +132,16 @@ async function carregarContatos(){
         if (busca) url += `&busca=${encodeURIComponent(busca)}`;
 
         const res = await fetch(url);
-
-        if (!res.ok){
-            lista.innerHTML = "<tr><td colspan='6'>Erro Rocket</td></tr>";
-            return;
-        }
-
         const json = await res.json();
 
-        if (!json || !json.itens){
+        if (!json.itens){
             lista.innerHTML = "<tr><td colspan='6'>Erro API</td></tr>";
             return;
         }
 
-        const clientes = json.itens;
+        let clientes = json.itens;
 
-        if (clientes.length === 0){
-            lista.innerHTML = "<tr><td colspan='6'>Nenhum cliente</td></tr>";
-            return;
-        }
-
-        // ===== HUMANO =====
+        // ===== BUSCAR ATENDIMENTO HUMANO =====
         let mapa = {};
 
         try{
@@ -210,53 +155,52 @@ async function carregarContatos(){
             });
 
         }catch(e){
-            console.warn(e);
+            console.log("Erro atendimentos:", e);
         }
+
+        // ===== INJETAR STATUS HUMANO =====
+        clientes = clientes.map(c=>{
+            const tel = (c.telefone || "").replace(/\D/g,"");
+            return {
+                ...c,
+                humano: mapa[tel] || false
+            }
+        });
+
+        // ===== ORDENAR (HUMANO PRIMEIRO) =====
+        clientes.sort((a,b)=> b.humano - a.humano);
 
         lista.innerHTML = "";
 
         clientes.forEach(c => {
 
             const telefone = (c.telefone || "").replace(/\D/g,"");
-            const humano = mapa[telefone] || false;
-
             const vencido = new Date(c.vencimento) < new Date();
 
             lista.innerHTML += `
-            <tr>
+            <tr class="${c.humano ? 'humano-row':''}">
                 <td>${c.nome}</td>
                 <td>${c.telefone}</td>
-                <td>${c.plano?.nome || "-"}</td>
+                <td>${c.plano?.nome || '-'}</td>
                 <td>R$ ${c.valor || 0}</td>
                 <td style="color:${vencido ? 'red':'#00ff88'}">
                     ${new Date(c.vencimento).toLocaleDateString()}
                 </td>
                 <td>
-                    <button class="btn ${humano ? 'humano':'bot'}"
-                        onclick="toggle('${telefone}', ${!humano})">
-                        ${humano ? '👤 HUMANO':'🤖 BOT'}
+                    <button class="btn ${c.humano ? 'humano':'bot'}"
+                        onclick="toggle('${telefone}', ${!c.humano})">
+                        ${c.humano ? '👤 HUMANO':'🤖 BOT'}
                     </button>
                 </td>
             </tr>`;
         });
 
-        const p = json.paginacao;
-
-        paginacao.innerHTML = `
-            <button onclick="prev()" ${!p.has_previous ? "disabled":""}>⬅</button>
-            Página ${p.page} de ${p.total_pages}
-            <button onclick="next()" ${!p.has_next ? "disabled":""}>➡</button>
-        `;
-
-    } catch(err){
+    } catch(e){
         lista.innerHTML = "<tr><td colspan='6'>Erro conexão</td></tr>";
     }
 }
 
-function next(){ pagina++; carregarContatos(); }
-function prev(){ if(pagina>1){ pagina--; carregarContatos(); } }
-
-// ================= HUMANO =================
+// ================= TOGGLE HUMANO =================
 async function toggle(telefone, status){
 
     await fetch(`${SUPABASE_URL}/functions/v1/humano-toggle`, {
@@ -266,80 +210,6 @@ async function toggle(telefone, status){
     });
 
     carregarContatos();
-}
-
-// ================= PRODUTOS =================
-async function carregarProdutos(){
-
-    const { data } = await supabaseClient
-        .from("produtos")
-        .select("*")
-        .order("criado_em", { ascending:false });
-
-    const div = document.getElementById("produtos");
-    div.innerHTML = "";
-
-    (data || []).forEach(p => {
-
-        div.innerHTML += `
-        <div class="produto">
-            <input value="${p.nome}" id="nome-${p.id}">
-            <input value="${p.valor}" id="valor-${p.id}">
-
-            <button onclick="salvar('${p.id}')">💾</button>
-            <button onclick="toggleAtivo('${p.id}', ${!p.ativo})">
-                ${p.ativo ? '🟢':'⚫'}
-            </button>
-            <button onclick="remover('${p.id}')">🗑</button>
-        </div>`;
-    });
-}
-
-async function addProduto(){
-
-    const nome = document.getElementById("nomeProduto").value;
-    const valor = document.getElementById("valorProduto").value;
-
-    if(!nome || !valor) return alert("Preencha");
-
-    await supabaseClient.from("produtos").insert([{ nome, valor }]);
-
-    carregarProdutos();
-}
-
-async function salvar(id){
-
-    const nome = document.getElementById("nome-"+id).value;
-    const valor = document.getElementById("valor-"+id).value;
-
-    await supabaseClient
-        .from("produtos")
-        .update({ nome, valor })
-        .eq("id", id);
-
-    carregarProdutos();
-}
-
-async function toggleAtivo(id, status){
-
-    await supabaseClient
-        .from("produtos")
-        .update({ ativo: status })
-        .eq("id", id);
-
-    carregarProdutos();
-}
-
-async function remover(id){
-
-    if(!confirm("Excluir produto?")) return;
-
-    await supabaseClient
-        .from("produtos")
-        .delete()
-        .eq("id", id);
-
-    carregarProdutos();
 }
 
 // INIT
