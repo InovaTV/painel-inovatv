@@ -39,6 +39,13 @@ body{
     background:#b024ff;
 }
 
+input{
+    padding:8px;
+    border-radius:6px;
+    border:none;
+    margin-bottom:10px;
+}
+
 table{
     width:100%;
     border-collapse:collapse;
@@ -55,8 +62,9 @@ td{
     border-bottom:1px solid #333;
 }
 
+/* destaque humano */
 tr.humano-row{
-    background:#2a0f0f;
+    background:#3a1111;
 }
 
 .btn{
@@ -80,11 +88,8 @@ tr.humano-row{
 <h2>📺 Painel InovaTV</h2>
 
 <div class="menu">
-    <button id="btnContatos" class="active" onclick="trocar('contatos')">Clientes</button>
-    <button id="btnProdutos" onclick="trocar('produtos')">Produtos</button>
+    <button class="active">Clientes</button>
 </div>
-
-<div id="telaContatos">
 
 <input id="busca" placeholder="Buscar cliente" oninput="pagina=1; carregarContatos()">
 
@@ -103,10 +108,6 @@ tr.humano-row{
 <tbody id="lista"></tbody>
 </table>
 
-<div id="paginacao"></div>
-
-</div>
-
 </div>
 
 <script>
@@ -117,6 +118,11 @@ const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let pagina = 1;
+
+// NORMALIZA TELEFONE
+function normalizar(tel){
+    return (tel || "").replace(/\D/g,"").slice(-11);
+}
 
 // ================= CLIENTES =================
 async function carregarContatos(){
@@ -141,7 +147,7 @@ async function carregarContatos(){
 
         let clientes = json.itens;
 
-        // ===== BUSCAR ATENDIMENTO HUMANO =====
+        // ===== BUSCA HUMANO =====
         let mapa = {};
 
         try{
@@ -150,31 +156,31 @@ async function carregarContatos(){
                 .select("*");
 
             (data || []).forEach(a=>{
-                const tel = (a.telefone || "").replace(/\D/g,"");
-                mapa[tel] = a.humano;
+                const tel = normalizar(a.telefone);
+                mapa[tel] = a.humano === true;
             });
 
         }catch(e){
             console.log("Erro atendimentos:", e);
         }
 
-        // ===== INJETAR STATUS HUMANO =====
+        // ===== APLICA HUMANO =====
         clientes = clientes.map(c=>{
-            const tel = (c.telefone || "").replace(/\D/g,"");
+            const tel = normalizar(c.telefone);
             return {
                 ...c,
-                humano: mapa[tel] || false
-            }
+                telefone_normalizado: tel,
+                humano: mapa[tel] === true
+            };
         });
 
-        // ===== ORDENAR (HUMANO PRIMEIRO) =====
+        // ===== ORDENA (HUMANO PRIMEIRO) =====
         clientes.sort((a,b)=> b.humano - a.humano);
 
         lista.innerHTML = "";
 
         clientes.forEach(c => {
 
-            const telefone = (c.telefone || "").replace(/\D/g,"");
             const vencido = new Date(c.vencimento) < new Date();
 
             lista.innerHTML += `
@@ -188,7 +194,7 @@ async function carregarContatos(){
                 </td>
                 <td>
                     <button class="btn ${c.humano ? 'humano':'bot'}"
-                        onclick="toggle('${telefone}', ${!c.humano})">
+                        onclick="toggle('${c.telefone_normalizado}', ${!c.humano})">
                         ${c.humano ? '👤 HUMANO':'🤖 BOT'}
                     </button>
                 </td>
@@ -200,7 +206,7 @@ async function carregarContatos(){
     }
 }
 
-// ================= TOGGLE HUMANO =================
+// ================= TOGGLE =================
 async function toggle(telefone, status){
 
     await fetch(`${SUPABASE_URL}/functions/v1/humano-toggle`, {
