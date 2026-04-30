@@ -181,11 +181,7 @@ async function carregarContatos(){
 
        const url = `${SUPABASE_URL}/functions/v1/rocket-clientes?page=${pagina}&busca=${encodeURIComponent(busca)}`;
 
-        const res = await fetch(url, {
-            headers: {
-               "Authorization": "Token " + ROCKET_KEY
-            }
-        });
+        const res = await fetch(url);
 
         if (!res.ok) {
             const erro = await res.text();
