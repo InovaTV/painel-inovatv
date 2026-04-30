@@ -216,14 +216,16 @@ async function carregarContatos(){
 
         // ===== pega humano =====
         const { data: atendimentos } = await supabaseClient
-            .from("atendimentos")
-            .select("*");
+    .from("atendimentos")
+    .select("*");
 
-        const mapa = {};
-        atendimentos.forEach(a => {
-            const tel = (a.telefone || "").replace(/\D/g,"");
-            mapa[tel] = a.humano;
-        });
+const mapa = {};
+
+// 🔥 proteção contra erro do supabase
+(atendimentos || []).forEach(a => {
+    const tel = (a.telefone || "").replace(/\D/g,"");
+    mapa[tel] = a.humano;
+});
 
         lista.innerHTML = "";
 
