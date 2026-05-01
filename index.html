@@ -44,6 +44,7 @@ input{
     border-radius:6px;
     border:none;
     margin-bottom:10px;
+    margin-right:5px;
 }
 
 table{
@@ -62,7 +63,6 @@ td{
     border-bottom:1px solid #333;
 }
 
-/* destaque humano */
 tr.humano{
     background:#3a1111;
 }
@@ -77,6 +77,7 @@ tr.humano{
 
 .bot{ background:#00d9ff; color:#000; }
 .humano-btn{ background:#ff4d4d; color:#fff; }
+.delete{ background:#666; color:#fff; }
 
 </style>
 </head>
@@ -88,10 +89,11 @@ tr.humano{
 <h2>📺 Painel InovaTV</h2>
 
 <div class="menu">
-    <button class="active" onclick="trocar('clientes')">Clientes</button>
-    <button onclick="trocar('produtos')">Produtos</button>
+    <button id="btnClientes" class="active" onclick="trocar('clientes')">Clientes</button>
+    <button id="btnProdutos" onclick="trocar('produtos')">Produtos</button>
 </div>
 
+<!-- CLIENTES -->
 <div id="telaClientes">
 
 <input id="busca" placeholder="Buscar cliente" oninput="carregar()">
@@ -113,8 +115,29 @@ tr.humano{
 
 </div>
 
+<!-- PRODUTOS -->
 <div id="telaProdutos" style="display:none">
-<h3>Produtos (em breve)</h3>
+
+<h3>📦 Produtos</h3>
+
+<input id="nomeProduto" placeholder="Nome">
+<input id="valorProduto" placeholder="Valor">
+
+<button onclick="salvarProduto()">Salvar</button>
+
+<table>
+<thead>
+<tr>
+<th>Nome</th>
+<th>Valor</th>
+<th>Status</th>
+<th>Ação</th>
+</tr>
+</thead>
+
+<tbody id="listaProdutos"></tbody>
+</table>
+
 </div>
 
 </div>
@@ -133,11 +156,25 @@ function tel(t){
 
 // TROCAR TELA
 function trocar(t){
-    document.getElementById("telaClientes").style.display = t==="clientes"?"block":"none";
-    document.getElementById("telaProdutos").style.display = t==="produtos"?"block":"none";
+
+    document.getElementById("telaClientes").style.display =
+        t==="clientes"?"block":"none";
+
+    document.getElementById("telaProdutos").style.display =
+        t==="produtos"?"block":"none";
+
+    document.getElementById("btnClientes").classList.remove("active");
+    document.getElementById("btnProdutos").classList.remove("active");
+
+    if(t==="clientes"){
+        document.getElementById("btnClientes").classList.add("active");
+    }else{
+        document.getElementById("btnProdutos").classList.add("active");
+        carregarProdutos();
+    }
 }
 
-// ================= CARREGAR =================
+// ================= CLIENTES =================
 async function carregar(){
 
     const busca = document.getElementById("busca").value;
@@ -155,7 +192,6 @@ async function carregar(){
 
         let clientes = json.itens || [];
 
-        // ===== PEGAR HUMANO =====
         let mapa = {};
 
         const { data } = await supabaseClient
@@ -166,7 +202,6 @@ async function carregar(){
             mapa[tel(a.telefone)] = a.humano;
         });
 
-        // ===== APLICAR HUMANO =====
         clientes = clientes.map(c=>{
             const t = tel(c.telefone);
             return {
@@ -176,7 +211,6 @@ async function carregar(){
             }
         });
 
-        // ===== ORDENAR =====
         clientes.sort((a,b)=> b.humano - a.humano);
 
         lista.innerHTML = "";
@@ -196,19 +230,19 @@ async function carregar(){
                 </td>
                 <td>
 
-    <button class="btn bot"
-        style="${!c.humano ? 'opacity:1' : 'opacity:0.4'}"
-        onclick="setModo('${c.t}', false)">
-        🤖 BOT
-    </button>
+                    <button class="btn bot"
+                        style="${!c.humano ? 'opacity:1' : 'opacity:0.4'}"
+                        onclick="setModo('${c.t}', false)">
+                        🤖 BOT
+                    </button>
 
-    <button class="btn humano-btn"
-        style="${c.humano ? 'opacity:1' : 'opacity:0.4'}"
-        onclick="setModo('${c.t}', true)">
-        👤 HUMANO
-    </button>
+                    <button class="btn humano-btn"
+                        style="${c.humano ? 'opacity:1' : 'opacity:0.4'}"
+                        onclick="setModo('${c.t}', true)">
+                        👤 HUMANO
+                    </button>
 
-</td>
+                </td>
             </tr>`;
         });
 
@@ -217,18 +251,87 @@ async function carregar(){
     }
 }
 
-// ================= TOGGLE =================
+// ================= MODO =================
 async function setModo(telefone, humano){
 
     await supabaseClient
         .from("atendimentos")
         .upsert([{
             telefone,
-            humano: humano,
+            humano,
             atualizado_em: new Date()
         }]);
 
     carregar();
+}
+
+// ================= PRODUTOS =================
+async function carregarProdutos(){
+
+    const lista = document.getElementById("listaProdutos");
+    lista.innerHTML = "<tr><td colspan='4'>Carregando...</td></tr>";
+
+    const { data, error } = await supabaseClient
+        .from("produtos")
+        .select("*")
+        .order("criado_em", { ascending: false });
+
+    if(error){
+        lista.innerHTML = "<tr><td colspan='4'>Erro</td></tr>";
+        return;
+    }
+
+    lista.innerHTML = "";
+
+    (data || []).forEach(p=>{
+        lista.innerHTML += `
+        <tr>
+            <td>${p.nome}</td>
+            <td>R$ ${p.valor}</td>
+            <td>${p.ativo ? "Ativo":"Inativo"}</td>
+            <td>
+                <button class="btn delete" onclick="excluirProduto('${p.id}')">
+                    Excluir
+                </button>
+            </td>
+        </tr>`;
+    });
+}
+
+// SALVAR PRODUTO
+async function salvarProduto(){
+
+    const nome = document.getElementById("nomeProduto").value;
+    const valor = document.getElementById("valorProduto").value;
+
+    if(!nome || !valor){
+        alert("Preencha tudo");
+        return;
+    }
+
+    await supabaseClient
+        .from("produtos")
+        .insert([{
+            nome,
+            valor: Number(valor),
+            ativo: true
+        }]);
+
+    document.getElementById("nomeProduto").value = "";
+    document.getElementById("valorProduto").value = "";
+
+    carregarProdutos();
+}
+
+// EXCLUIR
+async function excluirProduto(id){
+
+    await supabaseClient
+        .from("produtos")
+        .delete()
+        .eq("id", id);
+
+    carregarProdutos();
 }
 
 // INIT
