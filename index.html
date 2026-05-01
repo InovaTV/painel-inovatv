@@ -195,11 +195,20 @@ async function carregar(){
                     ${new Date(c.vencimento).toLocaleDateString()}
                 </td>
                 <td>
-                    <button class="btn ${c.humano?'humano-btn':'bot'}"
-                        onclick="toggle('${c.t}', ${!c.humano})">
-                        ${c.humano ? '👤 HUMANO':'🤖 BOT'}
-                    </button>
-                </td>
+
+    <button class="btn bot"
+        style="${!c.humano ? 'opacity:1' : 'opacity:0.4'}"
+        onclick="setModo('${c.t}', false)">
+        🤖 BOT
+    </button>
+
+    <button class="btn humano-btn"
+        style="${c.humano ? 'opacity:1' : 'opacity:0.4'}"
+        onclick="setModo('${c.t}', true)">
+        👤 HUMANO
+    </button>
+
+</td>
             </tr>`;
         });
 
@@ -209,13 +218,14 @@ async function carregar(){
 }
 
 // ================= TOGGLE =================
-async function toggle(telefone, status){
+async function setModo(telefone, humano){
 
     await supabaseClient
         .from("atendimentos")
         .upsert([{
             telefone,
-            humano: status
+            humano: humano,
+            atualizado_em: new Date()
         }]);
 
     carregar();
