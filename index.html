@@ -103,6 +103,7 @@ tr.humano{
 <tr>
 <th>Nome</th>
 <th>Telefone</th>
+<th>Usuário</th>
 <th>Plano</th>
 <th>Valor</th>
 <th>Vencimento</th>
@@ -223,6 +224,7 @@ async function carregar(){
             <tr class="${c.humano ? 'humano':''}">
                 <td>${c.nome}</td>
                 <td>${c.telefone}</td>
+                <td>${c.usuario || '-'}</td>
                 <td>${c.plano?.nome || '-'}</td>
                 <td>R$ ${c.valor}</td>
                 <td style="color:${vencido?'red':'#00ff88'}">
