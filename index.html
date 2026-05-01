@@ -212,7 +212,10 @@ async function carregar(){
             }
         });
 
-        clientes.sort((a,b)=> b.humano - a.humano);
+        clientes.sort((a,b)=> {
+  if (b.humano !== a.humano) return b.humano - a.humano;
+  return a.nome.localeCompare(b.nome);
+});
 
         lista.innerHTML = "";
 
