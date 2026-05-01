@@ -247,18 +247,19 @@ async function carregar(){
                 <td style="color:${vencido?'red':'#00ff88'}">
                     ${new Date(c.vencimento).toLocaleDateString()}
                 </td>
-                <td>
-                    <button class="btn bot"
-                        style="${!c.humano ? 'opacity:1' : 'opacity:0.4'}"
-                        onclick="setModo('${c.t}', false)">
-                        🤖 BOT
-                    </button>
-                    <button class="btn humano-btn"
-                        style="${c.humano ? 'opacity:1' : 'opacity:0.4'}"
-                        onclick="setModo('${c.t}', true)">
-                        👤 HUMANO
-                    </button>
-                </td>
+                <td style="display:flex; gap:6px; align-items:center;">
+    <button class="btn bot"
+        style="${!c.humano ? 'opacity:1' : 'opacity:0.4'}"
+        onclick="setModo('${c.t}', false)">
+        🤖 BOT
+    </button>
+
+    <button class="btn humano-btn"
+        style="${c.humano ? 'opacity:1' : 'opacity:0.4'}"
+        onclick="setModo('${c.t}', true)">
+        👤 HUMANO
+    </button>
+</td>
             </tr>`;
         });
 
