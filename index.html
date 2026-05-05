@@ -17,9 +17,8 @@ input{padding:8px;border-radius:6px;border:none;margin-bottom:10px;width:100%}
 table{width:100%;border-collapse:collapse;background:#111}
 th{background:#222;padding:10px}
 td{padding:10px;border-bottom:1px solid #333}
-tr.humano{background:#3a1111}
-.btn{padding:6px 10px;border:none;border-radius:6px;cursor:pointer;font-weight:bold}
-.bot{background:#00d9ff;color:#000}
+.btn{padding:6px 10px;border:none;border-radius:6px;cursor:pointer}
+.bot{background:#00d9ff}
 .humano-btn{background:#ff4d4d;color:#fff}
 </style>
 </head>
@@ -28,11 +27,11 @@ tr.humano{background:#3a1111}
 
 <div class="container">
 
-<h2>📺 Painel InovaTV</h2>
+<h2>Painel InovaTV</h2>
 
 <div class="menu">
-<button id="btnClientes" class="active" onclick="trocar('clientes')">Clientes</button>
-<button id="btnProdutos" onclick="trocar('produtos')">Produtos</button>
+<button onclick="trocar('clientes')" class="active">Clientes</button>
+<button onclick="trocar('produtos')">Produtos</button>
 </div>
 
 <div class="stats">
@@ -43,7 +42,8 @@ tr.humano{background:#3a1111}
 
 <!-- CLIENTES -->
 <div id="telaClientes">
-<input id="busca" placeholder="Buscar cliente" oninput="carregar()">
+<input id="busca" placeholder="Buscar" oninput="carregarClientes()">
+
 <table>
 <thead>
 <tr>
@@ -63,7 +63,7 @@ tr.humano{background:#3a1111}
 <!-- PRODUTOS -->
 <div id="telaProdutos" style="display:none">
 
-<button onclick="abrirModal()">➕ Criar Produto</button>
+<button onclick="abrirModal()">+ Criar Produto</button>
 
 <table>
 <thead>
@@ -85,7 +85,6 @@ tr.humano{background:#3a1111}
 
 <!-- MODAL -->
 <div id="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:#000a;justify-content:center;align-items:center">
-
 <div style="background:#111;padding:20px;border-radius:10px;width:350px">
 
 <h3 id="tituloModal">Produto</h3>
@@ -95,7 +94,7 @@ tr.humano{background:#3a1111}
 <input id="descricaoProduto" placeholder="Descrição">
 <input type="file" id="imagemProduto">
 
-<img id="preview" style="width:100px;display:none;margin-top:10px">
+<img id="preview" style="width:100px;display:none">
 
 <br><br>
 
@@ -110,12 +109,10 @@ tr.humano{background:#3a1111}
 const SUPABASE_URL="https://tiupgtbzikwmseecxbvo.supabase.co"
 const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c"
 
-const supabaseClient=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
+const supabase=supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
 
 let editandoId=null
 let imagemAtual=null
-
-function tel(t){return(t||"").replace(/\D/g,"").slice(-11)}
 
 function trocar(t){
 document.getElementById("telaClientes").style.display=t==="clientes"?"block":"none"
@@ -123,35 +120,23 @@ document.getElementById("telaProdutos").style.display=t==="produtos"?"block":"no
 if(t==="produtos")carregarProdutos()
 }
 
-async function carregar(){
+// ===== CLIENTES =====
+async function carregarClientes(){
 
-const busca=document.getElementById("busca").value
 const lista=document.getElementById("lista")
+lista.innerHTML="<tr><td colspan='7'>Carregando...</td></tr>"
+
+try{
 
 let url=`${SUPABASE_URL}/functions/v1/rocket-clientes`
-if(busca)url+=`?busca=${encodeURIComponent(busca)}`
-
 const res=await fetch(url)
 const json=await res.json()
 
 let clientes=json.itens||[]
 
-const {data}=await supabaseClient.from("atendimentos").select("*")
-
-let mapa={}
-(data||[]).forEach(a=>mapa[tel(a.telefone)]=a.humano)
-
-let total=0,bot=0,hum=0
-
 lista.innerHTML=""
 
 clientes.forEach(c=>{
-const t=tel(c.telefone)
-const humano=mapa[t]===true
-
-total++
-humano?hum++:bot++
-
 lista.innerHTML+=`
 <tr>
 <td>${c.nome}</td>
@@ -160,61 +145,21 @@ lista.innerHTML+=`
 <td>${c.plano?.nome||"-"}</td>
 <td>${c.valor}</td>
 <td>${new Date(c.vencimento).toLocaleDateString()}</td>
-<td style="display:flex;gap:5px">
-<button class="btn bot" onclick="setModo('${t}',false)">BOT</button>
-<button class="btn humano-btn" onclick="setModo('${t}',true)">HUMANO</button>
+<td>
+<button class="btn bot">BOT</button>
+<button class="btn humano-btn">HUMANO</button>
 </td>
 </tr>`
 })
 
-document.getElementById("total").innerText=total
-document.getElementById("bot").innerText=bot
-document.getElementById("humano").innerText=hum
-}
+document.getElementById("total").innerText=clientes.length
 
-async function setModo(telefone,humano){
-await supabaseClient.from("atendimentos").upsert([{telefone,humano}])
-carregar()
+}catch(e){
+lista.innerHTML="<tr><td colspan='7'>Erro ao carregar</td></tr>"
+}
 }
 
 // ===== PRODUTOS =====
-
-function abrirModal(p=null){
-
-modal.style.display="flex"
-
-if(p){
-editandoId=p.id
-imagemAtual=p.imagem||null
-nomeProduto.value=p.nome
-valorProduto.value=p.valor
-descricaoProduto.value=p.descricao||""
-
-if(p.imagem){
-preview.src=p.imagem
-preview.style.display="block"
-}
-
-}else{
-editandoId=null
-imagemAtual=null
-nomeProduto.value=""
-valorProduto.value=""
-descricaoProduto.value=""
-preview.style.display="none"
-}
-}
-
-function fecharModal(){modal.style.display="none"}
-
-imagemProduto.onchange=e=>{
-const file=e.target.files[0]
-if(file){
-preview.src=URL.createObjectURL(file)
-preview.style.display="block"
-}
-}
-
 async function carregarProdutos(){
 
 const res=await fetch(`${SUPABASE_URL}/rest/v1/produtos?select=*&order=criado_em.desc`,{
@@ -234,13 +179,63 @@ listaProdutos.innerHTML+=`
 <td>R$ ${p.valor}</td>
 <td><button onclick="toggle('${p.id}',${p.ativo})">${p.ativo?"Ativo":"Inativo"}</button></td>
 <td>
-<button onclick='abrirModal(${JSON.stringify(p)})'>Editar</button>
-<button onclick="excluirProduto('${p.id}')">Excluir</button>
+<button onclick="abrirEditar('${p.id}')">Editar</button>
+<button onclick="excluir('${p.id}')">Excluir</button>
 </td>
 </tr>`
 })
 }
 
+// ===== EDITAR =====
+async function abrirEditar(id){
+
+const res=await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`,{
+headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}
+})
+
+const p=(await res.json())[0]
+
+abrirModal(p)
+}
+
+// ===== MODAL =====
+function abrirModal(p=null){
+
+modal.style.display="flex"
+
+if(p){
+editandoId=p.id
+imagemAtual=p.imagem
+nomeProduto.value=p.nome
+valorProduto.value=p.valor
+descricaoProduto.value=p.descricao
+
+if(p.imagem){
+preview.src=p.imagem
+preview.style.display="block"
+}
+
+}else{
+editandoId=null
+imagemAtual=null
+nomeProduto.value=""
+valorProduto.value=""
+descricaoProduto.value=""
+preview.style.display="none"
+}
+}
+
+function fecharModal(){modal.style.display="none"}
+
+imagemProduto.onchange=e=>{
+const f=e.target.files[0]
+if(f){
+preview.src=URL.createObjectURL(f)
+preview.style.display="block"
+}
+}
+
+// ===== SALVAR =====
 async function salvarProduto(){
 
 let nome=nomeProduto.value
@@ -248,10 +243,10 @@ let valor=valorProduto.value
 let descricao=descricaoProduto.value
 let file=imagemProduto.files[0]
 
-let urlImg=imagemAtual
+let img=imagemAtual
 
 if(file){
-let nomeArq=Date.now()+"_"+file.name
+let nomeArq=Date.now()+file.name
 
 await fetch(`${SUPABASE_URL}/storage/v1/object/produtos/${nomeArq}`,{
 method:"POST",
@@ -259,7 +254,7 @@ headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`},
 body:file
 })
 
-urlImg=`${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArq}`
+img=`${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArq}`
 }
 
 if(editandoId){
@@ -267,7 +262,7 @@ if(editandoId){
 await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${editandoId}`,{
 method:"PATCH",
 headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json"},
-body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:urlImg})
+body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:img})
 })
 
 }else{
@@ -275,7 +270,7 @@ body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:urlImg})
 await fetch(`${SUPABASE_URL}/rest/v1/produtos`,{
 method:"POST",
 headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json"},
-body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:urlImg,ativo:true})
+body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:img,ativo:true})
 })
 }
 
@@ -283,7 +278,8 @@ fecharModal()
 carregarProdutos()
 }
 
-async function excluirProduto(id){
+// ===== EXCLUIR =====
+async function excluir(id){
 await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`,{
 method:"DELETE",
 headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}
@@ -291,6 +287,7 @@ headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}
 carregarProdutos()
 }
 
+// ===== STATUS =====
 async function toggle(id,atual){
 await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`,{
 method:"PATCH",
@@ -300,7 +297,7 @@ body:JSON.stringify({ativo:!atual})
 carregarProdutos()
 }
 
-carregar()
+carregarClientes()
 
 </script>
 
