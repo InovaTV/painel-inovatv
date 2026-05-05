@@ -238,16 +238,17 @@ preview.style.display="block"
 // ===== SALVAR =====
 async function salvarProduto(){
 
-let nome=nomeProduto.value
-let valor=valorProduto.value
-let descricao=descricaoProduto.value
-let file=imagemProduto.files[0]
+let nome = nomeProduto.value || ""
+let valor = Number(valorProduto.value || 0)
+let descricao = descricaoProduto.value || null
+let file = imagemProduto.files[0]
 
-let img=imagemAtual
+let img = imagemAtual || null
 
+// upload imagem
 if(file){
 
-let nomeArq=Date.now()+"_"+file.name
+let nomeArq = Date.now()+"_"+file.name
 
 const upload = await fetch(`${SUPABASE_URL}/storage/v1/object/produtos/${nomeArq}`,{
 method:"POST",
@@ -259,29 +260,48 @@ body:file
 })
 
 if(!upload.ok){
-const erro = await upload.text()
-alert("Erro ao subir imagem: " + erro)
+alert("Erro upload imagem")
 return
 }
 
-img=`${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArq}`
+img = `${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArq}`
 }
 
+// 🔥 MONTA OBJETO LIMPO
+let payload = {
+  nome,
+  valor,
+  ativo: true
+}
+
+// só adiciona se existir
+if(descricao) payload.descricao = descricao
+if(img) payload.imagem = img
+
+// 🔥 INSERT ou UPDATE
+let url = `${SUPABASE_URL}/rest/v1/produtos`
+let method = "POST"
+
 if(editandoId){
+url += `?id=eq.${editandoId}`
+method = "PATCH"
+}
 
-await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${editandoId}`,{
-method:"PATCH",
-headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json"},
-body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:img})
+const res = await fetch(url,{
+method,
+headers:{
+apikey:SUPABASE_KEY,
+Authorization:`Bearer ${SUPABASE_KEY}`,
+"Content-Type":"application/json"
+},
+body: JSON.stringify(payload)
 })
 
-}else{
-
-await fetch(`${SUPABASE_URL}/rest/v1/produtos`,{
-method:"POST",
-headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json"},
-body:JSON.stringify({nome,valor:Number(valor),descricao,imagem:img,ativo:true})
-})
+if(!res.ok){
+const erro = await res.text()
+console.log("ERRO REAL:", erro)
+alert("Erro ao salvar: " + erro)
+return
 }
 
 fecharModal()
