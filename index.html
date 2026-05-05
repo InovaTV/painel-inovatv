@@ -33,11 +33,6 @@ color:#fff;
 padding:10px 15px;
 border-radius:8px;
 cursor:pointer;
-transition:.2s;
-}
-
-.menu button:hover{
-background:#2a3170;
 }
 
 .menu .active{
@@ -45,8 +40,6 @@ background:#b024ff;
 }
 
 .stats{
-display:flex;
-gap:20px;
 margin-bottom:10px;
 font-weight:bold
 }
@@ -65,23 +58,40 @@ border-collapse:collapse;
 background:#111;
 border-radius:10px;
 overflow:hidden;
+table-layout:fixed;
 }
 
 th{
 background:#1e244d;
-padding:12px;
-text-align:left;
+padding:10px;
 font-size:13px;
 }
 
 td{
-padding:12px;
+padding:10px;
 border-bottom:1px solid #222;
-font-size:14px;
+font-size:13px;
+vertical-align:middle;
 }
 
-tr:hover{
-background:#181f4a;
+td.valor{
+width:90px;
+white-space:nowrap;
+text-align:center;
+}
+
+td.acoes{
+width:160px;
+}
+
+td.descricao{
+white-space:normal;
+}
+
+.acoes{
+display:flex;
+gap:5px;
+flex-wrap:wrap;
 }
 
 .btn{
@@ -95,38 +105,11 @@ font-size:12px;
 .bot{background:#00d9ff;color:#000}
 .humano-btn{background:#ff4d4d;color:#fff}
 
-.acoes{
-display:flex;
-gap:5px;
-}
-
 img{
 border-radius:6px;
+width:50px;
 }
 
-.modal{
-display:none;
-position:fixed;
-top:0;
-left:0;
-width:100%;
-height:100%;
-background:#000a;
-backdrop-filter:blur(5px);
-justify-content:center;
-align-items:center;
-}
-
-.modal-content{
-background:#111;
-padding:20px;
-border-radius:12px;
-width:350px;
-}
-
-.modal-content input{
-margin-bottom:10px;
-}
 </style>
 </head>
 
@@ -142,34 +125,36 @@ margin-bottom:10px;
 </div>
 
 <div class="stats">
-<div>Total: <span id="total">0</span></div>
+Total: <span id="total">0</span>
 </div>
 
 <!-- CLIENTES -->
 <div id="telaClientes">
-<input id="busca" placeholder="Buscar" oninput="carregarClientes()">
+
+<input id="busca" placeholder="Buscar cliente..." oninput="filtrarClientes()">
 
 <table>
 <thead>
 <tr>
+<th><input type="checkbox" onclick="toggleClientes(this)"></th>
 <th>Nome</th>
 <th>Telefone</th>
 <th>Usuário</th>
 <th>Plano</th>
-<th>Valor</th>
+<th class="valor">Valor</th>
 <th>Vencimento</th>
-<th>Ações</th>
+<th class="acoes">Ações</th>
 </tr>
 </thead>
 <tbody id="lista"></tbody>
 </table>
+
 </div>
 
 <!-- PRODUTOS -->
 <div id="telaProdutos" style="display:none">
 
 <button onclick="abrirModal()">+ Criar Produto</button>
-<button onclick="excluirSelecionados()">Excluir Selecionados</button>
 
 <table>
 <thead>
@@ -178,9 +163,9 @@ margin-bottom:10px;
 <th>Img</th>
 <th>Nome</th>
 <th>Descrição</th>
-<th>Valor</th>
+<th class="valor">Valor</th>
 <th>Status</th>
-<th>Ações</th>
+<th class="acoes">Ações</th>
 </tr>
 </thead>
 <tbody id="listaProdutos"></tbody>
@@ -190,27 +175,6 @@ margin-bottom:10px;
 
 </div>
 
-<!-- MODAL -->
-<div id="modal" class="modal">
-<div class="modal-content">
-
-<h3>Produto</h3>
-
-<input id="nomeProduto" placeholder="Nome">
-<input id="valorProduto" placeholder="Valor">
-<input id="descricaoProduto" placeholder="Descrição">
-<input type="file" id="imagemProduto">
-
-<img id="preview" style="width:100px;display:none">
-
-<br><br>
-
-<button onclick="salvarProduto()">Salvar</button>
-<button onclick="fecharModal()">Cancelar</button>
-
-</div>
-</div>
-
 <script>
 
 const SUPABASE_URL="https://tiupgtbzikwmseecxbvo.supabase.co"
@@ -218,34 +182,39 @@ const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSI
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
 
-let editandoId=null
-let imagemAtual=null
+let clientesGlobal=[]
 
+// TROCAR TELA
 function trocar(t){
-document.getElementById("telaClientes").style.display=t==="clientes"?"block":"none"
-document.getElementById("telaProdutos").style.display=t==="produtos"?"block":"none"
+telaClientes.style.display=t==="clientes"?"block":"none"
+telaProdutos.style.display=t==="produtos"?"block":"none"
 if(t==="produtos")carregarProdutos()
 }
 
 // CLIENTES
 async function carregarClientes(){
-const lista=document.getElementById("lista")
-lista.innerHTML="<tr><td colspan='7'>Carregando...</td></tr>"
 
-try{
 const res=await fetch(`${SUPABASE_URL}/functions/v1/rocket-clientes`)
 const json=await res.json()
 
+clientesGlobal=json.itens||[]
+
+renderClientes(clientesGlobal)
+}
+
+function renderClientes(listaDados){
+
 lista.innerHTML=""
 
-json.itens.forEach(c=>{
+listaDados.forEach(c=>{
 lista.innerHTML+=`
 <tr>
+<td><input type="checkbox" class="checkCliente"></td>
 <td>${c.nome}</td>
 <td>${c.telefone}</td>
 <td>${c.usuario||"-"}</td>
 <td>${c.plano?.nome||"-"}</td>
-<td>${c.valor}</td>
+<td class="valor">${c.valor}</td>
 <td>${new Date(c.vencimento).toLocaleDateString()}</td>
 <td class="acoes">
 <button class="btn bot">BOT</button>
@@ -254,11 +223,26 @@ lista.innerHTML+=`
 </tr>`
 })
 
-document.getElementById("total").innerText=json.itens.length
-
-}catch{
-lista.innerHTML="<tr><td colspan='7'>Erro</td></tr>"
+total.innerText=listaDados.length
 }
+
+// FILTRO CLIENTES
+function filtrarClientes(){
+let termo=busca.value.toLowerCase()
+
+let filtrados=clientesGlobal.filter(c=>
+(c.nome||"").toLowerCase().includes(termo) ||
+(c.telefone||"").includes(termo) ||
+(c.usuario||"").toLowerCase().includes(termo)
+)
+
+renderClientes(filtrados)
+}
+
+// CHECKBOX CLIENTES
+function toggleClientes(el){
+document.querySelectorAll(".checkCliente")
+.forEach(c=>c.checked=el.checked)
 }
 
 // PRODUTOS
@@ -275,136 +259,25 @@ listaProdutos.innerHTML=""
 data.forEach(p=>{
 listaProdutos.innerHTML+=`
 <tr>
-<td><input type="checkbox" class="checkProduto" value="${p.id}"></td>
-<td>${p.imagem?`<img src="${p.imagem}" width="50">`:"-"}</td>
+<td><input type="checkbox"></td>
+<td>${p.imagem?`<img src="${p.imagem}">`:"-"}</td>
 <td>${p.nome}</td>
-<td>${p.descricao||"-"}</td>
-<td>R$ ${p.valor}</td>
-<td><button onclick="toggle('${p.id}',${p.ativo})">${p.ativo?"Ativo":"Inativo"}</button></td>
+<td class="descricao">${p.descricao||"-"}</td>
+<td class="valor">R$ ${p.valor}</td>
+<td>${p.ativo?"Ativo":"Inativo"}</td>
 <td class="acoes">
-<button onclick="abrirEditar('${p.id}')">Editar</button>
-<button onclick="excluir('${p.id}')">Excluir</button>
+<button onclick="editarProduto('${p.id}')">Editar</button>
+<button onclick="excluirProduto('${p.id}')">Excluir</button>
 </td>
 </tr>`
 })
 }
 
-// CHECKBOX
-function toggleTodos(el){
-document.querySelectorAll(".checkProduto")
-.forEach(c=>c.checked=el.checked)
-}
-
-function excluirSelecionados(){
-const ids=[...document.querySelectorAll(".checkProduto:checked")].map(c=>c.value)
-ids.forEach(id=>excluir(id))
-}
-
-// MODAL
-function abrirModal(p=null){
-modal.style.display="flex"
-
-if(p){
-editandoId=p.id
-imagemAtual=p.imagem
-nomeProduto.value=p.nome
-valorProduto.value=p.valor
-descricaoProduto.value=p.descricao||""
-if(p.imagem){
-preview.src=p.imagem
-preview.style.display="block"
-}
-}else{
-editandoId=null
-imagemAtual=null
-nomeProduto.value=""
-valorProduto.value=""
-descricaoProduto.value=""
-preview.style.display="none"
-}
-}
-
-function fecharModal(){modal.style.display="none"}
-
-imagemProduto.onchange=e=>{
-const f=e.target.files[0]
-if(f){
-preview.src=URL.createObjectURL(f)
-preview.style.display="block"
-}
-}
-
-// EDITAR
-async function abrirEditar(id){
-const res=await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`,{
-headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}
-})
-const p=(await res.json())[0]
-abrirModal(p)
-}
-
-// SALVAR
-async function salvarProduto(){
-
-let payload={
-nome:nomeProduto.value,
-valor:Number(valorProduto.value),
-descricao:descricaoProduto.value||null,
-ativo:true
-}
-
-// upload imagem
-let file=imagemProduto.files[0]
-if(file){
-let nomeArq=Date.now()+"_"+file.name
-
-await fetch(`${SUPABASE_URL}/storage/v1/object/produtos/${nomeArq}`,{
-method:"POST",
-headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`},
-body:file
-})
-
-payload.imagem=`${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArq}`
-}
-
-// INSERT / UPDATE
-let url=`${SUPABASE_URL}/rest/v1/produtos`
-let method="POST"
-
-if(editandoId){
-url+=`?id=eq.${editandoId}`
-method="PATCH"
-}
-
-await fetch(url,{
-method,
-headers:{
-apikey:SUPABASE_KEY,
-Authorization:`Bearer ${SUPABASE_KEY}`,
-"Content-Type":"application/json"
-},
-body:JSON.stringify(payload)
-})
-
-fecharModal()
-carregarProdutos()
-}
-
-// EXCLUIR
-async function excluir(id){
+// EXCLUIR PRODUTO
+async function excluirProduto(id){
 await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`,{
 method:"DELETE",
 headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`}
-})
-carregarProdutos()
-}
-
-// STATUS
-async function toggle(id,atual){
-await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`,{
-method:"PATCH",
-headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`,"Content-Type":"application/json"},
-body:JSON.stringify({ativo:!atual})
 })
 carregarProdutos()
 }
