@@ -246,13 +246,23 @@ let file=imagemProduto.files[0]
 let img=imagemAtual
 
 if(file){
-let nomeArq=Date.now()+file.name
 
-await fetch(`${SUPABASE_URL}/storage/v1/object/produtos/${nomeArq}`,{
+let nomeArq=Date.now()+"_"+file.name
+
+const upload = await fetch(`${SUPABASE_URL}/storage/v1/object/produtos/${nomeArq}`,{
 method:"POST",
-headers:{apikey:SUPABASE_KEY,Authorization:`Bearer ${SUPABASE_KEY}`},
+headers:{
+apikey:SUPABASE_KEY,
+Authorization:`Bearer ${SUPABASE_KEY}`
+},
 body:file
 })
+
+if(!upload.ok){
+const erro = await upload.text()
+alert("Erro ao subir imagem: " + erro)
+return
+}
 
 img=`${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArq}`
 }
