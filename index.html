@@ -71,6 +71,8 @@ tr.humano{background:#3a1111;}
 
 <input id="nomeProduto" placeholder="Nome">
 <input id="valorProduto" placeholder="Valor">
+<input id="descricaoProduto" placeholder="Descrição">
+<input type="file" id="imagemProduto">
 
 <button onclick="salvarProduto()">Salvar</button>
 
@@ -94,9 +96,12 @@ tr.humano{background:#3a1111;}
 <script>
 
 const SUPABASE_URL = "https://tiupgtbzikwmseecxbvo.supabase.co";
-const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRpdXBndGJ6aWt3bXNlZWN4YnZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM5NjM2NTAsImV4cCI6MjA4OTUzOTY1MH0._NV_GF2233w4vjHA1e3NiKQVXVXFg4j3oSagO2jh28c";
+const SUPABASE_KEY = "SUA_KEY";
 
 const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let editandoId = null;
+let imagemAtual = null;
 
 function tel(t){
     return (t || "").replace(/\D/g,"").slice(-11);
@@ -115,6 +120,7 @@ function trocar(t){
     if(t==="produtos") carregarProdutos();
 }
 
+// ================= CLIENTES =================
 async function carregar(){
 
     const busca = document.getElementById("busca").value;
@@ -122,65 +128,59 @@ async function carregar(){
 
     lista.innerHTML = "<tr><td colspan='7'>Carregando...</td></tr>";
 
-    try{
+    let url = `${SUPABASE_URL}/functions/v1/rocket-clientes`;
+    if(busca) url += `?busca=${encodeURIComponent(busca)}`;
 
-        let url = `${SUPABASE_URL}/functions/v1/rocket-clientes`;
-        if(busca) url += `?busca=${encodeURIComponent(busca)}`;
+    const res = await fetch(url);
+    const json = await res.json();
 
-        const res = await fetch(url);
-        const json = await res.json();
+    let clientes = json.itens || [];
 
-        let clientes = json.itens || [];
+    let mapa = {};
 
-        let mapa = {};
+    const { data } = await supabaseClient
+        .from("atendimentos")
+        .select("*");
 
-        const { data } = await supabaseClient
-            .from("atendimentos")
-            .select("*");
+    (data || []).forEach(a=>{
+        mapa[tel(a.telefone)] = a.humano;
+    });
 
-        (data || []).forEach(a=>{
-            mapa[tel(a.telefone)] = a.humano;
-        });
+    let total = 0;
+    let totalHumano = 0;
+    let totalBot = 0;
 
-        let total = 0;
-        let totalHumano = 0;
-        let totalBot = 0;
+    clientes = clientes.map(c=>{
+        const t = tel(c.telefone);
+        const humano = mapa[t] === true;
 
-        clientes = clientes.map(c=>{
-            const t = tel(c.telefone);
-            const humano = mapa[t] === true;
+        total++;
+        humano ? totalHumano++ : totalBot++;
 
-            total++;
-            humano ? totalHumano++ : totalBot++;
+        return { ...c, t, humano };
+    });
 
-            return { ...c, t, humano };
-        });
+    document.getElementById("total").innerText = total;
+    document.getElementById("humano").innerText = totalHumano;
+    document.getElementById("bot").innerText = totalBot;
 
-        document.getElementById("total").innerText = total;
-        document.getElementById("humano").innerText = totalHumano;
-        document.getElementById("bot").innerText = totalBot;
+    lista.innerHTML = "";
 
-        lista.innerHTML = "";
-
-        clientes.forEach(c=>{
-            lista.innerHTML += `
-            <tr class="${c.humano ? 'humano':''}">
-                <td>${c.nome}</td>
-                <td>${c.telefone}</td>
-                <td>${c.usuario || '-'}</td>
-                <td>${c.plano?.nome || '-'}</td>
-                <td>R$ ${c.valor}</td>
-                <td>${new Date(c.vencimento).toLocaleDateString()}</td>
-                <td style="display:flex; gap:6px;">
-                    <button class="btn bot" onclick="setModo('${c.t}', false)">🤖 BOT</button>
-                    <button class="btn humano-btn" onclick="setModo('${c.t}', true)">👤 HUMANO</button>
-                </td>
-            </tr>`;
-        });
-
-    }catch(e){
-        lista.innerHTML = "<tr><td colspan='7'>Erro</td></tr>";
-    }
+    clientes.forEach(c=>{
+        lista.innerHTML += `
+        <tr class="${c.humano ? 'humano':''}">
+            <td>${c.nome}</td>
+            <td>${c.telefone}</td>
+            <td>${c.usuario || '-'}</td>
+            <td>${c.plano?.nome || '-'}</td>
+            <td>R$ ${c.valor}</td>
+            <td>${new Date(c.vencimento).toLocaleDateString()}</td>
+            <td style="display:flex; gap:6px;">
+                <button class="btn bot" onclick="setModo('${c.t}', false)">🤖 BOT</button>
+                <button class="btn humano-btn" onclick="setModo('${c.t}', true)">👤 HUMANO</button>
+            </td>
+        </tr>`;
+    });
 }
 
 async function setModo(telefone, humano){
@@ -188,9 +188,7 @@ async function setModo(telefone, humano){
     carregar();
 }
 
-//
-// 🔥 PRODUTOS CORRIGIDO (SEM 401)
-//
+// ================= PRODUTOS =================
 async function carregarProdutos(){
 
     const lista = document.getElementById("listaProdutos");
@@ -214,34 +212,103 @@ async function carregarProdutos(){
             <td>R$ ${p.valor}</td>
             <td>${p.ativo ? "Ativo":"Inativo"}</td>
             <td>
+                <button onclick="editarProduto(${JSON.stringify(p)})">Editar</button>
                 <button onclick="excluirProduto('${p.id}')">Excluir</button>
             </td>
         </tr>`;
     });
 }
 
+// ================= EDITAR =================
+function editarProduto(p){
+
+    editandoId = p.id;
+    imagemAtual = p.imagem || null;
+
+    document.getElementById("nomeProduto").value = p.nome || "";
+    document.getElementById("valorProduto").value = p.valor || "";
+    document.getElementById("descricaoProduto").value = p.descricao || "";
+
+    alert("Modo edição ativado");
+}
+
+// ================= SALVAR =================
 async function salvarProduto(){
 
     const nome = document.getElementById("nomeProduto").value;
     const valor = document.getElementById("valorProduto").value;
+    const descricao = document.getElementById("descricaoProduto").value;
+    const file = document.getElementById("imagemProduto").files[0];
 
-    await fetch(`${SUPABASE_URL}/rest/v1/produtos`, {
-        method: "POST",
-        headers: {
-            apikey: SUPABASE_KEY,
-            Authorization: `Bearer ${SUPABASE_KEY}`,
-            "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-            nome,
-            valor: Number(valor),
-            ativo: true
-        })
-    });
+    let urlImagem = imagemAtual;
+
+    // upload nova imagem
+    if(file){
+        const nomeArquivo = Date.now() + "_" + file.name;
+
+        await fetch(`${SUPABASE_URL}/storage/v1/object/produtos/${nomeArquivo}`, {
+            method: "POST",
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`
+            },
+            body: file
+        });
+
+        urlImagem = `${SUPABASE_URL}/storage/v1/object/public/produtos/${nomeArquivo}`;
+    }
+
+    if(editandoId){
+
+        // 🔥 UPDATE
+        await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${editandoId}`, {
+            method: "PATCH",
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                nome,
+                valor: Number(valor),
+                descricao,
+                imagem: urlImagem
+            })
+        });
+
+        editandoId = null;
+        imagemAtual = null;
+
+    } else {
+
+        // 🔥 INSERT
+        await fetch(`${SUPABASE_URL}/rest/v1/produtos`, {
+            method: "POST",
+            headers: {
+                apikey: SUPABASE_KEY,
+                Authorization: `Bearer ${SUPABASE_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                nome,
+                valor: Number(valor),
+                descricao,
+                imagem: urlImagem,
+                ativo: true
+            })
+        });
+    }
+
+    // limpa campos
+    document.getElementById("nomeProduto").value = "";
+    document.getElementById("valorProduto").value = "";
+    document.getElementById("descricaoProduto").value = "";
+    document.getElementById("imagemProduto").value = "";
 
     carregarProdutos();
 }
 
+// ================= EXCLUIR =================
 async function excluirProduto(id){
 
     await fetch(`${SUPABASE_URL}/rest/v1/produtos?id=eq.${id}`, {
