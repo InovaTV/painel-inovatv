@@ -572,7 +572,9 @@ async function setHumano(telefone){
 
 try{
 
-telefone = telefone.replace(/\D/g,'')
+telefone = telefone
+.replace(/\D/g,'')
+.slice(-11)
 
 const { error } =
 await supabaseClient
@@ -601,7 +603,9 @@ async function setBot(telefone){
 
 try{
 
-telefone = telefone.replace(/\D/g,'')
+telefone = telefone
+.replace(/\D/g,'')
+.slice(-11)
 
 const { error } =
 await supabaseClient
