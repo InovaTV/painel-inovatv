@@ -120,6 +120,14 @@ tr:hover{
 background:#141d46;
 }
 
+  tr.humano-linha{
+background:#4a1111 !important;
+}
+
+tr.humano-linha:hover{
+background:#641616 !important;
+}
+
 td img{
 width:60px;
 height:60px;
@@ -431,12 +439,49 @@ console.log("ERRO CLIENTES:", err)
 
 }
 
-function renderClientes(lista){
+async function renderClientes(lista){
 
 listaClientes.innerHTML = ""
 
 let totalAtivos = 0
 let totalVencidos = 0
+
+// 🔥 BUSCA STATUS HUMANO
+const { data: atendimentos } =
+await supabaseClient
+.from("atendimentos")
+.select("telefone, humano")
+
+// 🔥 MAPA RÁPIDO
+const mapaHumano = {}
+
+atendimentos?.forEach(a=>{
+
+const tel = String(a.telefone)
+.replace(/\D/g,'')
+.slice(-11)
+
+mapaHumano[tel] = a.humano === true
+
+})
+
+// 🔥 ORDENA HUMANO PRIMEIRO
+lista.sort((a,b)=>{
+
+const telA = String(a.telefone || "")
+.replace(/\D/g,'')
+.slice(-11)
+
+const telB = String(b.telefone || "")
+.replace(/\D/g,'')
+.slice(-11)
+
+const humanoA = mapaHumano[telA] ? 1 : 0
+const humanoB = mapaHumano[telB] ? 1 : 0
+
+return humanoB - humanoA
+
+})
 
 lista.forEach(c=>{
 
@@ -452,9 +497,21 @@ totalAtivos++
 totalVencidos++
 }
 
+const telefoneNormalizado =
+String(c.telefone || "")
+.replace(/\D/g,'')
+.slice(-11)
+
+const atendimentoHumano =
+mapaHumano[telefoneNormalizado] === true
+
 listaClientes.innerHTML += `
 
-<tr>
+<tr class="${
+atendimentoHumano
+? "humano-linha"
+: ""
+}">
 
 <td>
 <input type="checkbox" class="checkCliente">
