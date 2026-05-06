@@ -426,8 +426,8 @@ function renderClientes(lista){
 
 listaClientes.innerHTML = ""
 
-let ativos = 0
-let vencidos = 0
+let totalAtivos = 0
+let totalVencidos = 0
 
 lista.forEach(c=>{
 
@@ -438,9 +438,9 @@ const status =
 vencimento < hoje ? "Vencido" : "Ativo"
 
 if(status === "Ativo"){
-ativos++
+totalAtivos++
 }else{
-vencidos++
+totalVencidos++
 }
 
 listaClientes.innerHTML += `
@@ -502,9 +502,14 @@ HUMANO
 
 })
 
-totalClientes.innerText = lista.length
-ativos.innerText = ativos
-vencidos.innerText = vencidos
+document.getElementById("totalClientes").innerText =
+lista.length
+
+document.getElementById("ativos").innerText =
+totalAtivos
+
+document.getElementById("vencidos").innerText =
+totalVencidos
 
 }
 
