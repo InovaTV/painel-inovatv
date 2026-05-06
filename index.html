@@ -408,6 +408,8 @@ const res = await fetch(
 `${SUPABASE_URL}/functions/v1/rocket-clientes`
 )
 
+console.log("STATUS EDGE:", res.status)
+
 const json = await res.json()
 
 console.log("CLIENTES EDGE:", json)
@@ -421,11 +423,9 @@ json.results ||
 
 renderClientes(clientesGlobal)
 
-renderClientes(clientesGlobal)
-
 }catch(err){
 
-console.log(err)
+console.log("ERRO CLIENTES:", err)
 
 }
 
