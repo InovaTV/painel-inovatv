@@ -629,24 +629,58 @@ async function setHumano(telefone){
 
 try{
 
-telefone = telefone
+telefone = String(telefone)
 .replace(/\D/g,'')
 .slice(-11)
 
-const { error } =
+const { data: existente } =
 await supabaseClient
 .from("atendimentos")
-.upsert({
+.select("*")
+.eq("telefone", telefone)
+.maybeSingle()
+
+let error = null
+
+if(existente){
+
+const res =
+await supabaseClient
+.from("atendimentos")
+.update({
+humano: true,
+atualizado_em: new Date()
+})
+.eq("telefone", telefone)
+
+error = res.error
+
+}else{
+
+const res =
+await supabaseClient
+.from("atendimentos")
+.insert({
 telefone: telefone,
 humano: true
 })
+
+error = res.error
+
+}
 
 if(error){
 alert(error.message)
 return
 }
 
+clientesGlobal = []
+
+listaClientes.innerHTML = ""
+
 await carregarClientes()
+
+alert("HUMANO ativado")
 
 }catch(err){
 
@@ -660,24 +694,58 @@ async function setBot(telefone){
 
 try{
 
-telefone = telefone
+telefone = String(telefone)
 .replace(/\D/g,'')
 .slice(-11)
 
-const { error } =
+const { data: existente } =
 await supabaseClient
 .from("atendimentos")
-.upsert({
+.select("*")
+.eq("telefone", telefone)
+.maybeSingle()
+
+let error = null
+
+if(existente){
+
+const res =
+await supabaseClient
+.from("atendimentos")
+.update({
+humano: false,
+atualizado_em: new Date()
+})
+.eq("telefone", telefone)
+
+error = res.error
+
+}else{
+
+const res =
+await supabaseClient
+.from("atendimentos")
+.insert({
 telefone: telefone,
 humano: false
 })
+
+error = res.error
+
+}
 
 if(error){
 alert(error.message)
 return
 }
 
+clientesGlobal = []
+
+listaClientes.innerHTML = ""
+
 await carregarClientes()
+
+alert("BOT ativado")
 
 }catch(err){
 
