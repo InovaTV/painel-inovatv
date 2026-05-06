@@ -578,8 +578,8 @@ const { error } =
 await supabaseClient
 .from("atendimentos")
 .upsert({
-telefone,
-atendimento_humano:true
+telefone: telefone,
+humano: true
 })
 
 if(error){
@@ -607,8 +607,8 @@ const { error } =
 await supabaseClient
 .from("atendimentos")
 .upsert({
-telefone,
-atendimento_humano:false
+telefone: telefone,
+humano: false
 })
 
 if(error){
