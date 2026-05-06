@@ -493,11 +493,17 @@ ${c.vencimento
 
 <div class="acoes">
 
-<button class="bot">
+<button
+class="bot"
+onclick="setBot('${c.telefone}')"
+>
 BOT
 </button>
 
-<button class="humano">
+<button
+class="humano"
+onclick="setHumano('${c.telefone}')"
+>
 HUMANO
 </button>
 
@@ -561,6 +567,68 @@ document
 .forEach(c=>c.checked = el.checked)
 
 }
+
+  <script id="5t4s1n">
+
+async function setHumano(telefone){
+
+try{
+
+telefone = telefone.replace(/\D/g,'')
+
+const { error } =
+await supabaseClient
+.from("atendimentos")
+.upsert({
+telefone,
+atendimento_humano:true
+})
+
+if(error){
+alert(error.message)
+return
+}
+
+alert("Atendimento HUMANO ativado")
+
+}catch(err){
+
+console.log(err)
+
+}
+
+}
+
+async function setBot(telefone){
+
+try{
+
+telefone = telefone.replace(/\D/g,'')
+
+const { error } =
+await supabaseClient
+.from("atendimentos")
+.upsert({
+telefone,
+atendimento_humano:false
+})
+
+if(error){
+alert(error.message)
+return
+}
+
+alert("BOT ativado")
+
+}catch(err){
+
+console.log(err)
+
+}
+
+}
+
+</script>
 
 // PRODUTOS
 async function carregarProdutos(){
